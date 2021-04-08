@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TASagent Bot Control Panel</title>
+  <link rel="stylesheet" href="/Assets/css/jquery-ui.css">
+  <link rel="icon" href="data:,">
+  <script src="/Assets/js/jquery.min.js"></script>
+  <script src="/Assets/js/jquery-ui.min.js"></script>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://bootswatch.com/4/darkly/bootstrap.min.css" rel="stylesheet">
+  <!-- Popper.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+  <!-- Bootstrap -->
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+  <style>
+    th, td {
+      padding: 3px 15px;
+    }
+  </style>
+
+  <script>
+    function UpdateQuotes(quotes) {
+      var quoteTable = $("#quoteTable");
+
+      quotes.forEach(function(quote) {
+        var row = $("<tr>")
+
+        var idField = $("<td>").text(quote.id);
+        var quoteField = $("<td>").text('"' + quote.quoteText + '"');
+        var speakerField = $("<td>").text(quote.speaker);
+        var creatorField = $("<td>").text(quote.creator);
+
+        var d = new Date(quote.createTime);
+        var dateField = $("<td>").text(d.toDateString());
+
+        row.append(idField);
+        row.append(quoteField);
+        row.append(speakerField);
+        row.append(creatorField);
+        row.append(dateField);
+
+        quoteTable.append(row);
+      });
+
+    }
+
+    function RefreshDisplay() {
+      $.getJSON({
+        url: "/TASagentBotAPI/Quotes",
+        success: UpdateQuotes});
+    }
+
+    $(document).ready(RefreshDisplay);
+    
+  </script>
+</head>
+<body>
+<div class="widget">
+  <h1>TASagent Bot Quotes</h1>
+  <div class="container-fluid">
+    <table id="quoteTable">
+        <tr><th>Id</th><th>Quote</th><th>Speaker</th><th>Quotht By</th><th>Creation Time</th></tr>
+      </table>
+  </div>
+ 
+</body>
+</html>
