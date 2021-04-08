@@ -12,6 +12,15 @@ But once configured, the project should be very simple to use.  It has a number 
 
 To start with, get the appropriate [NetCore 5 SDK (With AspNet)](https://dotnet.microsoft.com/download/dotnet/5.0)
 
+Clone the [TASagentTwitchBotDemos project](https://github.com/TASagent/TASagentTwitchBotDemos) and initialize and update the gitsubmodule (this project):
+
+```cmd
+git clone https://github.com/TASagent/TASagentTwitchBotDemos
+cd TASagentTwitchBotDemos
+git submodule init
+git submodule update
+```
+
 If you're using this as a twitch bot, you're going to need to make a new Twitch account for that bot.  You also need to go to [The Twitch Dev Console](https://dev.twitch.tv/console/apps) and register an application to receive a ClientID.  Enter any name, use `http://localhost:9000/` as the OAuth Redirect URL, and choose "Chat Bot" as the category.
 
 You may need to forward ports `9000` and `9005` to the computer you intend to use to get everything to work.  Port `9000` is used for OAuth callbacks, and port `9005` is used for follower notifications.  To enable listening on these ports, you'll likely need to run the following commands in powershell in administrator mode:
@@ -74,3 +83,10 @@ New commands just need to extend the `ICommandSystem` interface, and get registe
 ### Channel Point Redemptions
 
 ### Notifications
+
+In OBS, add the following four BrowserSources
+
+`http://localsource:5000/BrowserSource/overlay.html` - Image notifications
+`http://localsource:5000/BrowserSource/controllerSpy.html` - SNES NintendoSpy Overlay
+`http://localsource:5000/BrowserSource/timer.html` - Timer overlay
+`http://localsource:5000/BrowserSource/ttsmarquee.html` - Scrolling TTS Marquee
