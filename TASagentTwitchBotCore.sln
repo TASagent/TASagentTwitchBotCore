@@ -7,8 +7,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BGC_Tools", "BGC_Tools\BGC_
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BotConfigurator", "BotConfigurator\BotConfigurator.csproj", "{27DF51AE-DF33-4B90-A455-6507E663DB0F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BasicMicController", "BasicMicController\BasicMicController.csproj", "{12D9E6EF-B37E-49D6-AE09-149C86A27465}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TASagentTwitchBot.Core", "TASagentTwitchBot.Core\TASagentTwitchBot.Core.csproj", "{A32D7301-F5DE-43AE-980A-96DA07943691}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TASagentTwitchBot.Plugin.ControllerSpy", "TASagentTwitchBot.Plugin.ControllerSpy\TASagentTwitchBot.Plugin.ControllerSpy.csproj", "{E28B4D8C-15EF-4672-BA39-E0F8BF20BAA5}"
@@ -27,10 +25,6 @@ Global
 		{27DF51AE-DF33-4B90-A455-6507E663DB0F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{27DF51AE-DF33-4B90-A455-6507E663DB0F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{27DF51AE-DF33-4B90-A455-6507E663DB0F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{12D9E6EF-B37E-49D6-AE09-149C86A27465}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{12D9E6EF-B37E-49D6-AE09-149C86A27465}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{12D9E6EF-B37E-49D6-AE09-149C86A27465}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{12D9E6EF-B37E-49D6-AE09-149C86A27465}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A32D7301-F5DE-43AE-980A-96DA07943691}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A32D7301-F5DE-43AE-980A-96DA07943691}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A32D7301-F5DE-43AE-980A-96DA07943691}.Release|Any CPU.ActiveCfg = Release|Any CPU

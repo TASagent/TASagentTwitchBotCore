@@ -9,7 +9,8 @@ namespace BGC.IO
     {
         private static string rootDirectory = null;
 
-        public static string defaultDirectory = "TASagentBot";
+        public static string defaultDirectory = "TASagentBotDemo";
+        public static bool Initialized => rootDirectory is not null;
 
         public static void Initialize(string directory)
         {

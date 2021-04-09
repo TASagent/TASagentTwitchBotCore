@@ -70,6 +70,12 @@ namespace TASagentTwitchBot.Core.Commands
             }
         }
 
+        protected virtual string GetGenericHelpMessage() =>
+            $"Commands: {string.Join(", ", GetAllPublicCommandStrings())}. For more information, visit https://info.tas.wtf";
+
+        protected virtual string GetUnrecognizedCommandMessage(IRC.TwitchChatter chatter, string[] splitMessage) =>
+            $"@{chatter.User.TwitchUserName}, You wot m8‽ ({splitMessage[0]})";
+
         public async Task HandleCommand(IRC.TwitchChatter chatter)
         {
             if (chatter.User.AuthorizationLevel == AuthorizationLevel.Restricted)
@@ -93,7 +99,11 @@ namespace TASagentTwitchBot.Core.Commands
                     if (splitMessage.Length == 1)
                     {
                         //General Help
-                        communication.SendPublicChatMessage($"Commands: {string.Join(", ", GetAllPublicCommandStrings())}. For more information, visit https://TASagent.github.io/");
+                        string response = GetGenericHelpMessage();
+                        if (!string.IsNullOrEmpty(response))
+                        {
+                            communication.SendPublicChatMessage(response);
+                        }
                     }
                     else if (helpFunctions.ContainsKey(splitMessage[1].ToLowerInvariant()))
                     {
@@ -165,14 +175,19 @@ namespace TASagentTwitchBot.Core.Commands
                     }
                     else
                     {
-                        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, You wot m8‽ (!{command})");
+                        string response = GetUnrecognizedCommandMessage(chatter, splitMessage);
+                        if (!string.IsNullOrEmpty(response))
+                        {
+                            communication.SendPublicChatMessage(response);
+                        }
+
                         communication.SendDebugMessage($"Unrecognized command: {cleanMessage}");
                     }
                     break;
             }
         }
 
-        public async Task HandleWhisper(IRC.TwitchChatter chatter)
+        public virtual async Task HandleWhisper(IRC.TwitchChatter chatter)
         {
             if (chatter.User.AuthorizationLevel == AuthorizationLevel.Restricted)
             {
@@ -192,6 +207,6 @@ namespace TASagentTwitchBot.Core.Commands
             }
         }
 
-        public bool IsCommand(string message) => message.TrimStart().StartsWith('!');
+        public virtual bool IsCommand(string message) => message.TrimStart().StartsWith('!');
     }
 }

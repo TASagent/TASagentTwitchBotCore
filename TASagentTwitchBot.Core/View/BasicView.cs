@@ -7,6 +7,7 @@ namespace TASagentTwitchBot.Core.View
 {
     public class BasicView : IConsoleOutput, IDisposable
     {
+        private readonly Config.BotConfiguration botConfig;
         private readonly ICommunication communication;
         private readonly ApplicationManagement applicationManagement;
 
@@ -20,11 +21,13 @@ namespace TASagentTwitchBot.Core.View
         private void WriteErrorLine(string line) => DebugMessageHandler(line, MessageType.Error);
 
         public BasicView(
+            Config.IBotConfigContainer botConfigContainer,
             ICommunication communication,
             ApplicationManagement applicationManagement)
         {
             Console.Title = "TASagent TwitchBot";
 
+            botConfig = botConfigContainer.BotConfig;
             this.communication = communication;
             this.applicationManagement = applicationManagement;
 
@@ -73,12 +76,12 @@ namespace TASagentTwitchBot.Core.View
 
         private void SendPublicChatHandler(string message)
         {
-            Console.WriteLine($"Chat    TASagentPuppet: {message}");
+            Console.WriteLine($"Chat    {botConfig.BotName}: {message}");
         }
 
         private void SendWhisperHandler(string username, string message)
         {
-            Console.WriteLine($"Chat    TASagentPuppet whispers {username}: {message}");
+            Console.WriteLine($"Chat    {botConfig.BotName} whispers {username}: {message}");
         }
 
         private void ReceiveMessageHandler(IRC.TwitchChatter chatter)

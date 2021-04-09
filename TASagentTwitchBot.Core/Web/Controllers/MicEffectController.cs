@@ -9,18 +9,18 @@ namespace TASagentTwitchBot.Core.Web.Controllers
     [Route("/TASagentBotAPI/Mic/[action]")]
     public class MicController : ControllerBase
     {
+        private readonly Config.IBotConfigContainer botConfigContainer;
         private readonly Audio.IMicrophoneHandler microphoneHandler;
         private readonly Audio.Effects.IAudioEffectSystem audioEffectSystem;
-        private readonly Config.IBotConfigContainer botConfigContainer;
 
         public MicController(
+            Config.IBotConfigContainer botConfigContainer,
             Audio.IMicrophoneHandler microphoneHandler,
-            Audio.Effects.IAudioEffectSystem audioEffectSystem,
-            Config.IBotConfigContainer botConfigContainer)
+            Audio.Effects.IAudioEffectSystem audioEffectSystem)
         {
+            this.botConfigContainer = botConfigContainer;
             this.microphoneHandler = microphoneHandler;
             this.audioEffectSystem = audioEffectSystem;
-            this.botConfigContainer = botConfigContainer;
         }
 
         [HttpPost]
@@ -75,7 +75,7 @@ namespace TASagentTwitchBot.Core.Web.Controllers
         }
 
         [HttpPost]
-        [AuthRequired(AuthDegree.Privileged)]
+        [AuthRequired(AuthDegree.Admin)]
         public IActionResult Compressor(Config.CompressorConfiguration request)
         {
             //Set CompressorConfig
@@ -94,7 +94,7 @@ namespace TASagentTwitchBot.Core.Web.Controllers
             botConfigContainer.BotConfig.MicConfiguration.CompressorConfiguration;
 
         [HttpPost]
-        [AuthRequired(AuthDegree.Privileged)]
+        [AuthRequired(AuthDegree.Admin)]
         public IActionResult Expander(Config.ExpanderConfiguration request)
         {
             //Set CompressorConfig
@@ -113,7 +113,7 @@ namespace TASagentTwitchBot.Core.Web.Controllers
             botConfigContainer.BotConfig.MicConfiguration.ExpanderConfiguration;
 
         [HttpPost]
-        [AuthRequired(AuthDegree.Privileged)]
+        [AuthRequired(AuthDegree.Admin)]
         public IActionResult NoiseGate(Config.NoiseGateConfiguration request)
         {
             //Set CompressorConfig

@@ -25,17 +25,18 @@ namespace BotConfigurator
         private static async Task RunConfiguration()
         {
             Console.WriteLine("Welcome to the TASagentBot Configurator!\n\n");
+
+            IBotConfigContainer botConfigContainer = new BotConfigContainer();
             ICommunication communication = new CommunicationHandler();
             ApplicationManagement appManagement = new ApplicationManagement();
-            _ = new TASagentTwitchBot.Core.View.BasicView(communication, appManagement);
+
+            _ = new TASagentTwitchBot.Core.View.BasicView(botConfigContainer, communication, appManagement);
 
             BGC.Debug.LogCallback += communication.SendDebugMessage;
             BGC.Debug.LogWarningCallback += communication.SendWarningMessage;
             BGC.Debug.LogErrorCallback += communication.SendErrorMessage;
 
             DataManagement.Initialize("TASagentBotDemo");
-
-            IBotConfigContainer botConfigContainer = new BotConfigContainer();
 
             botConfig = botConfigContainer.BotConfig;
             botConfigContainer.SerializeData();
@@ -120,7 +121,6 @@ namespace BotConfigurator
             helixHelper = new HelixHelper(botConfigContainer, communication);
             botTokenValidator = new TokenValidator(botConfigContainer, communication, true, helixHelper);
             broadcasterTokenValidator = new TokenValidator(botConfigContainer, communication, false, helixHelper);
-
 
             //Try to connect and validate tokens
             if (!await botTokenValidator.TryToConnect())

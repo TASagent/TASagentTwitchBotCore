@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.FeatureManagement.Mvc;
 
 using TASagentTwitchBot.Core.TTS;
 using TASagentTwitchBot.Core.Audio.Effects;
@@ -11,7 +10,7 @@ namespace TASagentTwitchBot.Core.Web.Controllers
 {
     [ApiController]
     [Route("/TASagentBotAPI/TTS/[action]")]
-    [FeatureGate(Feature.TTS)]
+    [ConditionalFeature("TTS")]
     public class TTSController : ControllerBase
     {
         private readonly IAudioEffectSystem audioEffectSystem;
@@ -27,7 +26,8 @@ namespace TASagentTwitchBot.Core.Web.Controllers
 
         [HttpPost]
         [AuthRequired(AuthDegree.Privileged)]
-        public IActionResult Play(TTSRequest request)
+        public IActionResult Play(
+            TTSRequest request)
         {
             if (string.IsNullOrEmpty(request.Voice) ||
                 string.IsNullOrEmpty(request.Pitch) ||

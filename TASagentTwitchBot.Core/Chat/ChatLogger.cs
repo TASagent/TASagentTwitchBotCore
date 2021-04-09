@@ -5,13 +5,17 @@ namespace TASagentTwitchBot.Core.Chat
 {
     public class ChatLogger : IDisposable
     {
+        private readonly Config.BotConfiguration botConfig;
         private readonly Lazy<Logs.LocalLogger> chatLog;
         private readonly Channel<string> lineChannel;
         private bool disposedValue;
 
         public ChatLogger(
+            Config.IBotConfigContainer botConfigContainer,
             ICommunication communication)
         {
+            botConfig = botConfigContainer.BotConfig;
+
             lineChannel = Channel.CreateUnbounded<string>();
             chatLog = new Lazy<Logs.LocalLogger>(() => new Logs.LocalLogger("ChatLogs", "chat"));
 
@@ -24,12 +28,12 @@ namespace TASagentTwitchBot.Core.Chat
 
         private void WriteOutgoingMessage(string message)
         {
-            lineChannel.Writer.TryWrite($"[{DateTime.Now:G}] TASagentPuppet: {message}");
+            lineChannel.Writer.TryWrite($"[{DateTime.Now:G}] {botConfig.BotName}: {message}");
         }
 
         private void WriteOutgoingWhisper(string username, string message)
         {
-            lineChannel.Writer.TryWrite($"[{DateTime.Now:G}] TASagentPuppet /w {username} : {message}");
+            lineChannel.Writer.TryWrite($"[{DateTime.Now:G}] {botConfig.BotName} /w {username} : {message}");
         }
 
         private void WriteIncomingMessage(IRC.TwitchChatter chatter)

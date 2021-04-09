@@ -6,10 +6,11 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.FeatureManagement;
 using Microsoft.OpenApi.Models;
 
-namespace TASagentTwitchBot.Core.Web
+using TASagentTwitchBot.Core.Web;
+
+namespace TASagentTwitchBot.Core
 {
     public class StartupCore
     {
@@ -44,9 +45,23 @@ namespace TASagentTwitchBot.Core.Web
         /// </summary>
         protected virtual void BuildCustomEndpointRoutes(IEndpointRouteBuilder endpoints) { }
 
+        protected virtual void ConfigureAddCustomAssemblies(IMvcBuilder builder) { }
+
+        protected virtual string[] GetExcludedFeatures() => Array.Empty<string>();
+
+        protected virtual void ConfigureAddControllers(IServiceCollection services)
+        {
+            IMvcBuilder mvcBuilder = services.GetMvcBuilder();
+
+            ConfigureAddCustomAssemblies(mvcBuilder);
+
+            mvcBuilder.RegisterControllersWithoutFeatures(GetExcludedFeatures());
+        }
+
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            ConfigureAddControllers(services);
             ConfigureCoreServicesInitial(services);
             ConfigureDatabases(services);
             ConfigureCoreServices(services);
@@ -56,9 +71,6 @@ namespace TASagentTwitchBot.Core.Web
 
         protected virtual void ConfigureCoreServicesInitial(IServiceCollection services)
         {
-            services.AddFeatureManagement();
-            services.AddControllers();
-
 #if DEBUG
             services.AddSwaggerGen(c =>
             {
@@ -168,10 +180,10 @@ namespace TASagentTwitchBot.Core.Web
         /// </summary>
         protected virtual void BuildCoreEndpointRoutes(IEndpointRouteBuilder endpoints)
         {
-            endpoints.MapHub<Hubs.MonitorHub>("/Hubs/Monitor");
-            endpoints.MapHub<Hubs.OverlayHub>("/Hubs/Overlay");
-            endpoints.MapHub<Hubs.TTSMarqueeHub>("/Hubs/TTSMarquee");
-            endpoints.MapHub<Hubs.TimerHub>("/Hubs/Timer");
+            endpoints.MapHub<Web.Hubs.MonitorHub>("/Hubs/Monitor");
+            endpoints.MapHub<Web.Hubs.OverlayHub>("/Hubs/Overlay");
+            endpoints.MapHub<Web.Hubs.TTSMarqueeHub>("/Hubs/TTSMarquee");
+            endpoints.MapHub<Web.Hubs.TimerHub>("/Hubs/Timer");
         }
 
         protected virtual void ConfigureCoreInitial(IApplicationBuilder app, IWebHostEnvironment env)
@@ -198,7 +210,7 @@ namespace TASagentTwitchBot.Core.Web
 
         protected virtual void ConfigureCoreMiddleware(IApplicationBuilder app)
         {
-            app.UseMiddleware<Middleware.AuthCheckerMiddleware>();
+            app.UseMiddleware<Web.Middleware.AuthCheckerMiddleware>();
         }
 
         protected virtual void ConstructCoreSingletons(IServiceProvider serviceProvider)

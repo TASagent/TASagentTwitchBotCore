@@ -26,6 +26,7 @@ namespace TASagentTwitchBot.Core.View
         private const ConsoleColor textColor = ConsoleColor.White;
         private const ConsoleColor backgroundColor = ConsoleColor.Black;
 
+        private readonly Config.BotConfiguration botConfig;
         private readonly ICommunication communication;
         private readonly ApplicationManagement applicationManagement;
 
@@ -54,11 +55,13 @@ namespace TASagentTwitchBot.Core.View
         private void WriteErrorLine(string line) => DebugMessageHandler(line, MessageType.Error);
 
         public ConsoleView(
+            Config.IBotConfigContainer botConfigContainer,
             ICommunication communication,
             ApplicationManagement applicationManagement)
         {
             Console.Title = "TASagent TwitchBot";
 
+            botConfig = botConfigContainer.BotConfig;
             this.communication = communication;
             this.applicationManagement = applicationManagement;
 
@@ -123,12 +126,12 @@ namespace TASagentTwitchBot.Core.View
 
         private void SendPublicChatHandler(string message)
         {
-            chatFrame.AddLine($" TASagentPuppet: {message}", 1);
+            chatFrame.AddLine($" {botConfig.BotName}: {message}", 1);
         }
 
         private void SendWhisperHandler(string username, string message)
         {
-            chatFrame.AddLine($" TASagentPuppet whispers {username}: {message}", 1);
+            chatFrame.AddLine($" {botConfig.BotName} whispers {username}: {message}", 1);
         }
 
         private void ReceiveMessageHandler(IRC.TwitchChatter chatter)

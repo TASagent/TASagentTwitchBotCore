@@ -79,11 +79,8 @@
 
       messageBlock.messages.forEach(function(message) {
         var liElement = $(`<li>${message.message}</li>`);
-
         let button = $("<button>Replay</button>");
-        button.on("click", function() {
-          connection.invoke("ReplayNotification", message.id);
-        });
+        button.on("click", function() { ReplayNotification(message.id); });
         liElement.prepend(button);
         scrollBox.append(liElement);
       });
@@ -101,17 +98,11 @@
         var liElement = $(`<li id=pending_${message.id}>${message.message}</li>`);
 
         let denyButton = $("<button>Deny</button>");
-        denyButton.on("click", function() {
-          connection.invoke("UpdatePendingNotification", message.id, false);
-          liElement.remove();
-        });
+        denyButton.on("click", function() { UpdatePendingNotification(message.id, false); });
         liElement.prepend(denyButton);
 
         let approveButton = $("<button>Approve</button>");
-        approveButton.on("click", function() {
-          connection.invoke("UpdatePendingNotification", message.id, true);
-          liElement.remove();
-        });
+        approveButton.on("click", function() { UpdatePendingNotification(message.id, true); });
         liElement.prepend(approveButton);
 
         scrollBox.append(liElement);
@@ -171,6 +162,7 @@
             if (result.role === "Admin")
             {
               FetchAudioDevices();
+              RefreshSerialDevices();
             }
           }
 
@@ -219,6 +211,51 @@
           $("#input-Expander-Release").val(result.releaseDuration);
           $("#input-Expander-Gain").val(result.outputGain);
         }});
+    }
+
+    function RefreshSerialDevices() {
+      $.getJSON({
+        url: "/TASagentBotAPI/ControllerSpy/GetPorts",
+        headers: { "Authorization": "PASS NONE" },
+        success: function(devices) {
+          var serialDeviceSelect = $("#select-SerialDevice");
+
+          serialDeviceSelect.empty();
+
+          serialDeviceSelect.append($("<option value=\"\">None</option>"))
+
+          devices.forEach(function(device) {
+            serialDeviceSelect.append($(`<option value="${device}">${device}</option>`));
+          });
+
+          UpdateCurrentSerialDevice();
+        },
+        beforeSend: ApplyAuth,
+        error: HandleErrorResponse
+      });
+    }
+
+
+    function UpdateCurrentSerialDevice() {
+      $.getJSON({
+        url: "/TASagentBotAPI/ControllerSpy/CurrentPort",
+        headers: { "Authorization": "PASS NONE" },
+        success: function(device) { $("#select-SerialDevice").val(device); },
+        beforeSend: ApplyAuth,
+        error: HandleErrorResponse
+      });
+    }
+    
+    function SubmitSerialDeviceChanged(port) {
+      PrintText(`Serial Device being changed to: ${port}`);
+      $.post({
+        url: "/TASagentBotAPI/ControllerSpy/Attach",
+        headers: { "Authorization": "PASS NONE" },
+        contentType: "application/json;charset=utf-8",
+        data: JSON.stringify({ Port: port }),
+        beforeSend: ApplyAuth,
+        error: HandleErrorResponse
+      });
     }
 
     function UpdateTimerLayoutDisplayModes() {
@@ -337,9 +374,9 @@
       });
     }
 
-    function PleaseClap() {
+    function SkipNotification() {
       $.post({
-        url: "/TASagentBotAPI/Event/PleaseClap",
+        url: "/TASagentBotAPI/Notifications/SkipNotification",
         headers: { "Authorization": "PASS NONE" },
         contentType: "application/json;charset=utf-8",
         beforeSend: ApplyAuth,
@@ -390,6 +427,31 @@
       });
     }
 
+    function UpdatePendingNotification(index, approved) {
+      $.post({
+        url: "/TASagentBotAPI/Notifications/UpdatePendingNotification",
+        headers: { "Authorization": "PASS NONE" },
+        contentType: "application/json;charset=utf-8",
+        data: JSON.stringify({
+          Index: index,
+          Approved: approved
+          }),
+        beforeSend: ApplyAuth,
+        error: HandleErrorResponse
+      });
+    }
+
+    function ReplayNotification(index) {
+      $.post({
+        url: "/TASagentBotAPI/Notifications/ReplayNotification",
+        headers: { "Authorization": "PASS NONE" },
+        contentType: "application/json;charset=utf-8",
+        data: JSON.stringify({ Index: index }),
+        beforeSend: ApplyAuth,
+        error: HandleErrorResponse
+      });
+    }
+
     function SubmitEffectOutputDevice(device) {
       PrintText(`Effect output device being changed to: ${device}`);
       $.post({
@@ -429,7 +491,7 @@
     function SubmitMidiOutputDevice(device) {
       PrintText(`Midi output device being changed to: ${device}`);
       $.post({
-        url: "/TASagentBotAPI/Settings/CurrentMidiOutputDevice",
+        url: "/TASagentBotAPI/Midi/CurrentMidiOutputDevice",
         headers: { "Authorization": "PASS NONE" },
         contentType: "application/json;charset=utf-8",
         data: JSON.stringify({ Device: device }),
@@ -441,7 +503,7 @@
     function SubmitMidiDevice(device) {
       PrintText(`Midi device being changed to: ${device}`);
       $.post({
-        url: "/TASagentBotAPI/Settings/CurrentMidiDevice",
+        url: "/TASagentBotAPI/Midi/CurrentMidiDevice",
         headers: { "Authorization": "PASS NONE" },
         contentType: "application/json;charset=utf-8",
         data: JSON.stringify({ Device: device }),
@@ -453,7 +515,7 @@
     function SubmitMidiInstrument(value) {
       PrintText(`Midi instrument being changed to: ${value}`);
       $.post({
-        url: "/TASagentBotAPI/Settings/CurrentMidiInstrument",
+        url: "/TASagentBotAPI/Midi/CurrentMidiInstrument",
         headers: { "Authorization": "PASS NONE" },
         contentType: "application/json;charset=utf-8",
         data: JSON.stringify({
@@ -468,7 +530,7 @@
     function SubmitMidiSoundEffect(value) {
       PrintText(`Midi Sound Effect being changed to: ${value}`);
       $.post({
-        url: "/TASagentBotAPI/Settings/CurrentMidiSoundEffect",
+        url: "/TASagentBotAPI/Midi/CurrentMidiSoundEffect",
         headers: { "Authorization": "PASS NONE" },
         contentType: "application/json;charset=utf-8",
         data: JSON.stringify({
@@ -530,7 +592,7 @@
       });
       
       $.get({
-        url: "/TASagentBotAPI/Settings/MidiDevices",
+        url: "/TASagentBotAPI/Midi/MidiDevices",
         headers: { "Authorization": "PASS NONE" },
         success: function(devices) {
           var midiDeviceSelect =  $("#select-MidiDevice");
@@ -551,7 +613,7 @@
       });
       
       $.get({
-        url: "/TASagentBotAPI/Settings/MidiInstruments",
+        url: "/TASagentBotAPI/Midi/MidiInstruments",
         headers: { "Authorization": "PASS NONE" },
         success: function(devices) {
           var midiInstrumentSelect =  $("#select-MidiInstrument");
@@ -586,7 +648,7 @@
       });
 
       $.get({
-        url: "/TASagentBotAPI/Settings/CurrentMidiOutputDevice",
+        url: "/TASagentBotAPI/Midi/CurrentMidiOutputDevice",
         headers: { "Authorization": "PASS NONE" },
         success: function(device) { $("#select-MidiOutputDevice").val(device); },
         beforeSend: ApplyAuth,
@@ -606,7 +668,7 @@
 
     function UpdateCurrentMidiDevice() {
       $.get({
-        url: "/TASagentBotAPI/Settings/CurrentMidiDevice",
+        url: "/TASagentBotAPI/Midi/CurrentMidiDevice",
         headers: { "Authorization": "PASS NONE" },
         success: function(device) { $("#select-MidiDevice").val(device); },
         beforeSend: ApplyAuth,
@@ -806,7 +868,7 @@
       SetAuthStatus("None");
 
       connection = new signalR.HubConnectionBuilder()
-        .withUrl("/MonitorHub")
+        .withUrl("/Hubs/Monitor")
         .withAutomaticReconnect()
         .build();
 
@@ -895,12 +957,9 @@
       $("#button-SubmitCompressorSettings").click(SubmitCompressor);
       $("#button-SubmitExpanderSettings").click(SubmitExpander);
       
-      $("#button-PleaseClap").click(PleaseClap);
       $("#button-Quit").click(Quit);
       
-      $("#button-Sephiroth").click(function() {
-        PlaySound("sephiroth");
-      });
+      $("#button-Skip").click(SkipNotification);
 
       $("#button-PlaySound").click(function() {
         PlaySound($("#input-PlaySound").val());
@@ -986,6 +1045,10 @@
       
       RefreshDisplay();
       UpdateTimerLayoutDisplayModes();
+
+      var serialDeviceSelect = $("#select-SerialDevice");
+      serialDeviceSelect.change(function() { SubmitSerialDeviceChanged(serialDeviceSelect.val()); });
+      $("#button-RefreshSerialDevices").click(RefreshSerialDevices);
     });
     
   </script>
@@ -1024,8 +1087,7 @@
         <h3>Tools</h3>
         
         <div class="d-flex flex-wrap">
-          <button class="btn btn-primary requirePrivAuth p-2 m-2" id="button-PleaseClap">Please Clap</button>
-          <button class="btn btn-primary requirePrivAuth p-2 m-2" id="button-Sephiroth">Sephiroth</button>
+          <button class="btn btn-primary requirePrivAuth p-2 m-2" id="button-Skip">Skip</button>
           <button class="btn btn-primary requireAdminAuth p-2 m-2" id="button-Quit">Quit</button>
         </div>
 
@@ -1269,6 +1331,35 @@
                 <div class="input-group-append">
                   <button id="button-TimerLoad" class="btn btn-primary" disabled="true">Load</button> 
                 </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+        
+        <div class="card adminAuthGroup">
+          <div class="card-header" id="inputCaptureHeading">
+            <h4 class="mb-0">
+              <button class="btn btn-link" data-toggle="collapse" data-target="#inputCaptureCollapser" aria-expanded="false" aria-controls="inputCaptureCollapser">
+                <h4>Input Capture</h4>
+              </button>
+            </h4>
+          </div>
+
+          <div id="inputCaptureCollapser" class="collapse" aria-labelledby="inputCaptureHeading" data-parent="#toolsAccordion">
+            <div class="card-body">
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="select-SerialDevice">Serial Devices</label>
+                  <select class="form-control" id="select-SerialDevice">
+                    <option selected>None</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <button class="btn btn-primary mb-2" id="button-RefreshSerialDevices">Refresh</button>
               </div>
 
             </div>

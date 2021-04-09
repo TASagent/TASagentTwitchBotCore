@@ -11,20 +11,17 @@ namespace TASagentTwitchBot.Core.Web.Controllers
     public class SFXController : ControllerBase
     {
         private readonly ISoundEffectSystem soundEffectSystem;
-        private readonly Notifications.IActivityDispatcher activityDispatcher;
         private readonly IAudioPlayer audioPlayer;
         private readonly Config.BotConfiguration botConfig;
 
         public SFXController(
+            Config.IBotConfigContainer botConfigContainer,
             ISoundEffectSystem soundEffectSystem,
-            IAudioPlayer audioPlayer,
-            Notifications.IActivityDispatcher activityDispatcher,
-            Config.IBotConfigContainer botConfigContainer)
+            IAudioPlayer audioPlayer)
         {
+            botConfig = botConfigContainer.BotConfig;
             this.soundEffectSystem = soundEffectSystem;
             this.audioPlayer = audioPlayer;
-            this.activityDispatcher = activityDispatcher;
-            botConfig = botConfigContainer.BotConfig;
         }
 
         [HttpPost]
@@ -52,14 +49,6 @@ namespace TASagentTwitchBot.Core.Web.Controllers
 
             audioPlayer.DemandPlayAudioImmediate(new SoundEffectRequest(soundEffect));
 
-            return Ok();
-        }
-
-        [HttpPost]
-        [AuthRequired(AuthDegree.Privileged)]
-        public IActionResult Skip()
-        {
-            activityDispatcher.Skip();
             return Ok();
         }
     }

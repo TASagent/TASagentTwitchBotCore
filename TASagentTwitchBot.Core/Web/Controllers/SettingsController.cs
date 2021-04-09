@@ -12,16 +12,13 @@ namespace TASagentTwitchBot.Core.Web.Controllers
     {
         private readonly Audio.IMicrophoneHandler microphoneHandler;
         private readonly Audio.IAudioPlayer audioPlayer;
-        private readonly Audio.MidiKeyboardHandler midiKeyboardHandler;
 
         public SettingsController(
             Audio.IMicrophoneHandler microphoneHandler,
-            Audio.IAudioPlayer audioPlayer,
-            Audio.MidiKeyboardHandler midiKeyboardHandler)
+            Audio.IAudioPlayer audioPlayer)
         {
             this.microphoneHandler = microphoneHandler;
             this.audioPlayer = audioPlayer;
-            this.midiKeyboardHandler = midiKeyboardHandler;
         }
 
         [HttpGet]
@@ -78,74 +75,6 @@ namespace TASagentTwitchBot.Core.Web.Controllers
         public IActionResult CurrentEffectOutputDevice(DeviceRequest deviceRequest)
         {
             if (!audioPlayer.UpdateEffectOutputDevice(deviceRequest.Device))
-            {
-                return BadRequest();
-            }
-
-            return Ok();
-        }
-
-        [HttpGet]
-        [AuthRequired(AuthDegree.Admin)]
-        public ActionResult<IEnumerable<string>> MidiDevices() =>
-            midiKeyboardHandler.GetMidiDevices();
-
-        [HttpGet]
-        [AuthRequired(AuthDegree.Admin)]
-        public ActionResult<string> CurrentMidiDevice() =>
-            midiKeyboardHandler.GetCurrentMidiDevice();
-
-        [HttpPost]
-        [AuthRequired(AuthDegree.Admin)]
-        public IActionResult CurrentMidiDevice(DeviceRequest deviceRequest)
-        {
-            if (!midiKeyboardHandler.UpdateCurrentMidiDevice(deviceRequest.Device))
-            {
-                return BadRequest();
-            }
-
-            return Ok();
-        }
-
-        [HttpGet]
-        [AuthRequired(AuthDegree.Admin)]
-        public ActionResult<string> CurrentMidiOutputDevice() =>
-            midiKeyboardHandler.GetCurrentMidiOutputDevice();
-
-        [HttpPost]
-        [AuthRequired(AuthDegree.Admin)]
-        public IActionResult CurrentMidiOutputDevice(DeviceRequest deviceRequest)
-        {
-            if (!midiKeyboardHandler.UpdateCurrentMidiOutputDevice(deviceRequest.Device))
-            {
-                return BadRequest();
-            }
-
-            return Ok();
-        }
-
-        [HttpGet]
-        [AuthRequired(AuthDegree.Admin)]
-        public ActionResult<IEnumerable<string>> MidiInstruments() =>
-            midiKeyboardHandler.GetSupportedInstruments();
-
-        [HttpPost]
-        [AuthRequired(AuthDegree.Admin)]
-        public IActionResult CurrentMidiInstrument(MidiRequest deviceRequest)
-        {
-            if (!midiKeyboardHandler.BindToInstrument(deviceRequest.Effect))
-            {
-                return BadRequest();
-            }
-
-            return Ok();
-        }
-
-        [HttpPost]
-        [AuthRequired(AuthDegree.Admin)]
-        public IActionResult CurrentMidiSoundEffect(MidiRequest deviceRequest)
-        {
-            if (!midiKeyboardHandler.BindToSoundEffect(deviceRequest.Effect))
             {
                 return BadRequest();
             }

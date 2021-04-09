@@ -9,16 +9,13 @@ namespace TASagentTwitchBot.Core.Web.Hubs
     {
         private readonly Config.BotConfiguration botConfig;
         private readonly IMessageAccumulator messsageAccumulator;
-        private readonly Notifications.IActivityDispatcher activityDispatcher;
 
         public MonitorHub(
             Config.IBotConfigContainer botConfigContainer,
-            IMessageAccumulator messsageAccumulator,
-            Notifications.IActivityDispatcher activityDispatcher)
+            IMessageAccumulator messsageAccumulator)
         {
             botConfig = botConfigContainer.BotConfig;
             this.messsageAccumulator = messsageAccumulator;
-            this.activityDispatcher = activityDispatcher;
         }
 
         public async Task<bool> Authenticate(string token)
@@ -95,37 +92,6 @@ namespace TASagentTwitchBot.Core.Web.Hubs
 
             //Failed to authenticate
             return new MessageBlock<NotificationMessage>(new System.Collections.Generic.List<NotificationMessage>());
-        }
-
-        public async Task<bool> UpdatePendingNotification(int index, bool approve)
-        {
-            if (messsageAccumulator.IsAuthenticatedUser(Context.ConnectionId))
-            {
-                messsageAccumulator.RemovePendingNotification(index);
-                bool success = activityDispatcher.UpdatePendingRequest(index, approve);
-
-                if (success)
-                {
-                    await Clients.OthersInGroup("Authenticated").SendAsync(
-                        "NotifyPendingRemoved", index);
-                }
-
-                return success;
-            }
-
-            //Failed to authenticate
-            return false;
-        }
-
-        public bool ReplayNotification(int index)
-        {
-            if (messsageAccumulator.IsAuthenticatedUser(Context.ConnectionId))
-            {
-                return activityDispatcher.ReplayNotification(index);
-            }
-
-            //Failed to authenticate
-            return false;
         }
     }
 }

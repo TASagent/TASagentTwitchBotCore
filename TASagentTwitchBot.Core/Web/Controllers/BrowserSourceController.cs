@@ -5,6 +5,7 @@ namespace TASagentTwitchBot.Core.Web.Controllers
 {
     [ApiController]
     [Route("/BrowserSource")]
+    [ConditionalFeature("Overlay")]
     public class BrowserSourceController : ControllerBase
     {
         public BrowserSourceController()

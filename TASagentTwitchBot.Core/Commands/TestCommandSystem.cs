@@ -9,32 +9,26 @@ namespace TASagentTwitchBot.Core.Commands
     {
         private readonly Config.BotConfiguration botConfig;
         private readonly ICommunication communication;
-        private readonly Audio.Effects.IAudioEffectSystem audioEffectSystem;
         private readonly Notifications.ISubscriptionHandler subscriptionHandler;
         private readonly Notifications.IRaidHandler raidHandler;
         private readonly Notifications.ICheerHandler cheerHandler;
-        private readonly Bits.CheerHelper cheerHelper;
 
         private readonly Database.BaseDatabaseContext db;
 
         public TestCommandSystem(
             Config.IBotConfigContainer botConfigContainer,
             ICommunication communication,
-            Audio.Effects.IAudioEffectSystem audioEffectSystem,
             Notifications.ISubscriptionHandler subscriptionHandler,
             Notifications.IRaidHandler raidHandler,
             Notifications.ICheerHandler cheerHandler,
-            Bits.CheerHelper cheerHelper,
             Database.BaseDatabaseContext db)
         {
             botConfig = botConfigContainer.BotConfig;
 
             this.communication = communication;
-            this.audioEffectSystem = audioEffectSystem;
             this.subscriptionHandler = subscriptionHandler;
             this.raidHandler = raidHandler;
             this.cheerHandler = cheerHandler;
-            this.cheerHelper = cheerHelper;
 
             this.db = db;
         }

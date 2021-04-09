@@ -79,7 +79,7 @@ namespace TASagentTwitchBot.Core.Quotes
             }
             else if (remainingCommand.Length == 1 && remainingCommand[0].ToLowerInvariant() == "add")
             {
-                return "Quote Add syntax example: !quote add \"Here is an example quote\" TASagent";
+                return $"Quote Add syntax: !quote add \"Quote\" [optional username]. Quote Add example: !quote add \"Here is an example quote\" {botConfig.Broadcaster}";
             }
             else
             {
@@ -425,12 +425,12 @@ namespace TASagentTwitchBot.Core.Quotes
                 if (string.IsNullOrWhiteSpace(data.FakeNewsExplanation))
                 {
                     //No Explanation
-                    outputQuoteText += $" ❗[TASagent has labeled this quote as {fakeNewsBag.PopNext()}]";
+                    outputQuoteText += $" ❗[{botConfig.Broadcaster} has labeled this quote as {fakeNewsBag.PopNext()}]";
                 }
                 else
                 {
                     //Include Explanation
-                    outputQuoteText += $" ❗[TASagent has labeled this quote as {fakeNewsBag.PopNext()}, stating \"{data.FakeNewsExplanation}\"]";
+                    outputQuoteText += $" ❗[{botConfig.Broadcaster} has labeled this quote as {fakeNewsBag.PopNext()}, stating \"{data.FakeNewsExplanation}\"]";
                 }
             }
 

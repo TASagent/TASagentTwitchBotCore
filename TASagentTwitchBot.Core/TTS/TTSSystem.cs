@@ -64,19 +64,19 @@ namespace TASagentTwitchBot.Core.TTS
 
             if (remainingCommand == null || remainingCommand.Length == 0)
             {
-                return "TTS Command - Send text as spoken audio to the stream with: !tts <text>  For more information, visit https://TASagent.github.io/twitchBotFeatures/tts.html";
+                return "TTS Command - Send text as spoken audio to the stream with: !tts <text>  For more information, visit info.tas.wtf/twitchBotFeatures/tts.html";
             }
             else if (remainingCommand[0].ToLower() == "voice")
             {
-                return "TTS Voice - Set your personal TTS Voice with !set tts voice <Voice>. Eg justin, joanna, brian, or en-US-Standard-B.  For more information, visit https://TASagent.github.io/twitchBotFeatures/tts.html#tts-voice-personalization";
+                return "TTS Voice - Set your personal TTS Voice with !set tts voice <Voice>. Eg justin, joanna, brian, or en-US-Standard-B.  For more information, visit info.tas.wtf/twitchBotFeatures/tts.html#tts-voice-personalization";
             }
             else if (remainingCommand[0].ToLower() == "pitch")
             {
-                return "TTS Pitch - Set your personal TTS Voice pitch with !set tts pitch <Pitch>. Eg normal, x-low, low, high, x-high.  For more information, visit https://TASagent.github.io/twitchBotFeatures/tts.html#supported-tts-pitches";
+                return "TTS Pitch - Set your personal TTS Voice pitch with !set tts pitch <Pitch>. Eg normal, x-low, low, high, x-high.  For more information, visit info.tas.wtf/twitchBotFeatures/tts.html#supported-tts-pitches";
             }
             else if (remainingCommand[0].ToLower() == "sounds")
             {
-                return "TTS Sounds - Add sounds to your TTS with commands like /bao, /midway, /jump, /kick, /pipe, /powerup.  For more information, visit https://TASagent.github.io/twitchBotFeatures/tts.html#tts-sound-effects-extension";
+                return "TTS Sounds - Add sounds to your TTS with commands like /bao, /midway, /jump, /kick, /pipe, /powerup.  For more information, visit info.tas.wtf/twitchBotFeatures/tts.html#tts-sound-effects-extension";
             }
             else
             {
@@ -285,7 +285,7 @@ namespace TASagentTwitchBot.Core.TTS
                     {
                         //Invalid voice
                         communication.SendPublicChatMessage(
-                            $"TTS Voice not in approved list: https://TASagent.github.io/twitchBotFeatures/tts.html#supported-tts-voices " +
+                            $"TTS Voice not in approved list: info.tas.wtf/twitchBotFeatures/tts.html#supported-tts-voices " +
                             $"submitted: ({remainingCommand[1]})");
                     }
                     else
@@ -315,7 +315,7 @@ namespace TASagentTwitchBot.Core.TTS
                         //Invalid pitch
                         communication.SendPublicChatMessage(
                             $"@{chatter.User.TwitchUserName}, " +
-                            $"TTS Pitch not in approved list: https://TASagent.github.io/twitchBotFeatures/tts.html#supported-tts-pitches " +
+                            $"TTS Pitch not in approved list: info.tas.wtf/twitchBotFeatures/tts.html#supported-tts-pitches " +
                             $"submitted: ({remainingCommand[1]})");
                     }
                     else

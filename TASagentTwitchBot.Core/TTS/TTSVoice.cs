@@ -446,7 +446,8 @@ namespace TASagentTwitchBot.Core.TTS
 
         }
 
-        private static readonly List<string> awsLexicons = new List<string>() { "TASagentLex" };
+        //Add to lexicons in startup if necessary
+        public static readonly List<string> awsLexicons = new List<string>() { };
 
         public static Amazon.Polly.Model.SynthesizeSpeechRequest GetAmazonTTSSpeechRequest(this TTSVoice voice)
         {

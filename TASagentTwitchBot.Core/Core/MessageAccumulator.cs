@@ -27,6 +27,7 @@ namespace TASagentTwitchBot.Core
 
     public class MessageAccumulator : IMessageAccumulator, IDisposable
     {
+        private readonly Config.BotConfiguration botConfig;
         private readonly IHubContext<MonitorHub> monitorHubContext;
 
         private readonly HashSet<string> authenticatedUsers = new HashSet<string>();
@@ -42,10 +43,12 @@ namespace TASagentTwitchBot.Core
         private bool disposedValue;
 
         public MessageAccumulator(
+            Config.IBotConfigContainer botConfigContainer,
             ICommunication communication,
             IHubContext<MonitorHub> monitorHubContext)
         {
             this.monitorHubContext = monitorHubContext;
+            botConfig = botConfigContainer.BotConfig;
 
             communication.ReceiveEventHandlers += ReceiveEvent;
             communication.ReceiveMessageLoggers += ReceiveChatter;
@@ -128,12 +131,12 @@ namespace TASagentTwitchBot.Core
 
         private void ReceiveMessageSent(string message)
         {
-            chatBuffer.AddMessage(new SimpleMessage($"<span style=\"color: #FF0000\">TASagentPuppet</span>:  {HttpUtility.HtmlEncode(message)}"));
+            chatBuffer.AddMessage(new SimpleMessage($"<span style=\"color: #FF0000\">{botConfig.BotName}</span>:  {HttpUtility.HtmlEncode(message)}"));
         }
 
         private void ReceiveWhisperSent(string username, string message)
         {
-            chatBuffer.AddMessage(new SimpleMessage($"<span style=\"color: #FF0000\">TASagentPuppet</span>:  {HttpUtility.HtmlEncode($"/w {username} {message}")}"));
+            chatBuffer.AddMessage(new SimpleMessage($"<span style=\"color: #FF0000\">{botConfig.BotName}</span>:  {HttpUtility.HtmlEncode($"/w {username} {message}")}"));
         }
 
         private void ReceiveDebugMessage(string message, MessageType messageType)

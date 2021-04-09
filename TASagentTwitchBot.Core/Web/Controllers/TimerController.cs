@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-
 using TASagentTwitchBot.Core.Web.Middleware;
 
 namespace TASagentTwitchBot.Core.Web.Controllers
 {
     [ApiController]
     [Route("/TASagentBotAPI/Timer/[action]")]
+    [ConditionalFeature("Overlay")]
     public class TimerController : Controller
     {
         private readonly Timer.ITimerManager timerManager;
@@ -51,7 +51,6 @@ namespace TASagentTwitchBot.Core.Web.Controllers
             timerManager.Set(timeValue.Time);
             return Ok();
         }
-
 
 
         [HttpPost]

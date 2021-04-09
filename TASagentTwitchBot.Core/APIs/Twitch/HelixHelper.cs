@@ -948,10 +948,6 @@ namespace TASagentTwitchBot.Core.API.Twitch
 
             IRestResponse response = await restClient.ExecuteAsync(request);
 
-            //System.IO.File.WriteAllText(
-            //    System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "TASagentBot", "customRewards.txt"),
-            //    response.Content);
-
             return JsonSerializer.Deserialize<TwitchCustomReward>(response.Content);
         }
 

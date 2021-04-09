@@ -74,7 +74,62 @@ Voila!
 
 ## Customizing the bot
 
-There are several major subsystems to help streamline customization, and it's simple to create new ones.
+There are several major subsystems to help streamline customization, and it's simple to create new ones.  A lot of the action takes place in the in the [Dependency Injection system](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/dependency-injection) that's part of ASP.NET.  Classes are registered in `TASagentTwitchBot.Web.StartupCore`, and when an instance of a class is required, it is instantiated (along with all of its constructor pre-requisites).  As a result, no _cycles_ are allowed (where Class A and Class B both require one-another).
+
+When multiple classes are registered for an interface or class, only the last one to be registered will be instantiated.
+
+If you wish to register a single class to handle multiple interfaces, be careful how you register it.
+
+This block would instantiate only one instance of `Notifications.FullActivityProvider` and provide it for every listed interface:
+
+```csharp
+services
+    .AddSingleton<Notifications.FullActivityProvider>()
+    .AddSingleton<Notifications.ISubscriptionHandler>(x => x.GetRequiredService<Notifications.FullActivityProvider>())
+    .AddSingleton<Notifications.ICheerHandler>(x => x.GetRequiredService<Notifications.FullActivityProvider>())
+    .AddSingleton<Notifications.IRaidHandler>(x => x.GetRequiredService<Notifications.FullActivityProvider>())
+    .AddSingleton<Notifications.IGiftSubHandler>(x => x.GetRequiredService<Notifications.FullActivityProvider>())
+    .AddSingleton<Notifications.IFollowerHandler>(x => x.GetRequiredService<Notifications.FullActivityProvider>())
+    .AddSingleton<Notifications.ITTSHandler>(x => x.GetRequiredService<Notifications.FullActivityProvider>());
+```
+
+Whereas this block would instantiate an independent copy of the class as the handler for each interface:
+
+```csharp
+services
+    .AddSingleton<Notifications.FullActivityProvider>()
+    .AddSingleton<Notifications.ISubscriptionHandler, Notifications.FullActivityProvider>()
+    .AddSingleton<Notifications.ICheerHandler, Notifications.FullActivityProvider>()
+    .AddSingleton<Notifications.IRaidHandler, Notifications.FullActivityProvider>()
+    .AddSingleton<Notifications.IGiftSubHandler, Notifications.FullActivityProvider>()
+    .AddSingleton<Notifications.IFollowerHandler, Notifications.FullActivityProvider>()
+    .AddSingleton<Notifications.ITTSHandler, Notifications.FullActivityProvider>();
+```
+
+However, when a class accepts an `IEnumerable` as a constructor argument, it receives an instance of every class that's been registered as a handler.  For example, the CommandSystem has the following constructor:
+
+```csharp
+public CommandSystem(
+    ICommunication communication,
+    ErrorHandler errorHandler,
+    IEnumerable<ICommandContainer> commandContainers)
+```
+
+So it recieves and instance of every class registered as an `ICommandContainer`:
+
+```csharp
+services
+    .AddSingleton<Commands.ICommandContainer, Commands.CustomSimpleCommands>()
+    .AddSingleton<Commands.ICommandContainer, Commands.SystemCommandSystem>()
+    .AddSingleton<Commands.ICommandContainer, Commands.PermissionSystem>()
+    .AddSingleton<Commands.ICommandContainer, Commands.ShoutOutSystem>()
+    .AddSingleton<Commands.ICommandContainer, Commands.NotificationSystem>()
+    .AddSingleton<Commands.ICommandContainer, Quotes.QuoteSystem>()
+    .AddSingleton<Commands.ICommandContainer, TTS.TTSSystem>()
+    .AddSingleton<Commands.ICommandContainer, Commands.TestCommandSystem>();
+```
+
+However, classes are (deliberately) not automatically registered as the handler for all of their interfaces.  If you created a class called `ExampleClass` that implements `Commands.ICommandContainer`, and in the `Startup` class you called `services.AddSingleton<ExampleClass>()`, then `ExampleClass` would _not_ be passed to the `CommandSystem`.
 
 ### Commands
 
