@@ -29,7 +29,7 @@ namespace TASagentTwitchBot.Core.Notifications
             _overlayHubContext = overlayHubContext;
             _ttsMarqueeHubContext = ttsMarqueeHubContext;
 
-            imagePath = BGC.IO.DataManagement.PathForDataSubDirectory(env.WebRootPath, "Assets", "Images");
+            imagePath = Path.Combine(env.WebRootPath, "Assets", "Images");
 
             imageURLs = new DepletableBag<string>()
             {

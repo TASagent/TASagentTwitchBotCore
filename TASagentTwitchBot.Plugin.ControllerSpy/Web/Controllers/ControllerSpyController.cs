@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
+
+using TASagentTwitchBot.Core.Web;
 using TASagentTwitchBot.Core.Web.Middleware;
 
 namespace TASagentTwitchBot.Plugin.ControllerSpy.Web.Controllers
 {
     [ApiController]
     [Route("/TASagentBotAPI/ControllerSpy/[action]")]
+    [ConditionalFeature("Audio")]
     public class ControllerSpyController : ControllerBase
     {
         private readonly IControllerManager controllerManager;

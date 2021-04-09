@@ -8,6 +8,8 @@ namespace TASagentTwitchBot.Core.Web.Controllers
 {
     [ApiController]
     [Route("/TASagentBotAPI/SFX/[action]")]
+    [ConditionalFeature("SFX")]
+    [ConditionalFeature("Audio")]
     public class SFXController : ControllerBase
     {
         private readonly ISoundEffectSystem soundEffectSystem;

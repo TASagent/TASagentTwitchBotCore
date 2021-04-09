@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.OpenApi.Models;
 
 using TASagentTwitchBot.Core.Web;
@@ -47,6 +49,9 @@ namespace TASagentTwitchBot.Core
 
         protected virtual void ConfigureAddCustomAssemblies(IMvcBuilder builder) { }
 
+        protected virtual void ConfigureCustomStaticFilesOverride(IApplicationBuilder app, IWebHostEnvironment env) { }
+        protected virtual void ConfigureCustomStaticFilesSupplement(IApplicationBuilder app, IWebHostEnvironment env) { }
+
         protected virtual string[] GetExcludedFeatures() => Array.Empty<string>();
 
         protected virtual void ConfigureAddControllers(IServiceCollection services)
@@ -59,7 +64,7 @@ namespace TASagentTwitchBot.Core
         }
 
         // This method gets called by the runtime. Use this method to add services to the container.
-        public void ConfigureServices(IServiceCollection services)
+        public virtual void ConfigureServices(IServiceCollection services)
         {
             ConfigureAddControllers(services);
             ConfigureCoreServicesInitial(services);
@@ -154,9 +159,10 @@ namespace TASagentTwitchBot.Core
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public virtual void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             ConfigureCoreInitial(app, env);
+            ConfigureStaticFiles(app, env);
             ConfigureCoreMiddleware(app);
             ConfigureCustomMiddleware(app);
 
@@ -204,9 +210,15 @@ namespace TASagentTwitchBot.Core
 
             app.UseRouting();
             app.UseAuthorization();
-            app.UseDefaultFiles();
-            app.UseStaticFiles();
         }
+
+        protected virtual void ConfigureStaticFiles(IApplicationBuilder app, IWebHostEnvironment env)
+        {
+            ConfigureCustomStaticFilesOverride(app, env);
+            ConfigureCoreLibraryContent(app, env);
+            ConfigureCustomStaticFilesSupplement(app, env);
+        }
+
 
         protected virtual void ConfigureCoreMiddleware(IApplicationBuilder app)
         {
@@ -220,6 +232,99 @@ namespace TASagentTwitchBot.Core
             serviceProvider.GetRequiredService<View.IConsoleOutput>();
             serviceProvider.GetRequiredService<Chat.ChatLogger>();
             serviceProvider.GetRequiredService<Commands.CommandSystem>();
+        }
+
+        protected virtual void ConfigureCoreLibraryContent(
+            IApplicationBuilder app,
+            IWebHostEnvironment env)
+        {
+            app.UseDefaultFiles();
+            //Include project's wwwroot first
+            app.UseStaticFiles();
+
+            //Include TASagentTwitchBot.Core's wwwroot
+            UseCoreLibraryContent(app, env, "TASagentTwitchBot.Core");
+        }
+
+        protected virtual void UseCoreLibraryContent(
+            IApplicationBuilder app,
+            IWebHostEnvironment env,
+            string libraryName,
+            bool useDefault = true)
+        {
+            string wwwRootPath;
+
+            if (env.IsDevelopment())
+            {
+                //Navigate relative to the current path in Development
+                wwwRootPath = Path.Combine(
+                    Directory.GetParent(env.ContentRootPath).FullName,
+                    "TASagentTwitchBotCore",
+                    libraryName,
+                    "wwwroot");
+            }
+            else
+            {
+                //Look in published "_content" directory
+                wwwRootPath = Path.Combine(env.WebRootPath, "_content", libraryName);
+            }
+
+            PhysicalFileProvider fileProvider = new PhysicalFileProvider(wwwRootPath);
+
+            if (useDefault)
+            {
+                app.UseDefaultFiles(new DefaultFilesOptions
+                {
+                    FileProvider = fileProvider,
+                    RequestPath = ""
+                });
+            }
+
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = fileProvider,
+                RequestPath = ""
+            });
+        }
+
+        protected virtual void UseLibraryContent(
+            IApplicationBuilder app,
+            IWebHostEnvironment env,
+            string libraryName,
+            bool useDefault = true)
+        {
+            string wwwRootPath;
+
+            if (env.IsDevelopment())
+            {
+                //Navigate relative to the current path in Development
+                wwwRootPath = Path.Combine(
+                    Directory.GetParent(env.ContentRootPath).FullName,
+                    libraryName,
+                    "wwwroot");
+            }
+            else
+            {
+                //Look in published "_content" directory
+                wwwRootPath = Path.Combine(env.WebRootPath, "_content", libraryName);
+            }
+
+            PhysicalFileProvider fileProvider = new PhysicalFileProvider(wwwRootPath);
+
+            if (useDefault)
+            {
+                app.UseDefaultFiles(new DefaultFilesOptions
+                {
+                    FileProvider = fileProvider,
+                    RequestPath = ""
+                });
+            }
+
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = fileProvider,
+                RequestPath = ""
+            });
         }
     }
 }

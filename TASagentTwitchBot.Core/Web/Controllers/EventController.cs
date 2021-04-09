@@ -10,19 +10,17 @@ namespace TASagentTwitchBot.Core.Web.Controllers
     public class EventController : ControllerBase
     {
         private readonly ICommunication communication;
-        private readonly ApplicationManagement applicationManagement;
 
         public EventController(
-            ICommunication communication,
-            ApplicationManagement applicationManagement)
+            ICommunication communication)
         {
             this.communication = communication;
-            this.applicationManagement = applicationManagement;
         }
 
         [HttpPost]
         [AuthRequired(AuthDegree.Admin)]
-        public IActionResult Quit()
+        public IActionResult Quit(
+            [FromServices] ApplicationManagement applicationManagement)
         {
             applicationManagement.TriggerExit();
             return Ok();

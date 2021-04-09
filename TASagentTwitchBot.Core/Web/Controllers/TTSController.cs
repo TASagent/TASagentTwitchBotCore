@@ -11,6 +11,7 @@ namespace TASagentTwitchBot.Core.Web.Controllers
     [ApiController]
     [Route("/TASagentBotAPI/TTS/[action]")]
     [ConditionalFeature("TTS")]
+    [ConditionalFeature("Audio")]
     public class TTSController : ControllerBase
     {
         private readonly IAudioEffectSystem audioEffectSystem;

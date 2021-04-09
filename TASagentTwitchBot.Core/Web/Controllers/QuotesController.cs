@@ -9,13 +9,18 @@ namespace TASagentTwitchBot.Core.Web.Controllers
 {
     [ApiController]
     [Route("/TASagentBotAPI/[controller]")]
+    [ConditionalFeature("Database")]
     public class QuotesController : ControllerBase
     {
-        public QuotesController() { }
+        private readonly Database.BaseDatabaseContext db;
+
+        public QuotesController(Database.BaseDatabaseContext db)
+        {
+            this.db = db;
+        }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<QuoteDTO>>> GetQuotes(
-            [FromServices] Database.BaseDatabaseContext db)
+        public async Task<ActionResult<IEnumerable<QuoteDTO>>> GetQuotes()
         {
             return await db.Quotes
                 .Include(x => x.Creator)
@@ -25,7 +30,6 @@ namespace TASagentTwitchBot.Core.Web.Controllers
 
         [HttpGet("{id}")]
         public async Task<ActionResult<QuoteDTO>> GetQuote(
-            [FromServices] Database.BaseDatabaseContext db,
             int id)
         {
             Database.Quote quote = await db.Quotes.FindAsync(id);

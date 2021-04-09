@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
@@ -22,23 +21,15 @@ namespace TASagentTwitchBot.Core.Web
         {
             foreach (TypeInfo controllerType in feature.Controllers.ToArray())
             {
-                if (controllerType.GetCustomAttribute<ConditionalFeatureAttribute>() is ConditionalFeatureAttribute conditionalFeatureAttribute &&
-                    disabledFeatures.Contains(conditionalFeatureAttribute.FeatureSet))
+                foreach (ConditionalFeatureAttribute conditionalFeatureAttribute in controllerType.GetCustomAttributes<ConditionalFeatureAttribute>())
                 {
-                    feature.Controllers.Remove(controllerType);
+                    if (disabledFeatures.Contains(conditionalFeatureAttribute.FeatureSet))
+                    {
+                        feature.Controllers.Remove(controllerType);
+                        break;
+                    }
                 }
             }
-        }
-    }
-
-    [AttributeUsage(AttributeTargets.Class)]
-    public class ConditionalFeatureAttribute : Attribute
-    {
-        public string FeatureSet { get; }
-
-        public ConditionalFeatureAttribute(string featureSet)
-        {
-            FeatureSet = featureSet;
         }
     }
 }

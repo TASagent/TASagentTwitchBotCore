@@ -9,6 +9,7 @@ namespace TASagentTwitchBot.Core.Web.Controllers
     [ApiController]
     [Route("/TASagentBotAPI/Midi/[action]")]
     [ConditionalFeature("Midi")]
+    [ConditionalFeature("Audio")]
     public class MidiController : ControllerBase
     {
         private readonly Audio.MidiKeyboardHandler midiKeyboardHandler;

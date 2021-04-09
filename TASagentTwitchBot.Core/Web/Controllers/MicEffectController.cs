@@ -7,6 +7,7 @@ namespace TASagentTwitchBot.Core.Web.Controllers
 {
     [ApiController]
     [Route("/TASagentBotAPI/Mic/[action]")]
+    [ConditionalFeature("Audio")]
     public class MicController : ControllerBase
     {
         private readonly Config.IBotConfigContainer botConfigContainer;
