@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TASagent Bot - Open Source</title>
+  <link rel="stylesheet" href="/Assets/css/jquery-ui.css">
+  <link rel="icon" href="data:,">
+  <script src="/Assets/js/jquery.min.js"></script>
+  <script src="/Assets/js/jquery-ui.min.js"></script>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://bootswatch.com/4/darkly/bootstrap.min.css" rel="stylesheet">
+  <!-- Popper.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+  <!-- Bootstrap -->
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div class="jumbotron jumbotron-fluid">
+    <div class="container">
+      <h1 class="display-4">TASagent Bot</h1>
+      <p class="lead">Open Source Information</p>
+    </div>
+  </div>
+  <div class="container">
+    <p>TASagentTwitchBot has been Open-Sourced under the GPL over at</p>
+    <p><a href="https://github.com/TASagent/TASagentTwitchBotCore">https://github.com/TASagent/TASagentTwitchBotCore</a> - Core bot framework</p>
+    <p><a href="https://github.com/TASagent/TASagentTwitchBotDemos">https://github.com/TASagent/TASagentTwitchBotDemos</a> - Demo projects using the framework</p>
+    <h3>Features include:</h3>
+    <ul>
+      <li>TTS</li>
+      <ul>
+        <li>Per-user customizable TTS</li>
+        <li>Support for utilizing both AWSPolly and Google Cloud TTS</li>
+        <li>TTS voice effects</li>
+      </ul>
+      <li>Voice</li>
+      <ul>
+        <li>Capture, filter, modify, and output mic audio (intended to be used with tools like VB-Audio)</li>
+        <li>Apply customizable audio effects</li>
+      </ul>
+      <li>Sound Effects</li>
+      <ul>
+        <li>You can has them</li>
+        <li>Add sound effects in-line in the middle of TTS</li>
+      </ul>
+      <li>Browser Sources</li>
+      <ul>
+        <li>Handle (and customize) video, audio, and TTS notifications for Follows, Subs, etc</li>
+        <li>Customizable Timer overlay and a system for saving, loading, and adjusting timers</li>
+        <li>Render NintendoSpy captures (only for SNES at the moment)</li>
+      </ul>
+      <li>Channel Point Handling</li>
+      <ul>
+        <li>Simple system for creating, managing, and handling new channel point redemptions</li>
+      </ul>
+      <li>Integrated example Quote System</li>
+      <ul>
+        <li>View entire quote library as a webpage (hosted at <a href="http://localhost:5000/Quotes.html">http://localhost:5000/Quotes.html</a>)</li>
+      </ul>
+      <li>Midi Instrument Host</li>
+      <ul>
+        <li>Attach midi keyboards and play them out the effects output device - EZPZ</li>
+        <li>Integrates with the Voice Vocoding effect</li>
+      </ul>
+      <li>Local Administration Website (hosted at <a href="http://localhost:5000/API/ControlPage.html">http://localhost:5000/API/ControlPage.html</a>)</li>
+      <li>REST API to control all of the above</li>
+      <li>Simple Streamdeck plugin for triggering all of the above (public soon)</li>
+      <li>Everything easily customizable and extensible</li>
+      <li>Written in C#</li>
+      <li>Not written in Python (fuck python)</li>
+    </ul>
+  </div>
+</body>
+</html>

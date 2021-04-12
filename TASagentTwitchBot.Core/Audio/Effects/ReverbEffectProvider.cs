@@ -40,12 +40,23 @@ namespace TASagentTwitchBot.Core.Audio.Effects
             {
                 //Supplied reverbType
                 reverbIRF = soundEffectSystem.GetReverbEffectByAlias(effectArguments[1]);
+
+                if (reverbIRF is null)
+                {
+                    throw new EffectParsingException($"Reverb Effect not recognized: {effectArguments[1]}.");
+                }
             }
             else
             {
                 //Grab the first as the default, I guess
                 reverbIRF = soundEffectSystem.GetReverbEffectByName(reverbEffects[0]);
+
+                if (reverbIRF is null)
+                {
+                    throw new EffectParsingException($"No reverb effects registered!");
+                }
             }
+
 
             return new ReverbEffect(reverbIRF, lastEffect);
         }

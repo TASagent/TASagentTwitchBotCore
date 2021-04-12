@@ -95,6 +95,12 @@ namespace TASagentTwitchBot.Core.Commands
                 return;
             }
 
+            if (commandsCache.ContainsKey(command))
+            {
+                communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, cannot add command !{command} - already exists.");
+                return;
+            }
+
             CustomTextCommand newTextCommand = new CustomTextCommand()
             {
                 Command = command,

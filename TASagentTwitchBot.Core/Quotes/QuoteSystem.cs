@@ -310,47 +310,56 @@ namespace TASagentTwitchBot.Core.Quotes
         private async Task AddQuote(IRC.TwitchChatter chatter, string quoteText)
         {
             //Adding
-            int endQuoteIndex = quoteText.IndexOf('"', 1);
-
-            if (!quoteText.StartsWith('"') || endQuoteIndex == -1)
-            {
-                //Malformed
-                communication.SendPublicChatMessage(
-                    $"@{chatter.User.TwitchUserName} Malformed Quote Add command.  Expected: !quote add \"Contents\" [optional username]");
-                communication.SendDebugMessage($"Bad Command: {quoteText}");
-                communication.SendDebugMessage($"    Original Message: {chatter.Message}");
-
-                return;
-            }
-
-            string quote = quoteText[1..endQuoteIndex];
+            string quote;
             string userName = botConfig.Broadcaster;
 
-            if (quoteText.Length > endQuoteIndex + 1)
+            if (quoteText.StartsWith('"') && quoteText[1..].Contains('"'))
             {
-                //Parse Username
-                quoteText = quoteText[(endQuoteIndex + 1)..].Trim();
+                int endQuoteIndex = quoteText.IndexOf('"', 1);
 
-                if (quoteText.Contains(' ') || quoteText.Contains('"'))
+                if (!quoteText.StartsWith('"') || endQuoteIndex == -1)
                 {
+                    //Malformed
                     communication.SendPublicChatMessage(
                         $"@{chatter.User.TwitchUserName} Malformed Quote Add command.  Expected: !quote add \"Contents\" [optional username]");
-                    communication.SendDebugMessage($"Bad Username: {quoteText}");
+                    communication.SendDebugMessage($"Bad Command: {quoteText}");
                     communication.SendDebugMessage($"    Original Message: {chatter.Message}");
 
                     return;
                 }
 
-                if (quoteText.StartsWith('-'))
-                {
-                    //Strip off any optional -
-                    quoteText = quoteText[1..];
-                }
+                quote = quoteText[1..endQuoteIndex];
 
-                if (quoteText.Length > 0)
+                if (quoteText.Length > endQuoteIndex + 1)
                 {
-                    userName = quoteText;
+                    //Parse Username
+                    quoteText = quoteText[(endQuoteIndex + 1)..].Trim();
+
+                    if (quoteText.Contains(' ') || quoteText.Contains('"'))
+                    {
+                        communication.SendPublicChatMessage(
+                            $"@{chatter.User.TwitchUserName} Malformed Quote Add command.  Expected: !quote add \"Contents\" [optional username]");
+                        communication.SendDebugMessage($"Bad Username: {quoteText}");
+                        communication.SendDebugMessage($"    Original Message: {chatter.Message}");
+
+                        return;
+                    }
+
+                    if (quoteText.StartsWith('-'))
+                    {
+                        //Strip off any optional -
+                        quoteText = quoteText[1..];
+                    }
+
+                    if (quoteText.Length > 0)
+                    {
+                        userName = quoteText;
+                    }
                 }
+            }
+            else
+            {
+                quote = quoteText;
             }
 
             Quote newQuote = new Quote()
