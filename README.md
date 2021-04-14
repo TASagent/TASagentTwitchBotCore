@@ -8,6 +8,8 @@ At the moment, if you aren't comfortable getting your hands dirty with the sourc
 
 But once configured, the project should be very simple to use.  It has a number of modular features, and it should be fast and easy to develop new ones.
 
+![Control Page](assets/ControlPage.png)
+
 ## Getting Started
 
 To start with, get the appropriate [NetCore 5 SDK (With AspNet)](https://dotnet.microsoft.com/download/dotnet/5.0).  It will also be useful to install the .NET Entity Framework CLI tools by running:
