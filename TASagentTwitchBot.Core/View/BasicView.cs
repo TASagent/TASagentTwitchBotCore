@@ -25,8 +25,6 @@ namespace TASagentTwitchBot.Core.View
             ICommunication communication,
             ApplicationManagement applicationManagement)
         {
-            Console.Title = "TASagent TwitchBot";
-
             botConfig = botConfigContainer.BotConfig;
             this.communication = communication;
             this.applicationManagement = applicationManagement;
@@ -58,15 +56,19 @@ namespace TASagentTwitchBot.Core.View
             switch (messageType)
             {
                 case MessageType.Debug:
-                    Console.WriteLine($"Debug   {message}");
+                    Console.WriteLine(message);
                     break;
 
                 case MessageType.Warning:
-                    Console.WriteLine($"Warning {message}");
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine(message);
+                    Console.ForegroundColor = ConsoleColor.Gray;
                     break;
 
                 case MessageType.Error:
-                    Console.WriteLine($"ERROR   {message}");
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine(message);
+                    Console.ForegroundColor = ConsoleColor.Gray;
                     break;
 
                 default:

@@ -128,23 +128,23 @@ namespace TASagentTwitchBot.Core.API.Twitch
     }
 
     public record TwitchStreams(
-        [property: JsonPropertyName("data")] List<TwitchStreams.Datum> Data,
-        [property: JsonPropertyName("pagination")] Pagination Pagination)
-    {
-        public record Datum(
-            [property: JsonPropertyName("id")] string ID,
-            [property: JsonPropertyName("user_id")] string UserID,
-            [property: JsonPropertyName("user_name")] string UserName,
-            [property: JsonPropertyName("game_id")] string GameID,
-            [property: JsonPropertyName("community_ids")] List<string> CommunityIDs,
-            [property: JsonPropertyName("type")] string Type,
-            [property: JsonPropertyName("title")] string Title,
-            [property: JsonPropertyName("viewer_count")] int ViewerCount,
-            [property: JsonPropertyName("started_at")] DateTime StartedAt,
-            [property: JsonPropertyName("language")] string Language,
-            [property: JsonPropertyName("thumbnail_url")] string ThumbnailURL,
-            [property: JsonPropertyName("tag_ids")] List<string> TagIDs);
-    }
+        [property: JsonPropertyName("data")] List<TwitchStreamData> Data,
+        [property: JsonPropertyName("pagination")] Pagination Pagination);
+
+    public record TwitchStreamData(
+        [property: JsonPropertyName("id")] string ID,
+        [property: JsonPropertyName("user_id")] string UserID,
+        [property: JsonPropertyName("user_name")] string UserName,
+        [property: JsonPropertyName("game_id")] string GameID,
+        [property: JsonPropertyName("community_ids")] List<string> CommunityIDs,
+        [property: JsonPropertyName("type")] string Type,
+        [property: JsonPropertyName("title")] string Title,
+        [property: JsonPropertyName("viewer_count")] int ViewerCount,
+        [property: JsonPropertyName("started_at")] DateTime StartedAt,
+        [property: JsonPropertyName("language")] string Language,
+        [property: JsonPropertyName("thumbnail_url")] string ThumbnailURL,
+        [property: JsonPropertyName("tag_ids")] List<string> TagIDs);
+
 
     public record TwitchChannels(
         [property: JsonPropertyName("data")] List<TwitchChannels.Datum> Data)

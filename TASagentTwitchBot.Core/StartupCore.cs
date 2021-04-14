@@ -71,6 +71,7 @@ namespace TASagentTwitchBot.Core
             ConfigureDatabases(services);
             ConfigureCoreServices(services);
             ConfigureCoreCommandServices(services);
+            ConfigureCoreWebSubServices(services);
             ConfigureCustomServices(services);
         }
 
@@ -102,9 +103,12 @@ namespace TASagentTwitchBot.Core
                 .AddSingleton<IRC.IrcClient>()
                 .AddSingleton<API.Twitch.HelixHelper>()
                 .AddSingleton<Audio.MidiKeyboardHandler>()
-                .AddSingleton<Follows.FollowerWebSubClient>()
                 .AddSingleton<PubSub.PubSubClient>()
                 .AddSingleton<Notifications.FullActivityProvider>();
+
+            services
+                .AddSingleton<API.Twitch.IBotTokenValidator, API.Twitch.BotTokenValidator>()
+                .AddSingleton<API.Twitch.IBroadcasterTokenValidator, API.Twitch.BroadcasterTokenValidator>();
 
             services
                 .AddSingleton<ICommunication, CommunicationHandler>()
@@ -124,6 +128,11 @@ namespace TASagentTwitchBot.Core
                 .AddSingleton<PubSub.IRedemptionSystem, PubSub.RedemptionSystem>()
                 .AddSingleton<Database.IUserHelper, Database.UserHelper>();
 
+            //Returns the address that websubs should be directed at
+            //Replace this with a custom class if you're behind a proxy or have a domain
+            services.AddSingleton<Config.IExternalWebAccessConfiguration, Config.ExternalWebAccessConfiguration>();
+
+
             //Make handler requests access the same instance of the CustomActivityProvider singleton
             services
                 .AddSingleton<Notifications.ISubscriptionHandler>(x => x.GetRequiredService<Notifications.FullActivityProvider>())
@@ -141,6 +150,20 @@ namespace TASagentTwitchBot.Core
                 .AddSingleton<Audio.Effects.IAudioEffectProvider, Audio.Effects.NoiseVocoderEffectProvider>()
                 .AddSingleton<Audio.Effects.IAudioEffectProvider, Audio.Effects.PitchShiftEffectProvider>()
                 .AddSingleton<Audio.Effects.IAudioEffectProvider, Audio.Effects.ReverbEffectProvider>();
+        }
+
+        protected virtual void ConfigureCoreWebSubServices(IServiceCollection services)
+        {
+            services.AddSingleton<WebSub.WebSubHandler>();
+
+            services
+                .AddSingleton<WebSub.IFollowSubscriber, WebSub.FollowSubscriber>()
+                .AddSingleton<WebSub.IStreamChangeSubscriber, WebSub.StreamChangeSubscriber>();
+
+            //Make sure the same instance of each subscriber is used in each case
+            services
+                .AddSingleton<WebSub.IWebSubSubscriber>(x => x.GetRequiredService<WebSub.IFollowSubscriber>())
+                .AddSingleton<WebSub.IWebSubSubscriber>(x => x.GetRequiredService<WebSub.IStreamChangeSubscriber>());
         }
 
         protected virtual void ConfigureCoreCommandServices(IServiceCollection services)
@@ -210,6 +233,21 @@ namespace TASagentTwitchBot.Core
 
             app.UseRouting();
             app.UseAuthorization();
+
+            app.Use(async (context, next) =>
+            {
+                //Reject all requests on WebSub Port that aren't hitting the websub endpoints
+                if (context.Request.Host.Port == Web.Middleware.WebSubHandlerMiddleware.WEBSUB_PORT &&
+                    !context.Request.Path.ToString().StartsWith("/TASagentBotAPI/WebSub/"))
+                {
+                    //Not a websub call
+                    //Refuse connections on WebSub Port
+                    context.Response.StatusCode = 401;
+                    return;
+                }
+
+                await next();
+            });
         }
 
         protected virtual void ConfigureStaticFiles(IApplicationBuilder app, IWebHostEnvironment env)
@@ -222,6 +260,7 @@ namespace TASagentTwitchBot.Core
 
         protected virtual void ConfigureCoreMiddleware(IApplicationBuilder app)
         {
+            app.UseMiddleware<Web.Middleware.WebSubHandlerMiddleware>();
             app.UseMiddleware<Web.Middleware.AuthCheckerMiddleware>();
         }
 

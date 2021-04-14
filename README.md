@@ -21,14 +21,9 @@ git submodule init
 git submodule update
 ```
 
-If you're using this as a twitch bot, you're going to need to make a new Twitch account for that bot.  You also need to go to [The Twitch Dev Console](https://dev.twitch.tv/console/apps) and register an application to receive a ClientID.  Enter any name, use `http://localhost:9000/` as the OAuth Redirect URL, and choose "Chat Bot" as the category.
+If you're using this as a twitch bot, you're going to need to make a new Twitch account for that bot.  You also need to go to [The Twitch Dev Console](https://dev.twitch.tv/console/apps) and register an application to receive a ClientID.  Enter any name, use `http://localhost:5000/TASagentBotAPI/OAuth/BotCode` and `http://localhost:5000/TASagentBotAPI/OAuth/BroadcasterCode` as the OAuth Redirect URLs, and choose "Chat Bot" as the category.
 
-You may need to forward ports `9000` and `9005` to the computer you intend to use to get everything to work.  Port `9000` is used for OAuth callbacks, and port `9005` is used for follower notifications.  To enable listening on these ports, you'll likely need to run the following commands in powershell in administrator mode:
-
-```powershell
-netsh http add urlacl url="http://+:9000/" user=everyone
-netsh http add urlacl url="http://+:9005/" user=everyone
-```
+You will need to forward port `9000` to the computer you intend to use get follower notifications to work, since port `9000` is used for Twitch WebSub callbacks. But the middleware should reject all other calls to port `9000`.
 
 Compile and run the `BotConfigurator` program to begin setup.  You'll be prompted for several values, and it will prepare some configuration files in your `Documents/TASagentBotDemo` directory.  
 

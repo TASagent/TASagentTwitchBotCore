@@ -52,130 +52,41 @@ namespace TASagentTwitchBot.Core.API.Twitch
         #region Authorization
 
         /// <summary>
-        /// Gets new OAuth Access token for Bot account
-        /// </summary>
-        public async Task<string> GetBotCode()
-        {
-            const string scopes =
-                "analytics:read:extensions " +
-                "analytics:read:games " +
-                "bits:read " +
-                "channel:edit:commercial " +
-                "channel:manage:broadcast " +
-                "channel:manage:extensions " +
-                "channel:moderate " +
-                "channel:read:hype_train " +
-                "channel:read:stream_key " +
-                "channel:read:subscriptions " +
-                "chat:edit " +
-                "chat:read " +
-                "clips:edit " +
-                "user:edit " +
-                "user:edit:follows " +
-                "user:read:broadcast " +
-                "user:read:email " +
-                "whispers:read " +
-                "whispers:edit";
-
-            string stateString = GenerateRandomStringToken();
-
-            using HttpListener httpListener = new HttpListener();
-
-            httpListener.Prefixes.Clear();
-            httpListener.Prefixes.Add("http://localhost:9000/");
-            httpListener.Start();
-
-            string url = $"https://id.twitch.tv/oauth2/authorize" +
-                $"?client_id={botConfig.TwitchClientId}" +
-                $"&client_secret={botConfig.TwitchClientSecret}" +
-                $"&redirect_uri=http://localhost:9000/" +
-                $"&response_type=code" +
-                $"&scope={scopes.Replace(" ", "+")}" +
-                $"&state={HttpUtility.UrlEncode(stateString)}";
-
-            communication.SendDebugMessage($"Go to url as Bot:\n\n{url}\n\n");
-
-            HttpListenerContext context = await httpListener.GetContextAsync();
-            HttpListenerRequest request = context.Request;
-
-            NameValueCollection queryString = request.QueryString;
-
-            //Extract AuthCode
-            string code = queryString.Get("code");
-
-            //Compare state string
-            string state = queryString.Get("state");
-            if (state != stateString)
-            {
-                throw new Exception($"Security Issue.  State string did not match:\n  SENT     {state}\n  RECEIVED {stateString}");
-            }
-
-            return code;
-        }
-
-        /// <summary>
-        /// Gets new OAuth Access token for Broadcaster account
-        /// </summary>
-        public async Task<string> GetBroadcasterCode()
-        {
-            const string scopes =
-                "channel:manage:broadcast " +
-                "channel:manage:extensions " +
-                "channel:manage:redemptions " +
-                "channel:moderate " +
-                "channel:read:redemptions " +
-                "channel:read:subscriptions";
-
-            string stateString = GenerateRandomStringToken();
-
-            using HttpListener httpListener = new HttpListener();
-            httpListener.Prefixes.Clear();
-            httpListener.Prefixes.Add("http://localhost:9000/");
-            httpListener.Start();
-
-            string url = $"https://id.twitch.tv/oauth2/authorize" +
-                $"?client_id={botConfig.TwitchClientId}" +
-                $"&client_secret={botConfig.TwitchClientSecret}" +
-                $"&redirect_uri=http://localhost:9000/" +
-                $"&response_type=code" +
-                $"&scope={scopes.Replace(" ", "+")}" +
-                $"&state={HttpUtility.UrlEncode(stateString)}";
-
-            communication.SendDebugMessage($"Go to url as Broadcaster:\n\n{url}\n\n");
-
-            HttpListenerContext context = await httpListener.GetContextAsync();
-            HttpListenerRequest request = context.Request;
-
-            NameValueCollection queryString = request.QueryString;
-
-            //Extract AuthCode
-            string code = queryString.Get("code");
-
-            //Compare state string
-            string state = queryString.Get("state");
-            if (state != stateString)
-            {
-                throw new Exception($"Security Issue.  State string did not match:\n  SENT     {state}\n  RECEIVED {stateString}");
-            }
-
-            return code;
-        }
-
-        /// <summary>
         /// Gets new OAuth Access token
         /// </summary>
         public async Task<TokenRequest> GetToken(
-            string authCode)
+            string authCode,
+            string redirectURI)
         {
-            string url = $"https://id.twitch.tv/oauth2/token";
-
-            RestClient restClient = new RestClient(url);
+            RestClient restClient = new RestClient("https://id.twitch.tv/oauth2/token");
             RestRequest request = new RestRequest(Method.POST);
             request.AddParameter("client_id", botConfig.TwitchClientId);
             request.AddParameter("client_secret", botConfig.TwitchClientSecret);
             request.AddParameter("code", authCode);
             request.AddParameter("grant_type", "authorization_code");
-            request.AddParameter("redirect_uri", "http://localhost:9000/");
+            request.AddParameter("redirect_uri", redirectURI);
+
+            IRestResponse response = await restClient.ExecuteAsync(request);
+
+            if (response.StatusCode != HttpStatusCode.OK)
+            {
+                return null;
+            }
+
+            return JsonSerializer.Deserialize<TokenRequest>(response.Content);
+        }
+
+        /// <summary>
+        /// Gets new OAuth Access token
+        /// </summary>
+        public async Task<TokenRequest> GetClientCredentialsToken()
+        {
+
+            RestClient restClient = new RestClient("https://id.twitch.tv/oauth2/token");
+            RestRequest request = new RestRequest(Method.POST);
+            request.AddParameter("client_id", botConfig.TwitchClientId);
+            request.AddParameter("client_secret", botConfig.TwitchClientSecret);
+            request.AddParameter("grant_type", "client_credentials");
 
             IRestResponse response = await restClient.ExecuteAsync(request);
 
@@ -859,14 +770,15 @@ namespace TASagentTwitchBot.Core.API.Twitch
         /// <summary>
         /// Gets the Webhook subscriptions of a user identified by a Bearer token, in order of expiration.
         /// </summary>
-        /// <returns>Twitch_WebhookResponse</returns>
         public async Task<TwitchWebhookResponse> GetWebhookSubscriptions(
+            string clientCredentialsToken,
             string after = null,
             string first = null)
         {
             RestClient restClient = new RestClient("https://api.twitch.tv/helix/webhooks/subscriptions");
             RestRequest request = new RestRequest(Method.GET);
-            request.AddHeader("Authorization", $"Bearer {botConfig.BotAccessToken}");
+            request.AddHeader("Client-ID", botConfig.TwitchClientId);
+            request.AddHeader("Authorization", $"Bearer {clientCredentialsToken}");
 
             request.AddOptionalParameter("after", after);
             request.AddOptionalParameter("first", first);
@@ -878,9 +790,8 @@ namespace TASagentTwitchBot.Core.API.Twitch
 
 
         /// <summary>
-        /// Gets the Webhook subscriptions of a user identified by a Bearer token, in order of expiration.
+        /// Subscrube/Unsubscribe the indicated topic for webhooks.
         /// </summary>
-        /// <returns>Twitch_WebhookResponse</returns>
         public async Task<bool> WebhookSubscribe(
             string callback,
             string mode,

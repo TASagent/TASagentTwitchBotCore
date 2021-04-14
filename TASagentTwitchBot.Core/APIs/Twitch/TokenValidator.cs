@@ -1,15 +1,20 @@
 ﻿using System;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 
 namespace TASagentTwitchBot.Core.API.Twitch
 {
-    public class TokenValidator
+    public interface ITokenValidator
     {
-        private readonly Config.IBotConfigContainer botConfigContainer;
-        private readonly ICommunication communication;
-        private readonly HelixHelper helixHelper;
+        void SetCode(string code, string state);
+        Task<bool> TryToConnect();
+        void RunValidator();
+    }
 
-        private readonly bool useBotToken;
+    public abstract class TokenValidator : ITokenValidator
+    {
+        protected readonly ICommunication communication;
+        protected readonly HelixHelper helixHelper;
 
         /// <summary>
         /// How frequently we check to see if it's time to rerun validation
@@ -24,17 +29,29 @@ namespace TASagentTwitchBot.Core.API.Twitch
         private readonly TimeSpan tokenRefreshRange = new TimeSpan(hours: 1, minutes: 0, seconds: 0);
 
         private DateTime nextValidateTime;
+        private TaskCompletionSource<(string code, string state)> codeCallback = null;
+
+        protected abstract string AccessToken { get; set; }
+        protected abstract string RefreshToken { get; set; }
+        protected abstract string RedirectURI { get; }
 
         public TokenValidator(
-            Config.IBotConfigContainer botConfigContainer,
             ICommunication communication,
-            bool useBotToken,
             HelixHelper helixHelper)
         {
             this.communication = communication;
-            this.useBotToken = useBotToken;
             this.helixHelper = helixHelper;
-            this.botConfigContainer = botConfigContainer;
+        }
+
+        public void SetCode(string code, string state)
+        {
+            if (codeCallback == null)
+            {
+                communication.SendWarningMessage($"Received OAuth Code when not awaiting one.");
+                return;
+            }
+
+            codeCallback.SetResult((code, state));
         }
 
         public async Task<bool> TryToConnect()
@@ -50,16 +67,7 @@ namespace TASagentTwitchBot.Core.API.Twitch
             else
             {
                 //We require reauthorization
-                string authCode;
-
-                if (useBotToken)
-                {
-                    authCode = await helixHelper.GetBotCode();
-                }
-                else
-                {
-                    authCode = await helixHelper.GetBroadcasterCode();
-                }
+                string authCode = await GetCode();
 
                 if (string.IsNullOrEmpty(authCode))
                 {
@@ -67,7 +75,7 @@ namespace TASagentTwitchBot.Core.API.Twitch
                 }
 
                 //Try to get a new Token
-                TokenRequest request = await helixHelper.GetToken(authCode);
+                TokenRequest request = await helixHelper.GetToken(authCode, RedirectURI);
 
                 //Did we receive a new Access Token?
                 if (request == null)
@@ -76,27 +84,18 @@ namespace TASagentTwitchBot.Core.API.Twitch
                     return false;
                 }
 
-                //Update values
-                if (useBotToken)
-                {
-                    botConfigContainer.BotConfig.BotAccessToken = request.AccessToken;
-                    botConfigContainer.BotConfig.BotRefreshToken = request.RefreshToken;
-                }
-                else
-                {
-                    botConfigContainer.BotConfig.BroadcasterAccessToken = request.AccessToken;
-                    botConfigContainer.BotConfig.BroadcasterRefreshToken = request.RefreshToken;
-                }
+                AccessToken = request.AccessToken;
+                RefreshToken = request.RefreshToken;
 
                 //Update saved accessToken
-                botConfigContainer.SerializeData();
+                SaveChanges();
 
                 //Does the token validate?
                 return await TryValidateToken();
             }
         }
 
-        public async Task<bool> TryToValidate()
+        private async Task<bool> TryToValidate()
         {
             if (await TryExistingToken())
             {
@@ -113,7 +112,7 @@ namespace TASagentTwitchBot.Core.API.Twitch
         private async Task<bool> TryExistingToken()
         {
             //Do we have an AccessToken?
-            if (string.IsNullOrEmpty(useBotToken ? botConfigContainer.BotConfig.BotAccessToken : botConfigContainer.BotConfig.BroadcasterAccessToken))
+            if (string.IsNullOrEmpty(AccessToken))
             {
                 return false;
             }
@@ -125,24 +124,14 @@ namespace TASagentTwitchBot.Core.API.Twitch
         private async Task<bool> TryTokenRefresh()
         {
             //Do we have a RefreshToken?
-            if (string.IsNullOrEmpty(useBotToken ? botConfigContainer.BotConfig.BotRefreshToken : botConfigContainer.BotConfig.BroadcasterRefreshToken))
+            if (string.IsNullOrEmpty(RefreshToken))
             {
                 //We can't try a refresh without a RefreshToken
                 return false;
             }
 
             //Try a refresh
-            TokenRefreshRequest request;
-
-
-            if (useBotToken)
-            {
-                request = await helixHelper.RefreshToken(botConfigContainer.BotConfig.BotRefreshToken);
-            }
-            else
-            {
-                request = await helixHelper.RefreshToken(botConfigContainer.BotConfig.BroadcasterRefreshToken);
-            }
+            TokenRefreshRequest request = await helixHelper.RefreshToken(RefreshToken);
 
             //Did we receive an Access Token?
             if (request == null)
@@ -152,19 +141,11 @@ namespace TASagentTwitchBot.Core.API.Twitch
             }
 
             //Update Tokens
-            if (useBotToken)
-            {
-                botConfigContainer.BotConfig.BotAccessToken = request.AccessToken;
-                botConfigContainer.BotConfig.BotRefreshToken = request.RefreshToken;
-            }
-            else
-            {
-                botConfigContainer.BotConfig.BroadcasterAccessToken = request.AccessToken;
-                botConfigContainer.BotConfig.BroadcasterRefreshToken = request.RefreshToken;
-            }
+            AccessToken = request.AccessToken;
+            RefreshToken = request.RefreshToken;
 
             //Update saved accessToken
-            botConfigContainer.SerializeData();
+            SaveChanges();
 
             //Does the token validate?
             return await TryValidateToken();
@@ -173,8 +154,7 @@ namespace TASagentTwitchBot.Core.API.Twitch
         private async Task<bool> TryValidateToken()
         {
             //Request Twitch validate our access_token
-            TokenValidationRequest validationRequest = await helixHelper.ValidateToken(useBotToken ?
-                botConfigContainer.BotConfig.BotAccessToken : botConfigContainer.BotConfig.BroadcasterAccessToken);
+            TokenValidationRequest validationRequest = await helixHelper.ValidateToken(AccessToken);
 
             //Was our token validated?
             if (validationRequest != null)
@@ -220,6 +200,51 @@ namespace TASagentTwitchBot.Core.API.Twitch
                     }
                 }
             }
+        }
+
+
+        private async Task<string> GetCode()
+        {
+            string code = null;
+            string stateString = GenerateRandomStringToken();
+
+            SendCodeRequest(stateString);
+
+            codeCallback = new TaskCompletionSource<(string code, string state)>();
+
+            //Wait up to 10 minutes
+            await Task.WhenAny(
+                codeCallback.Task,
+                Task.Delay(1000 * 60 * 10));
+
+            if (codeCallback.Task.IsCompleted)
+            {
+                (string code, string state) result = codeCallback.Task.Result;
+
+                if (result.state != stateString)
+                {
+                    communication.SendWarningMessage($"OAuth state string did not match:  SENT \"{stateString}\"  RECEIVED \"{result.state}\"");
+                }
+                else
+                {
+                    code = result.code;
+                }
+            }
+
+            codeCallback = null;
+            return code;
+        }
+
+        protected abstract void SendCodeRequest(string stateString);
+        protected abstract void SaveChanges();
+
+        private static string GenerateRandomStringToken()
+        {
+            using RNGCryptoServiceProvider rngCsp = new RNGCryptoServiceProvider();
+
+            byte[] data = new byte[30];
+            rngCsp.GetBytes(data);
+            return Convert.ToBase64String(data);
         }
     }
 }
