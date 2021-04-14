@@ -87,10 +87,7 @@ namespace TASagentTwitchBot.Core
             services.AddSignalR();
         }
 
-        protected virtual void ConfigureDatabases(IServiceCollection services)
-        {
-            services.AddSingleton<Database.BaseDatabaseContext>();
-        }
+        protected virtual void ConfigureDatabases(IServiceCollection services) { }
 
         protected virtual void ConfigureCoreServices(IServiceCollection services)
         {

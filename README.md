@@ -10,7 +10,12 @@ But once configured, the project should be very simple to use.  It has a number 
 
 ## Getting Started
 
-To start with, get the appropriate [NetCore 5 SDK (With AspNet)](https://dotnet.microsoft.com/download/dotnet/5.0)
+To start with, get the appropriate [NetCore 5 SDK (With AspNet)](https://dotnet.microsoft.com/download/dotnet/5.0).  It will also be useful to install the .NET Entity Framework CLI tools by running:
+
+```cmd
+dotnet tool install --global dotnet-ef
+dotnet tool update --global dotnet-ef
+```
 
 Clone the [TASagentTwitchBotDemos project](https://github.com/TASagent/TASagentTwitchBotDemos) and initialize and update the gitsubmodule (this project):
 
@@ -24,6 +29,8 @@ git submodule update
 If you're using this as a twitch bot, you're going to need to make a new Twitch account for that bot.  You also need to go to [The Twitch Dev Console](https://dev.twitch.tv/console/apps) and register an application to receive a ClientID.  Enter any name, use `http://localhost:5000/TASagentBotAPI/OAuth/BotCode` and `http://localhost:5000/TASagentBotAPI/OAuth/BroadcasterCode` as the OAuth Redirect URLs, and choose "Chat Bot" as the category.
 
 You will need to forward port `9000` to the computer you intend to use get follower notifications to work, since port `9000` is used for Twitch WebSub callbacks. But the middleware should reject all other calls to port `9000`.
+
+If the project you're building uses the database, navigate to the project directory via command line.  If the migration files already exist for it (and are up-to-date), then just run `dotnet ef database update`.  If they do not exist yet, you'll have to create them first with `dotnet ef migrations add InitialDBCreation`, followed by `dotnet ef database update`.  
 
 Compile and run the `BotConfigurator` program to begin setup.  You'll be prompted for several values, and it will prepare some configuration files in your `Documents/TASagentBotDemo` directory.  
 
@@ -58,6 +65,8 @@ Example `awsPollyCredentials.json` file:
 ### Database
 
 Navigate to the directory of the Bot project (where the `.proj` file lives) and create the initial database with `dotnet ef database update`.
+
+To apply model changes as a new database migration, navigate to the directory of the project and use `dotnet ef migrations add <MigrationName>` where `<MigrationName>` is what you'd like to name this model update, for example, `dotnet ef migrations add AddingNewUserField`.  Then use `dotnet ef database update` to apply the model updates to the database.
 
 ## Running and controlling the bot
 

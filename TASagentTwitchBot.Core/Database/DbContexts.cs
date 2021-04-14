@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace TASagentTwitchBot.Core.Database
 {
     //Create the database 
-    public class BaseDatabaseContext : DbContext
+    public abstract class BaseDatabaseContext : DbContext
     {
         public DbSet<User> Users { get; set; }
         public DbSet<Quote> Quotes { get; set; }
