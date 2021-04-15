@@ -246,7 +246,7 @@ namespace TASagentTwitchBot.Core.IRC
                     //Check if we're connected
                     await CheckConnectionOrWait();
 
-                    //Reset pongReceived
+                    //Reset pongReceived flag
                     pongReceived = false;
 
                     //Send the ping
@@ -286,14 +286,8 @@ namespace TASagentTwitchBot.Core.IRC
                     }
                 }
             }
-            catch (TaskCanceledException)
-            {
-                //Swallow
-            }
-            catch (OperationCanceledException)
-            {
-                //Swallow
-            }
+            catch (TaskCanceledException) { /*swallow*/ }
+            catch (OperationCanceledException) { /*swallow*/ }
             catch (Exception ex)
             {
                 //Log Error
@@ -310,7 +304,7 @@ namespace TASagentTwitchBot.Core.IRC
         {
             try
             {
-                communication.SendDebugMessage("Attempting Reconnect");
+                communication.SendDebugMessage("Attempting IRC Reconnect");
 
                 readers.AddCount();
                 int timeout = 1000;
@@ -325,9 +319,10 @@ namespace TASagentTwitchBot.Core.IRC
 
                     try
                     {
+                        //Ensure we are disconnected
                         await Disconnect();
                     }
-                    catch (Exception) { }
+                    catch (Exception) { /*swallow*/ }
 
                     try
                     {
@@ -353,15 +348,10 @@ namespace TASagentTwitchBot.Core.IRC
                     timeout = Math.Max(2 * timeout, 8000);
                 }
 
+                communication.SendDebugMessage("IRC Reconnect Success");
             }
-            catch (TaskCanceledException)
-            {
-                //Swallow
-            }
-            catch (OperationCanceledException)
-            {
-                //Swallow
-            }
+            catch (TaskCanceledException) { /*swallow*/ }
+            catch (OperationCanceledException) { /*swallow*/ }
             catch (Exception ex)
             {
                 errorHandler.LogSystemException(ex);
@@ -371,7 +361,6 @@ namespace TASagentTwitchBot.Core.IRC
                 readers.Signal();
             }
 
-            communication.SendDebugMessage("Reconnect Success");
         }
 
         private void SendMessage(string message) =>
@@ -401,7 +390,15 @@ namespace TASagentTwitchBot.Core.IRC
                     break;
                 }
 
-                await outputStream.WriteLineAsync(newMessage);
+                try
+                {
+                    await outputStream.WriteLineAsync(newMessage);
+                }
+                catch (Exception ex)
+                {
+                    communication.SendErrorMessage($"IRC Send Exception {ex.GetType().Name}");
+                    errorHandler.LogMessageException(ex, newMessage);
+                }
 
                 await Task.Delay(200);
             }
@@ -454,18 +451,12 @@ namespace TASagentTwitchBot.Core.IRC
                         LogIRCMessage(rawMessage, true);
                         lastMessageTime = DateTime.Now;
                     }
-                    catch (TaskCanceledException)
-                    {
-                        //Swallow
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        //Swallow
-                    }
+                    catch (TaskCanceledException) { /*swallow*/ }
+                    catch (OperationCanceledException) { /*swallow*/ }
                     catch (Exception ex)
                     {
                         communication.SendErrorMessage($"IRC Exception Type {ex.GetType().Name}");
-                        errorHandler.LogMessageException(ex, (rawMessage ?? ""));
+                        errorHandler.LogMessageException(ex, "");
                     }
 
                     if (generalTokenSource.IsCancellationRequested)
@@ -531,7 +522,7 @@ namespace TASagentTwitchBot.Core.IRC
 
                         case IRCCommand.Reconnect:
                             //Reconnect
-                            communication.SendDebugMessage($"  Reconnect Message");
+                            communication.SendDebugMessage($"IRC Reconnect Message");
                             WriteToIRCLog("Received Reconnect Message.  Initiating Reconnect.");
                             breakConnection = true;
                             break;
@@ -586,14 +577,8 @@ namespace TASagentTwitchBot.Core.IRC
                     }
                 }
             }
-            catch (TaskCanceledException)
-            {
-                //Swallow
-            }
-            catch (OperationCanceledException)
-            {
-                //Swallow
-            }
+            catch (TaskCanceledException) { /*swallow*/ }
+            catch (OperationCanceledException) { /*swallow*/ }
             catch (Exception ex)
             {
                 communication.SendErrorMessage($"IRC Exception Type {ex.GetType().Name}");

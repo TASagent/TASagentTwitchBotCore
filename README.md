@@ -147,7 +147,7 @@ New commands just need to extend the `ICommandSystem` interface, and get registe
 
 In OBS, add the following four BrowserSources
 
-`http://localsource:5000/BrowserSource/overlay.html` - Image notifications
-`http://localsource:5000/BrowserSource/controllerSpy.html` - SNES NintendoSpy Overlay
-`http://localsource:5000/BrowserSource/timer.html` - Timer overlay
-`http://localsource:5000/BrowserSource/ttsmarquee.html` - Scrolling TTS Marquee
+`http://localhost:5000/BrowserSource/overlay.html` - Image notifications
+`http://localhost:5000/BrowserSource/controllerSpy.html` - SNES NintendoSpy Overlay
+`http://localhost:5000/BrowserSource/timer.html` - Timer overlay
+`http://localhost:5000/BrowserSource/ttsmarquee.html` - Scrolling TTS Marquee

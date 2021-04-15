@@ -15,6 +15,7 @@ namespace TASagentTwitchBot.Core.Audio
                 case ".avi":
                 case ".wma":
                 case ".aac":
+                case ".m4a":
                     return new MediaFoundationReader(filePath).ToDisposableProvider();
 
                 case ".mp3":

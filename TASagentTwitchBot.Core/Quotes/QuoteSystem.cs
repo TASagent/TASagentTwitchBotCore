@@ -345,9 +345,9 @@ namespace TASagentTwitchBot.Core.Quotes
                         return;
                     }
 
-                    if (quoteText.StartsWith('-'))
+                    if (quoteText.StartsWith('-') || quoteText.StartsWith('@'))
                     {
-                        //Strip off any optional -
+                        //Strip off any optional - or @
                         quoteText = quoteText[1..];
                     }
 
