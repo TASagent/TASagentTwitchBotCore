@@ -10,6 +10,8 @@ But once configured, the project should be very simple to use.  It has a number 
 
 ![Control Page](assets/ControlPage.png)
 
+I've also developed [a StreamDeck plugin](https://github.com/TASagent/TASagentTwitchBot.StreamDeckPlugin) for interacting with the REST endpoints hosted by the bot.
+
 ## Getting Started
 
 To start with, get the appropriate [NetCore 5 SDK (With AspNet)](https://dotnet.microsoft.com/download/dotnet/5.0).  It will also be useful to install the .NET Entity Framework CLI tools by running:
