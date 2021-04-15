@@ -49,7 +49,7 @@ namespace TASagentTwitchBot.Core.WebSub
             TokenRequest tokenContainer = await helixHelper.GetClientCredentialsToken();
             TwitchWebhookResponse subscriptions = await helixHelper.GetWebhookSubscriptions(tokenContainer.AccessToken);
 
-            if (subscriptions.Data is not null)
+            if (subscriptions.Data is not null && subscriptions.Data.Count > 0)
             {
                 communication.SendWarningMessage($"Unsubscribing from {subscriptions.Data.Count} existing webhooks");
 
