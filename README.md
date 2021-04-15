@@ -34,7 +34,7 @@ You will need to forward port `9000` to the computer you intend to use get follo
 
 If the project you're building uses the database, navigate to the project directory via command line.  If the migration files already exist for it (and are up-to-date), then just run `dotnet ef database update`.  If they do not exist yet, you'll have to create them first with `dotnet ef migrations add InitialDBCreation`, followed by `dotnet ef database update`.  
 
-Compile and run the `BotConfigurator` program to begin setup.  You'll be prompted for several values, and it will prepare some configuration files in your `Documents/TASagentBotDemo` directory.  
+The first time you run a demo program, you'll be prompted for several values, and it will prepare some configuration files in your `Documents/TASagentBotDemo` directory.  
 
 ### TTS
 

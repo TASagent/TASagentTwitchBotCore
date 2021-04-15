@@ -105,18 +105,9 @@ namespace TASagentTwitchBot.Core
                     await Task.Delay(1000, cancellationTokenSource.Token);
                 }
             }
-            catch (TaskCanceledException)
-            {
-                //Swallow
-            }
-            catch (ThreadAbortException)
-            {
-                //Swallow
-            }
-            catch (ObjectDisposedException)
-            {
-                //Swallow
-            }
+            catch (TaskCanceledException) { /* swallow */}
+            catch (ThreadAbortException) { /* swallow */}
+            catch (ObjectDisposedException) { /* swallow */}
             finally
             {
                 readers.Signal();

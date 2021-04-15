@@ -30,7 +30,6 @@ namespace TASagentTwitchBot.Core.Timer
 
         Task UpdateLayout(TimerLayoutData layout);
 
-
         List<TimerData> GetSavedTimers();
         Task<bool> LoadTimer(string name);
         void SaveTimer(string name);
@@ -144,14 +143,8 @@ namespace TASagentTwitchBot.Core.Timer
                     HandleAutosave();
                 }
             }
-            catch (TaskCanceledException)
-            {
-                //Swallow
-            }
-            catch (OperationCanceledException)
-            {
-                //Swallow
-            }
+            catch (TaskCanceledException) { /* swallow */}
+            catch (OperationCanceledException) { /* swallow */}
             catch (Exception ex)
             {
                 communication.SendErrorMessage($"TimerManager Exception Type {ex.GetType().Name}: {ex}");

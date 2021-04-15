@@ -39,6 +39,8 @@ namespace TASagentTwitchBot.Core.View
             communication.SendMessageHandlers += SendPublicChatHandler;
             communication.SendWhisperHandlers += SendWhisperHandler;
             communication.DebugMessageHandlers += DebugMessageHandler;
+
+            communication.SendDebugMessage("BasicView Connected.  Listening for Ctrl+Q to quit gracefully.\n");
         }
 
         private void ReceiveEventHandler(string message)
@@ -131,14 +133,8 @@ namespace TASagentTwitchBot.Core.View
                     await consoleChannel.Writer.WriteAsync(nextKey);
                 }
             }
-            catch (TaskCanceledException)
-            {
-                //Swallow
-            }
-            catch (OperationCanceledException)
-            {
-                //Swallow
-            }
+            catch (TaskCanceledException) { /* swallow */}
+            catch (OperationCanceledException) { /* swallow */}
             catch (Exception ex)
             {
                 //Log Error
@@ -155,21 +151,12 @@ namespace TASagentTwitchBot.Core.View
         {
             while (true)
             {
-                bool handled = false;
-
                 Console.CursorVisible = false;
-
                 ConsoleKeyInfo input = await consoleChannel.Reader.ReadAsync();
 
                 if (input.Key == ConsoleKey.Q && ((input.Modifiers & ConsoleModifiers.Control) != 0))
                 {
                     applicationManagement.TriggerExit();
-                    handled = true;
-                }
-
-                if (!handled)
-                {
-                    Console.Beep();
                 }
             }
         }

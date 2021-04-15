@@ -92,6 +92,9 @@ namespace TASagentTwitchBot.Core
         protected virtual void ConfigureCoreServices(IServiceCollection services)
         {
             services
+                .AddSingleton<IConfigurator, StandardConfigurator>();
+
+            services
                 .AddSingleton<Chat.ChatLogger>()
                 .AddSingleton<ErrorHandler>()
                 .AddSingleton<ApplicationManagement>()
@@ -117,7 +120,7 @@ namespace TASagentTwitchBot.Core
                 .AddSingleton<Audio.ISoundEffectSystem, Audio.SoundEffectSystem>()
                 .AddSingleton<Audio.Effects.IAudioEffectSystem, Audio.Effects.AudioEffectSystem>()
                 .AddSingleton<Chat.IChatMessageHandler, Chat.ChatMessageHandler>()
-                .AddSingleton<View.IConsoleOutput, View.ConsoleView>()
+                .AddSingleton<View.IConsoleOutput, View.BasicView>()
                 .AddSingleton<IRC.INoticeHandler, IRC.NoticeHandler>()
                 .AddSingleton<IRC.IIRCLogger, IRC.IRCLogger>()
                 .AddSingleton<TTS.ITTSRenderer, TTS.TTSRenderer>()

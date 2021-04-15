@@ -286,8 +286,8 @@ namespace TASagentTwitchBot.Core.IRC
                     }
                 }
             }
-            catch (TaskCanceledException) { /*swallow*/ }
-            catch (OperationCanceledException) { /*swallow*/ }
+            catch (TaskCanceledException) { /* swallow */ }
+            catch (OperationCanceledException) { /* swallow */ }
             catch (Exception ex)
             {
                 //Log Error
@@ -322,7 +322,7 @@ namespace TASagentTwitchBot.Core.IRC
                         //Ensure we are disconnected
                         await Disconnect();
                     }
-                    catch (Exception) { /*swallow*/ }
+                    catch (Exception) { /* swallow */ }
 
                     try
                     {
@@ -350,8 +350,8 @@ namespace TASagentTwitchBot.Core.IRC
 
                 communication.SendDebugMessage("IRC Reconnect Success");
             }
-            catch (TaskCanceledException) { /*swallow*/ }
-            catch (OperationCanceledException) { /*swallow*/ }
+            catch (TaskCanceledException) { /* swallow */ }
+            catch (OperationCanceledException) { /* swallow */ }
             catch (Exception ex)
             {
                 errorHandler.LogSystemException(ex);
@@ -451,8 +451,8 @@ namespace TASagentTwitchBot.Core.IRC
                         LogIRCMessage(rawMessage, true);
                         lastMessageTime = DateTime.Now;
                     }
-                    catch (TaskCanceledException) { /*swallow*/ }
-                    catch (OperationCanceledException) { /*swallow*/ }
+                    catch (TaskCanceledException) { /* swallow */ }
+                    catch (OperationCanceledException) { /* swallow */ }
                     catch (Exception ex)
                     {
                         communication.SendErrorMessage($"IRC Exception Type {ex.GetType().Name}");
@@ -577,8 +577,8 @@ namespace TASagentTwitchBot.Core.IRC
                     }
                 }
             }
-            catch (TaskCanceledException) { /*swallow*/ }
-            catch (OperationCanceledException) { /*swallow*/ }
+            catch (TaskCanceledException) { /* swallow */ }
+            catch (OperationCanceledException) { /* swallow */ }
             catch (Exception ex)
             {
                 communication.SendErrorMessage($"IRC Exception Type {ex.GetType().Name}");

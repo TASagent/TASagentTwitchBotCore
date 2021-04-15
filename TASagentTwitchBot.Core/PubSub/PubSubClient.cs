@@ -112,7 +112,7 @@ namespace TASagentTwitchBot.Core.PubSub
                         //Ensure we are disconnected
                         await Disconnect();
                     }
-                    catch (Exception) { /*swallow*/ }
+                    catch (Exception) { /* swallow */ }
 
                     try
                     {
@@ -140,8 +140,8 @@ namespace TASagentTwitchBot.Core.PubSub
 
                 communication.SendDebugMessage("PubSub Reconnect Success");
             }
-            catch (TaskCanceledException) { /*swallow*/ }
-            catch (OperationCanceledException) { /*swallow*/ }
+            catch (TaskCanceledException) { /* swallow */ }
+            catch (OperationCanceledException) { /* swallow */ }
             catch (Exception ex)
             {
                 errorHandler.LogSystemException(ex);
@@ -224,10 +224,10 @@ namespace TASagentTwitchBot.Core.PubSub
                     await Task.Delay(pingWaitTime, generalTokenSource.Token);
                 }
             }
-            catch (TaskCanceledException) { /*swallow*/ }
-            catch (ThreadAbortException) { /*swallow*/ }
-            catch (ObjectDisposedException) { /*swallow*/ }
-            catch (OperationCanceledException) { /*swallow*/ }
+            catch (TaskCanceledException) { /* swallow */ }
+            catch (ThreadAbortException) { /* swallow */ }
+            catch (ObjectDisposedException) { /* swallow */ }
+            catch (OperationCanceledException) { /* swallow */ }
             catch (Exception ex)
             {
                 communication.SendErrorMessage($"PubSub Server Pinger Exception: {ex.GetType().Name}");
@@ -257,13 +257,12 @@ namespace TASagentTwitchBot.Core.PubSub
                         webSocketReceiveResult = await clientWebSocket.ReceiveAsync(incomingData, readerTokenSource.Token);
                         readCompleted = true;
                     }
-                    catch (TaskCanceledException) { /*swallow*/ }
-                    catch (ThreadAbortException) { /*swallow*/ }
-                    catch (ObjectDisposedException) { /*swallow*/ }
-                    catch (OperationCanceledException) { /*swallow*/ }
+                    catch (TaskCanceledException) { /* swallow */ }
+                    catch (ThreadAbortException) { /* swallow */ }
+                    catch (ObjectDisposedException) { /* swallow */ }
+                    catch (OperationCanceledException) { /* swallow */ }
                     catch (WebSocketException)
                     {
-                        //Swallow
                         communication.SendWarningMessage($"PubSub Websocket closed unexpectedly.");
                     }
                     catch (Exception ex)
@@ -358,10 +357,10 @@ namespace TASagentTwitchBot.Core.PubSub
                     }
                 }
             }
-            catch (TaskCanceledException) { /*swallow*/ }
-            catch (ThreadAbortException) { /*swallow*/ }
-            catch (ObjectDisposedException) { /*swallow*/ }
-            catch (OperationCanceledException) { /*swallow*/ }
+            catch (TaskCanceledException) { /* swallow */ }
+            catch (ThreadAbortException) { /* swallow */ }
+            catch (ObjectDisposedException) { /* swallow */ }
+            catch (OperationCanceledException) { /* swallow */ }
             catch (Exception ex)
             {
                 communication.SendErrorMessage($"PubSub Exception: {ex.GetType().Name}");
