@@ -3,25 +3,26 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TASagent Bot Control Panel</title>
-  <link rel="stylesheet" href="/Assets/css/jquery-ui.css">
   <link rel="icon" href="data:,">
-  <script src="/Assets/js/jquery.min.js"></script>
-  <script src="/Assets/js/jquery-ui.min.js"></script>
-  <script src="/Assets/js/signalr.min.js"></script>
+
+  <title>TASagent Bot Control Panel</title>
+
+  <link href="/Assets/libs/jquery-ui/1.12.1/jquery-ui.css" rel="stylesheet">
+  <script src="/Assets/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="/Assets/libs/jquery-ui/1.12.1/jquery-ui.min.js"></script>
+  <script src="/Assets/libs/signalr/5.0.5/signalr.min.js"></script>
+
+  <link href="/Assets/libs/bootstrap/4/darkly/bootstrap.min.css" rel="stylesheet">
+  <script src="/Assets/libs/popper.js/1.14.3/umd/popper.min.js"></script>
+  <script src="/Assets/libs/bootstrap/4.1.3/js/bootstrap.min.js"></script>
+  
   <script src="/Assets/js/timerUtil.js"></script>
 
-  <!-- Bootstrap CSS -->
-  <link href="https://bootswatch.com/4/darkly/bootstrap.min.css" rel="stylesheet">
-  <!-- Popper.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
-  <!-- Bootstrap -->
-  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
   <style>
-      .list-group {
-          max-height: 300px;
-          overflow-y: auto;
-      }
+    .list-group {
+      max-height: 300px;
+      overflow-y: auto;
+    }
   </style>
 
   <script>
@@ -32,7 +33,7 @@
       var scrollBox = $("#chatBox");
       var isScrolledToBottom = scrollBox[0].scrollHeight - scrollBox[0].clientHeight <= scrollBox.scrollTop() + 1;
 
-      messageBlock.messages.forEach(function(message) {
+      messageBlock.messages.forEach(function (message) {
         var liElement = document.createElement('li');
         liElement.innerHTML = message.message;
         scrollBox.append(liElement);
@@ -47,7 +48,7 @@
       var scrollBox = $("#eventBox");
       var isScrolledToBottom = scrollBox[0].scrollHeight - scrollBox[0].clientHeight <= scrollBox.scrollTop() + 1;
 
-      messageBlock.messages.forEach(function(message) {
+      messageBlock.messages.forEach(function (message) {
         var liElement = document.createElement('li');
         liElement.innerHTML = message.message;
         scrollBox.append(liElement);
@@ -62,7 +63,7 @@
       var scrollBox = $("#debugBox");
       var isScrolledToBottom = scrollBox[0].scrollHeight - scrollBox[0].clientHeight <= scrollBox.scrollTop() + 1;
 
-      messageBlock.messages.forEach(function(message) {
+      messageBlock.messages.forEach(function (message) {
         var liElement = document.createElement('li');
         liElement.innerHTML = message.message;
         scrollBox.append(liElement);
@@ -77,10 +78,10 @@
       var scrollBox = $("#notificationBox");
       var isScrolledToBottom = scrollBox[0].scrollHeight - scrollBox[0].clientHeight <= scrollBox.scrollTop() + 1;
 
-      messageBlock.messages.forEach(function(message) {
+      messageBlock.messages.forEach(function (message) {
         var liElement = $(`<li>${message.message}</li>`);
         let button = $("<button>Replay</button>");
-        button.on("click", function() { ReplayNotification(message.id); });
+        button.on("click", function () { ReplayNotification(message.id); });
         liElement.prepend(button);
         scrollBox.append(liElement);
       });
@@ -94,15 +95,15 @@
       var scrollBox = $("#pendingNotificationBox");
       var isScrolledToBottom = scrollBox[0].scrollHeight - scrollBox[0].clientHeight <= scrollBox.scrollTop() + 1;
 
-      messageBlock.messages.forEach(function(message) {
+      messageBlock.messages.forEach(function (message) {
         var liElement = $(`<li id=pending_${message.id}>${message.message}</li>`);
 
         let denyButton = $("<button>Deny</button>");
-        denyButton.on("click", function() { UpdatePendingNotification(message.id, false); });
+        denyButton.on("click", function () { UpdatePendingNotification(message.id, false); });
         liElement.prepend(denyButton);
 
         let approveButton = $("<button>Approve</button>");
-        approveButton.on("click", function() { UpdatePendingNotification(message.id, true); });
+        approveButton.on("click", function () { UpdatePendingNotification(message.id, true); });
         liElement.prepend(approveButton);
 
         scrollBox.append(liElement);
@@ -120,13 +121,12 @@
       }
     }
 
-    function ApplyAuth( xhr ) {
-      xhr.setRequestHeader( "Authorization", authString );
+    function ApplyAuth(xhr) {
+      xhr.setRequestHeader("Authorization", authString);
     }
 
     function HandleErrorResponse(response) {
-      if (response.status && response.status === 401)
-      {
+      if (response.status && response.status === 401) {
         SetAuthStatus("None");
       }
     }
@@ -136,13 +136,13 @@
         url: "/TASagentBotAPI/Auth/Authorize",
         contentType: "application/json;charset=utf-8",
         data: JSON.stringify({ Password: $("#input-password").val() }),
-        success: async function(result) {
+        success: async function (result) {
           authString = result.authString;
 
           SetAuthStatus(result.role);
 
           if (authString && authString.length > 0 &&
-              result.role === "Admin" || result.role === "Privileged") {
+            result.role === "Admin" || result.role === "Privileged") {
             if (connection.invoke("Authenticate", authString)) {
               //Clear Logs
               $("#chatBox").empty();
@@ -159,8 +159,7 @@
               ReceiveNewPendingNotifications(await connection.invoke("RequestAllPendingNotifications"));
             }
 
-            if (result.role === "Admin")
-            {
+            if (result.role === "Admin") {
               FetchAudioDevices();
               RefreshSerialDevices();
             }
@@ -168,63 +167,67 @@
 
           RefreshDisplay();
         },
-        error: function(result) { SetAuthStatus("None"); }
+        error: function (result) { SetAuthStatus("None"); }
       });
     }
 
     function RefreshDisplay() {
       $.getJSON({
         url: "/TASagentBotAPI/Mic/Effect",
-        success: function(result) {
+        success: function (result) {
           $("#text-Status").val(result.effect);
-        }});
-        
+        }
+      });
+
       $.getJSON({
         url: "/TASagentBotAPI/Mic/Compressor",
-        success: function(result) {
+        success: function (result) {
           $("#input-Compressor-Enabled").prop('checked', result.enabled);
           $("#input-Compressor-Ratio").val(result.ratio);
           $("#input-Compressor-Threshold").val(result.threshold);
           $("#input-Compressor-Attack").val(result.attackDuration);
           $("#input-Compressor-Release").val(result.releaseDuration);
           $("#input-Compressor-Gain").val(result.outputGain);
-        }});
-        
+        }
+      });
+
       $.getJSON({
         url: "/TASagentBotAPI/Mic/NoiseGate",
-        success: function(result) {
+        success: function (result) {
           $("#input-NoiseGate-Enabled").prop('checked', result.enabled);
           $("#input-NoiseGate-OpenThreshold").val(result.openThreshold);
           $("#input-NoiseGate-CloseThreshold").val(result.closeThreshold);
           $("#input-NoiseGate-Attack").val(result.attackDuration);
           $("#input-NoiseGate-Hold").val(result.holdDuration);
           $("#input-NoiseGate-Release").val(result.releaseDuration);
-        }});
-        
+        }
+      });
+
       $.getJSON({
         url: "/TASagentBotAPI/Mic/Expander",
-        success: function(result) {
+        success: function (result) {
           $("#input-Expander-Enabled").prop('checked', result.enabled);
           $("#input-Expander-Ratio").val(result.ratio);
           $("#input-Expander-Threshold").val(result.threshold);
           $("#input-Expander-Attack").val(result.attackDuration);
           $("#input-Expander-Release").val(result.releaseDuration);
           $("#input-Expander-Gain").val(result.outputGain);
-        }});
+        }
+      });
     }
 
     function RefreshSerialDevices() {
       $.getJSON({
         url: "/TASagentBotAPI/ControllerSpy/GetPorts",
         headers: { "Authorization": "PASS NONE" },
-        success: function(devices) {
+        success: function (devices) {
           var serialDeviceSelect = $("#select-SerialDevice");
 
           serialDeviceSelect.empty();
 
           serialDeviceSelect.append($("<option value=\"\">None</option>"))
 
-          devices.forEach(function(device) {
+          devices.forEach(function (device) {
             serialDeviceSelect.append($(`<option value="${device}">${device}</option>`));
           });
 
@@ -240,12 +243,12 @@
       $.getJSON({
         url: "/TASagentBotAPI/ControllerSpy/CurrentPort",
         headers: { "Authorization": "PASS NONE" },
-        success: function(device) { $("#select-SerialDevice").val(device); },
+        success: function (device) { $("#select-SerialDevice").val(device); },
         beforeSend: ApplyAuth,
         error: HandleErrorResponse
       });
     }
-    
+
     function SubmitSerialDeviceChanged(port) {
       PrintText(`Serial Device being changed to: ${port}`);
       $.post({
@@ -261,18 +264,19 @@
     function UpdateTimerLayoutDisplayModes() {
       $.getJSON({
         url: "/TASagentBotAPI/Timer/DisplayModes",
-        success: function(result) {
-          var timerMainValueSelect =  $("#select-TimerMainValue");
-          var timerSecondaryValueSelect =  $("#select-TimerSecondaryValue");
+        success: function (result) {
+          var timerMainValueSelect = $("#select-TimerMainValue");
+          var timerSecondaryValueSelect = $("#select-TimerSecondaryValue");
 
           timerMainValueSelect.empty();
           timerSecondaryValueSelect.empty();
 
-          result.forEach(function(timerLayoutValue) {
+          result.forEach(function (timerLayoutValue) {
             timerMainValueSelect.append($(`<option value="${timerLayoutValue.value}">${timerLayoutValue.display}</option>`));
             timerSecondaryValueSelect.append($(`<option value="${timerLayoutValue.value}">${timerLayoutValue.display}</option>`));
           });
-        }});
+        }
+      });
     }
 
     function SubmitEffect(effect) {
@@ -361,9 +365,9 @@
     }
 
     function MoveSlider() {
-        var value = $('#slider-PitchSlider').slider("value");
-        var pitchValue = Math.pow(8, value);
-        
+      var value = $('#slider-PitchSlider').slider("value");
+      var pitchValue = Math.pow(8, value);
+
       $.post({
         url: "/TASagentBotAPI/Mic/PitchFactor",
         headers: { "Authorization": "PASS NONE" },
@@ -435,7 +439,7 @@
         data: JSON.stringify({
           Index: index,
           Approved: approved
-          }),
+        }),
         beforeSend: ApplyAuth,
         error: HandleErrorResponse
       });
@@ -546,16 +550,16 @@
       $.get({
         url: "/TASagentBotAPI/Settings/OutputDevices",
         headers: { "Authorization": "PASS NONE" },
-        success: function(devices) {
+        success: function (devices) {
           var effectOutputSelect = $("#select-EffectOutputDevice");
-          var voiceOutputSelect =  $("#select-VoiceOutputDevice");
+          var voiceOutputSelect = $("#select-VoiceOutputDevice");
           var midiOutputSelect = $("#select-MidiOutputDevice");
 
           effectOutputSelect.empty();
           voiceOutputSelect.empty();
           midiOutputSelect.empty();
 
-          devices.forEach(function(device) {
+          devices.forEach(function (device) {
             var effectOptionElement = $(`<option value="${device}">${device}</option>`);
             effectOutputSelect.append(effectOptionElement);
 
@@ -571,16 +575,16 @@
         beforeSend: ApplyAuth,
         error: HandleErrorResponse
       });
-      
+
       $.get({
         url: "/TASagentBotAPI/Settings/InputDevices",
         headers: { "Authorization": "PASS NONE" },
-        success: function(devices) {
-          var voiceInputSelect =  $("#select-VoiceInputDevice");
+        success: function (devices) {
+          var voiceInputSelect = $("#select-VoiceInputDevice");
 
           voiceInputSelect.empty();
 
-          devices.forEach(function(device) {
+          devices.forEach(function (device) {
             var optionElement = $(`<option value="${device}">${device}</option>`);
             voiceInputSelect.append(optionElement);
           });
@@ -590,18 +594,18 @@
         beforeSend: ApplyAuth,
         error: HandleErrorResponse
       });
-      
+
       $.get({
         url: "/TASagentBotAPI/Midi/MidiDevices",
         headers: { "Authorization": "PASS NONE" },
-        success: function(devices) {
-          var midiDeviceSelect =  $("#select-MidiDevice");
+        success: function (devices) {
+          var midiDeviceSelect = $("#select-MidiDevice");
 
           midiDeviceSelect.empty();
           var noneOptionElement = $(`<option value="">None</option>`);
           midiDeviceSelect.append(noneOptionElement);
 
-          devices.forEach(function(device) {
+          devices.forEach(function (device) {
             var optionElement = $(`<option value="${device}">${device}</option>`);
             midiDeviceSelect.append(optionElement);
           });
@@ -611,16 +615,16 @@
         beforeSend: ApplyAuth,
         error: HandleErrorResponse
       });
-      
+
       $.get({
         url: "/TASagentBotAPI/Midi/MidiInstruments",
         headers: { "Authorization": "PASS NONE" },
-        success: function(devices) {
-          var midiInstrumentSelect =  $("#select-MidiInstrument");
+        success: function (devices) {
+          var midiInstrumentSelect = $("#select-MidiInstrument");
 
           midiInstrumentSelect.empty();
 
-          devices.forEach(function(device) {
+          devices.forEach(function (device) {
             var optionElement = $(`<option value="${device}">${device}</option>`);
             midiInstrumentSelect.append(optionElement);
           });
@@ -634,7 +638,7 @@
       $.get({
         url: "/TASagentBotAPI/Settings/CurrentEffectOutputDevice",
         headers: { "Authorization": "PASS NONE" },
-        success: function(device) { $("#select-EffectOutputDevice").val(device); },
+        success: function (device) { $("#select-EffectOutputDevice").val(device); },
         beforeSend: ApplyAuth,
         error: HandleErrorResponse
       });
@@ -642,7 +646,7 @@
       $.get({
         url: "/TASagentBotAPI/Settings/CurrentVoiceOutputDevice",
         headers: { "Authorization": "PASS NONE" },
-        success: function(device) { $("#select-VoiceOutputDevice").val(device); },
+        success: function (device) { $("#select-VoiceOutputDevice").val(device); },
         beforeSend: ApplyAuth,
         error: HandleErrorResponse
       });
@@ -650,7 +654,7 @@
       $.get({
         url: "/TASagentBotAPI/Midi/CurrentMidiOutputDevice",
         headers: { "Authorization": "PASS NONE" },
-        success: function(device) { $("#select-MidiOutputDevice").val(device); },
+        success: function (device) { $("#select-MidiOutputDevice").val(device); },
         beforeSend: ApplyAuth,
         error: HandleErrorResponse
       });
@@ -660,7 +664,7 @@
       $.get({
         url: "/TASagentBotAPI/Settings/CurrentVoiceInputDevice",
         headers: { "Authorization": "PASS NONE" },
-        success: function(device) { $("#select-VoiceInputDevice").val(device); },
+        success: function (device) { $("#select-VoiceInputDevice").val(device); },
         beforeSend: ApplyAuth,
         error: HandleErrorResponse
       });
@@ -670,7 +674,7 @@
       $.get({
         url: "/TASagentBotAPI/Midi/CurrentMidiDevice",
         headers: { "Authorization": "PASS NONE" },
-        success: function(device) { $("#select-MidiDevice").val(device); },
+        success: function (device) { $("#select-MidiDevice").val(device); },
         beforeSend: ApplyAuth,
         error: HandleErrorResponse
       });
@@ -704,9 +708,9 @@
       $.get({
         url: "/TASagentBotAPI/Timer/TimerState",
         headers: { "Authorization": "PASS NONE" },
-        success: function(timerState) {
+        success: function (timerState) {
           var lapStartTime = 0;
-          timerState.laps.forEach(function(value) {lapStartTime += value;});
+          timerState.laps.forEach(function (value) { lapStartTime += value; });
 
           $("#input-TimerCumulative").val(timeToString(lapStartTime + timerState.currentMS));
           $("#input-TimerCurrent").val(timeToString(timerState.currentMS));
@@ -727,14 +731,14 @@
       $.get({
         url: "/TASagentBotAPI/Timer/SavedTimers",
         headers: { "Authorization": "PASS NONE" },
-        success: function(timers) {
+        success: function (timers) {
           var timerLoadSelect = $("#select-TimerLoad");
 
           timerLoadSelect.empty();
 
-          timers.forEach(function(timer) {
+          timers.forEach(function (timer) {
             var cumulativeTime = timer.endingTime;
-            timer.laps.forEach(function(value) {cumulativeTime += value;});
+            timer.laps.forEach(function (value) { cumulativeTime += value; });
 
             var timerOptionElement = $(`<option value="${timer.name}">${timer.name}: ${timeToString(cumulativeTime)}</option>`);
             timerLoadSelect.append(timerOptionElement);
@@ -796,8 +800,7 @@
       var isPrivAuth = false;
       var isAdminAuth = false;
 
-      switch(role)
-      {
+      switch (role) {
         case "None":
           break;
 
@@ -815,27 +818,27 @@
           isPrivAuth = true;
           isAdminAuth = true;
           break;
-          
+
         default:
           console.log("Unexpected role: " + role);
           break;
       }
 
-      $(".requireAuth").each(function() {
+      $(".requireAuth").each(function () {
         $(this).prop('disabled', !isUserAuth);
       });
-      
-      $(".requirePrivAuth").each(function() {
+
+      $(".requirePrivAuth").each(function () {
         $(this).prop('disabled', !isPrivAuth);
       });
-      
-      $(".requireAdminAuth").each(function() {
+
+      $(".requireAdminAuth").each(function () {
         $(this).prop('disabled', !isAdminAuth);
       });
 
       $("#text-role").val(role);
-      
-      $(".userAuthGroup").each(function() {
+
+      $(".userAuthGroup").each(function () {
         if (isUserAuth) {
           $(this).show();
         }
@@ -843,8 +846,8 @@
           $(this).hide();
         }
       });
-      
-      $(".privAuthGroup").each(function() {
+
+      $(".privAuthGroup").each(function () {
         if (isPrivAuth) {
           $(this).show();
         }
@@ -852,8 +855,8 @@
           $(this).hide();
         }
       });
-      
-      $(".adminAuthGroup").each(function() {
+
+      $(".adminAuthGroup").each(function () {
         if (isAdminAuth) {
           $(this).show();
         }
@@ -863,7 +866,7 @@
       });
     }
 
-    $(document).ready(function() {
+    $(document).ready(function () {
 
       SetAuthStatus("None");
 
@@ -883,59 +886,59 @@
       connection.start();
 
 
-      $("#button-Normal").click(function() {
+      $("#button-Normal").click(function () {
         SubmitEffect("");
       });
 
-      $("#button-HighPitch").click(function() {
+      $("#button-HighPitch").click(function () {
         SubmitEffect("PitchShift 1.5000");
       });
-      
-      $("#button-LowPitch").click(function() {
+
+      $("#button-LowPitch").click(function () {
         SubmitEffect("PitchShift 0.75000");
       });
-      
-      $("#button-Modulation").click(function() {
+
+      $("#button-Modulation").click(function () {
         SubmitEffect("Modulate 4 200");
       });
-      
-      $("#button-Vocoding").click(function() {
+
+      $("#button-Vocoding").click(function () {
         SubmitEffect("Vocode 15");
       });
-      
-      $("#button-VocodingPitch").click(function() {
+
+      $("#button-VocodingPitch").click(function () {
         SubmitEffect("Vocode 15, Pitch 1.5");
       });
-      
-      $("#button-Chorus").click(function() {
+
+      $("#button-Chorus").click(function () {
         SubmitEffect("Chorus 40 60 0.25 Sine");
       });
-      
-      $("#button-ReverbVeryWarm").click(function() {
+
+      $("#button-ReverbVeryWarm").click(function () {
         SubmitEffect("Reverb VeryWarm");
       });
-      
-      $("#button-ReverbInsideEar").click(function() {
+
+      $("#button-ReverbInsideEar").click(function () {
         SubmitEffect("Reverb InsideEar");
       });
-      
-      $("#button-ReverbInsideBox").click(function() {
+
+      $("#button-ReverbInsideBox").click(function () {
         SubmitEffect("Reverb InsideBox");
       });
-      
-      $("#button-WorkingRobot").click(function() {
+
+      $("#button-WorkingRobot").click(function () {
         SubmitEffect("Reverb crappyspeaker, FreqShift 200");
       });
-      
-      $("#button-BrokenRobot").click(function() {
+
+      $("#button-BrokenRobot").click(function () {
         SubmitEffect("FreqShift 800, Reverb Crappyspeaker, FreqShift -400");
       });
-      
-      $("#button-Strange").click(function() {
+
+      $("#button-Strange").click(function () {
         SubmitEffect("PitchShift 0.75, FreqShift 400, Reverb Crappyspeaker");
       });
 
-      $("#button-SubmitCustomEffect").click(function() {
+      $("#button-SubmitCustomEffect").click(function () {
         SubmitEffect($("#input-CustomEffect").val());
       });
 
@@ -946,7 +949,7 @@
         step: 0.01,
         slide: MoveSlider
       })
-      
+
 
       $("#button-Refresh").click(RefreshDisplay);
 
@@ -956,22 +959,22 @@
       $("#button-SubmitNoiseGateSettings").click(SubmitNoiseGate);
       $("#button-SubmitCompressorSettings").click(SubmitCompressor);
       $("#button-SubmitExpanderSettings").click(SubmitExpander);
-      
+
       $("#button-Quit").click(Quit);
-      
+
       $("#button-Skip").click(SkipNotification);
 
-      $("#button-PlaySound").click(function() {
+      $("#button-PlaySound").click(function () {
         PlaySound($("#input-PlaySound").val());
         $("#input-PlaySound").val("");
       });
 
-      $("#button-SendMessage").click(function() {
+      $("#button-SendMessage").click(function () {
         PrintText($("#input-SendMessage").val());
         $("#input-SendMessage").val("");
       });
 
-      $("#button-Speak").click(function() {
+      $("#button-Speak").click(function () {
         SpeakText($("#input-Speak").val());
         $("#input-Speak").val("");
       });
@@ -979,78 +982,78 @@
       $("#button-RefreshAudioDevices").click(FetchAudioDevices);
 
       var effectOutputDevice = $("#select-EffectOutputDevice");
-      effectOutputDevice.change(function() { SubmitEffectOutputDevice(effectOutputDevice.val()); });
-      
+      effectOutputDevice.change(function () { SubmitEffectOutputDevice(effectOutputDevice.val()); });
+
       var voiceOutputDevice = $("#select-VoiceOutputDevice");
-      voiceOutputDevice.change(function() { SubmitVoiceOutputDevice(voiceOutputDevice.val()); });
+      voiceOutputDevice.change(function () { SubmitVoiceOutputDevice(voiceOutputDevice.val()); });
 
       var voiceInputDevice = $("#select-VoiceInputDevice");
-      voiceInputDevice.change(function() { SubmitVoiceInputDevice(voiceInputDevice.val()); });
+      voiceInputDevice.change(function () { SubmitVoiceInputDevice(voiceInputDevice.val()); });
 
       var midiOutputDevice = $("#select-MidiOutputDevice");
-      midiOutputDevice.change(function() { SubmitMidiOutputDevice(midiOutputDevice.val()); });
+      midiOutputDevice.change(function () { SubmitMidiOutputDevice(midiOutputDevice.val()); });
 
       var midiDevice = $("#select-MidiDevice");
-      midiDevice.change(function() { SubmitMidiDevice(midiDevice.val()); });
+      midiDevice.change(function () { SubmitMidiDevice(midiDevice.val()); });
 
 
-      $("#button-MidiBindSFX").click(function() {
+      $("#button-MidiBindSFX").click(function () {
         SubmitMidiSoundEffect($("#input-MidiBindSFX").val());
       });
 
-      $("#button-MidiBindInstrument").click(function() {
+      $("#button-MidiBindInstrument").click(function () {
         SubmitMidiInstrument($("#select-MidiInstrument").val());
       });
-      
+
       $("#button-TimerRefresh").click(FetchTimerValues);
 
-      $("#button-TimerSetTime").click(function() {
+      $("#button-TimerSetTime").click(function () {
         SubmitTimerTime($("#input-TimerSetTime").val());
       });
 
-      $("#button-TimerStart").click(function() {
+      $("#button-TimerStart").click(function () {
         TriggerTimerAction("Start");
       });
 
-      $("#button-TimerStop").click(function() {
+      $("#button-TimerStop").click(function () {
         TriggerTimerAction("Stop");
       });
 
-      $("#button-TimerReset").click(function() {
+      $("#button-TimerReset").click(function () {
         TriggerTimerAction("Reset");
       });
 
-      $("#button-TimerLap").click(function() {
+      $("#button-TimerLap").click(function () {
         TriggerTimerAction("MarkLap");
       });
 
-      $("#button-TimerUnlap").click(function() {
+      $("#button-TimerUnlap").click(function () {
         TriggerTimerAction("UnmarkLap");
       });
 
-      $("#button-TimerResetLap").click(function() {
+      $("#button-TimerResetLap").click(function () {
         TriggerTimerAction("ResetCurrentLap");
       });
 
-      $("#button-TimerLoad").click(function() {
+      $("#button-TimerLoad").click(function () {
         LoadTimer($("#select-TimerLoad").val());
       });
 
-      $("#button-TimerSave").click(function() {
+      $("#button-TimerSave").click(function () {
         SaveTimer($("#input-TimerSaveName").val());
       });
-      
+
       $("#button-TimerFetchSaved").click(FetchSavedTimerValues);
       $("#button-TimerApplyLayout").click(SubmitTimerLayout);
-      
+
       RefreshDisplay();
       UpdateTimerLayoutDisplayModes();
 
       var serialDeviceSelect = $("#select-SerialDevice");
-      serialDeviceSelect.change(function() { SubmitSerialDeviceChanged(serialDeviceSelect.val()); });
+      serialDeviceSelect.change(function () { SubmitSerialDeviceChanged(serialDeviceSelect.val()); });
       $("#button-RefreshSerialDevices").click(RefreshSerialDevices);
     });
-    
+
   </script>
 </head>
 <body>
@@ -1085,7 +1088,7 @@
 
       <div class="col-sm privAuthGroup" id="toolsAccordion">
         <h3>Tools</h3>
-        
+
         <div class="d-flex flex-wrap">
           <button class="btn btn-primary requirePrivAuth p-2 m-2" id="button-Skip">Skip</button>
           <button class="btn btn-primary requireAdminAuth p-2 m-2" id="button-Quit">Quit</button>
@@ -1121,7 +1124,7 @@
           </div>
         </div>
 
-  
+
         <div class="card">
           <div class="card-header" id="ttsHeading">
             <h4 class="mb-0">
@@ -1272,11 +1275,11 @@
                 </div>
                 <input type="text" id="input-TimerSetTime" class="form-control">
                 <div class="input-group-append">
-                  <button id="button-TimerSetTime" class="btn btn-primary">Set</button> 
+                  <button id="button-TimerSetTime" class="btn btn-primary">Set</button>
                 </div>
               </div>
 
-              
+
               <div class="card">
                 <div class="card-header">
                   <h5 class="mb-0">Layout</h5>
@@ -1287,25 +1290,25 @@
                       <label for="input-TimerMainLabel">Main Label</label>
                       <input type="text" id="input-TimerMainLabel" class="form-control">
                     </div>
-    
+
                     <div class="form-group col-md-3">
                       <label for="select-TimerMainValue">Main Value</label>
                       <select id="select-TimerMainValue" class="form-control">
                       </select>
                     </div>
-                    
+
                     <div class="form-group col-md-3">
                       <label for="input-TimerSecondaryLabel">Secondary Label</label>
                       <input type="text" id="input-TimerSecondaryLabel" class="form-control">
                     </div>
-    
+
                     <div class="form-group col-md-3">
                       <label for="select-TimerSecondaryValue">Secondary Value</label>
                       <select id="select-TimerSecondaryValue" class="form-control">
                       </select>
                     </div>
                   </div>
-    
+
                   <button id="button-TimerApplyLayout" class="btn btn-primary">Apply Layout</button>
                 </div>
               </div>
@@ -1318,25 +1321,25 @@
                 </div>
                 <input type="text" id="input-TimerSaveName" class="form-control">
                 <div class="input-group-append">
-                  <button id="button-TimerSave" class="btn btn-primary">Save</button> 
+                  <button id="button-TimerSave" class="btn btn-primary">Save</button>
                 </div>
               </div>
 
               <div class="input-group mb-3">
                 <div class="input-group-prepend">
-                  <button id="button-TimerFetchSaved" class="btn btn-primary">Fetch</button> 
+                  <button id="button-TimerFetchSaved" class="btn btn-primary">Fetch</button>
                 </div>
                 <select type="text" id="select-TimerLoad" class="form-control">
                 </select>
                 <div class="input-group-append">
-                  <button id="button-TimerLoad" class="btn btn-primary" disabled="true">Load</button> 
+                  <button id="button-TimerLoad" class="btn btn-primary" disabled="true">Load</button>
                 </div>
               </div>
 
             </div>
           </div>
         </div>
-        
+
         <div class="card adminAuthGroup">
           <div class="card-header" id="inputCaptureHeading">
             <h4 class="mb-0">
@@ -1377,7 +1380,7 @@
           </div>
           <input type="text" id="text-Status" class="form-control" name="release" readonly="true">
           <div class="input-group-append">
-            <button id="button-Refresh" class="btn btn-primary">Refresh</button> 
+            <button id="button-Refresh" class="btn btn-primary">Refresh</button>
           </div>
         </div>
 
@@ -1388,7 +1391,7 @@
           </div>
           <input type="text" id="input-CustomEffect" class="form-control" name="customEffect">
           <div class="input-group-append">
-            <button id="button-SubmitCustomEffect" class="btn btn-primary requireAuth">Submit</button> 
+            <button id="button-SubmitCustomEffect" class="btn btn-primary requireAuth">Submit</button>
           </div>
         </div>
 
@@ -1410,7 +1413,7 @@
                 <button class="btn btn-primary requireAuth p-2 m-2" id="button-LowPitch">Low Pitch</button>
                 <button class="btn btn-primary requireAuth p-2 m-2" id="button-Modulation">Modulation</button>
                 <button class="btn btn-primary requireAuth p-2 m-2" id="button-Vocoding">Vocoding</button>
-                <button class="btn btn-primary requireAuth p-2 m-2" id="button-VocodingPitch">Vocoding And Pitch</button> 
+                <button class="btn btn-primary requireAuth p-2 m-2" id="button-VocodingPitch">Vocoding And Pitch</button>
                 <button class="btn btn-primary requireAuth p-2 m-2" id="button-ReverbVeryWarm">Reverb: Very Warm</button>
                 <button class="btn btn-primary requireAuth p-2 m-2" id="button-ReverbInsideEar">Reverb: Inside Ear</button>
                 <button class="btn btn-primary requireAuth p-2 m-2" id="button-ReverbInsideBox">Reverb: Inside Box</button>
@@ -1470,28 +1473,28 @@
                 </div>
                 <input type="number" id="input-NoiseGate-OpenThreshold" class="form-control" name="openThreshold" min="-60.0" max="0.0" step="1">
               </div>
-        
+
               <div class="input-group mb-3">
                 <div class="input-group-prepend">
                   <span class="input-group-text" id="inputGroup-sizing-default">Close Threshold (dB)</span>
                 </div>
                 <input type="number" id="input-NoiseGate-CloseThreshold" class="form-control" name="closeThreshold" min="-60.0" max="0.0" step="1">
               </div>
-        
+
               <div class="input-group mb-3">
                 <div class="input-group-prepend">
                   <span class="input-group-text" id="inputGroup-sizing-default">Attack Duration (s)</span>
                 </div>
                 <input type="number" id="input-NoiseGate-Attack" class="form-control" name="attack" min="0.0" max="1.0" step="0.001">
               </div>
-        
+
               <div class="input-group mb-3">
                 <div class="input-group-prepend">
                   <span class="input-group-text" id="inputGroup-sizing-default">Hold Duration (s)</span>
                 </div>
                 <input type="number" id="input-NoiseGate-Hold" class="form-control" name="hold" min="0.0" max="1.0" step="0.001">
               </div>
-        
+
               <div class="input-group mb-3">
                 <div class="input-group-prepend">
                   <span class="input-group-text" id="inputGroup-sizing-default">Release Duration (s)</span>
@@ -1530,28 +1533,28 @@
                 </div>
                 <input type="number" id="input-Expander-Ratio" class="form-control" name="ratio" min="1" max="40" step="0.1">
               </div>
-        
+
               <div class="input-group mb-3">
                 <div class="input-group-prepend">
                   <span class="input-group-text" id="inputGroup-sizing-default">Threshold (dB)</span>
                 </div>
                 <input type="number" id="input-Expander-Threshold" class="form-control" name="threshold" min="-60.0" max="0.0" step="1">
               </div>
-        
+
               <div class="input-group mb-3">
                 <div class="input-group-prepend">
                   <span class="input-group-text" id="inputGroup-sizing-default">Attack Duration (s)</span>
                 </div>
                 <input type="number" id="input-Expander-Attack" class="form-control" name="attack" min="0.0" max="1.0" step="0.001">
               </div>
-        
+
               <div class="input-group mb-3">
                 <div class="input-group-prepend">
                   <span class="input-group-text" id="inputGroup-sizing-default">Release Duration (s)</span>
                 </div>
                 <input type="number" id="input-Expander-Release" class="form-control" name="release" min="0.0" max="1.0" step="0.001">
               </div>
-        
+
               <div class="input-group mb-3">
                 <div class="input-group-prepend">
                   <span class="input-group-text" id="inputGroup-sizing-default">Gain (dB)</span>
@@ -1590,28 +1593,28 @@
                 </div>
                 <input type="number" id="input-Compressor-Ratio" class="form-control" name="ratio" min="1" max="40" step="0.1">
               </div>
-        
+
               <div class="input-group mb-3">
                 <div class="input-group-prepend">
                   <span class="input-group-text" id="inputGroup-sizing-default">Threshold (dB)</span>
                 </div>
                 <input type="number" id="input-Compressor-Threshold" class="form-control" name="threshold" min="-60.0" max="0.0" step="1">
               </div>
-        
+
               <div class="input-group mb-3">
                 <div class="input-group-prepend">
                   <span class="input-group-text" id="inputGroup-sizing-default">Attack Duration (s)</span>
                 </div>
                 <input type="number" id="input-Compressor-Attack" class="form-control" name="attack" min="0.0" max="1.0" step="0.001">
               </div>
-        
+
               <div class="input-group mb-3">
                 <div class="input-group-prepend">
                   <span class="input-group-text" id="inputGroup-sizing-default">Release Duration (s)</span>
                 </div>
                 <input type="number" id="input-Compressor-Release" class="form-control" name="release" min="0.0" max="1.0" step="0.001">
               </div>
-        
+
               <div class="input-group mb-3">
                 <div class="input-group-prepend">
                   <span class="input-group-text" id="inputGroup-sizing-default">Gain (dB)</span>
@@ -1711,7 +1714,7 @@
                   <button class="btn btn-primary" id="button-MidiBindInstrument">Bind</button>
                 </div>
               </div>
-              
+
               <div class="input-group mb-3">
                 <div class="input-group-prepend">
                   <span class="input-group-text" id="inputGroup-sizing-sm">Bind To Sound Effect</span>
@@ -1721,7 +1724,7 @@
                   <button class="btn btn-primary" id="button-MidiBindSFX">Bind</button>
                 </div>
               </div>
-              
+
             </div>
           </div>
         </div>
@@ -1743,7 +1746,7 @@
         <ul id="chatBox" class="list-group"> </ul>
       </div>
     </div>
-    
+
     <div class="card">
       <div class="card-header">
         <h4 class="mb-0">Events</h4>
@@ -1753,7 +1756,7 @@
         <ul id="eventBox" class="list-group"> </ul>
       </div>
     </div>
-    
+
     <div class="card">
       <div class="card-header">
         <h4 class="mb-0">Debug</h4>
@@ -1763,7 +1766,7 @@
         <ul id="debugBox" class="list-group"> </ul>
       </div>
     </div>
-    
+
   </div>
 
   <div class="card-group privAuthGroup">
@@ -1776,8 +1779,8 @@
         <ul id="notificationBox" class="list-group"> </ul>
       </div>
     </div>
-    
-    
+
+
     <div class="card">
       <div class="card-header">
         <h4 class="mb-0">Pending Notifications</h4>
@@ -1787,7 +1790,7 @@
         <ul id="pendingNotificationBox" class="list-group"> </ul>
       </div>
     </div>
-    
+
     <div class="card">
     </div>
   </div>

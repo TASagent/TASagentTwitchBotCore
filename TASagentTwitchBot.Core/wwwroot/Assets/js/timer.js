@@ -1,6 +1,5 @@
 // Convert time to a format of hours, minutes, seconds, and milliseconds
 
-
 let connection = new signalR.HubConnectionBuilder()
     .withUrl("/Hubs/Timer")
     .build();
