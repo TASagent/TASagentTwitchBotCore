@@ -16,8 +16,7 @@ let secondaryDisplayMode = 0;
 let mainDisplayTextElement = $("#text-MainDisplay");
 let secondaryDisplayTextElement = $("#text-SecondaryDisplay");
 
-function GetDisplayText(displayMode)
-{
+function GetDisplayText(displayMode) {
     switch (displayMode) {
         //None
         case 0: return "";
@@ -42,14 +41,13 @@ function Print() {
 
 function Start() {
     startTime = Date.now() - elapsedTime;
-    timerInterval = setInterval(function() {
+    timerInterval = setInterval(function () {
         elapsedTime = Date.now() - startTime;
         Print();
     }, 10);
 }
 
-function SetState(stateValue)
-{
+function SetState(stateValue) {
     clearInterval(timerInterval);
     $("#text-MainLabel").text(stateValue.layout.mainLabel);
     $("#text-SecondaryLabel").text(stateValue.layout.secondaryLabel);
@@ -57,25 +55,22 @@ function SetState(stateValue)
     secondaryDisplayMode = stateValue.layout.secondaryDisplay;
 
     lapTime = 0;
-    stateValue.laps.forEach(function(value) { lapTime += value; });
+    stateValue.laps.forEach(function (value) { lapTime += value; });
     lapTimeString = timeToString(lapTime);
 
     elapsedTime = stateValue.currentMS;
 
-    if (stateValue.ticking)
-    {
+    if (stateValue.ticking) {
         Start();
     }
-    else
-    {
+    else {
         Print();
     }
 }
 
 connection.on('SetState', SetState);
 
-async function Initiate()
-{
+async function Initiate() {
     await connection.start();
     await connection.invoke("RequestState");
 }

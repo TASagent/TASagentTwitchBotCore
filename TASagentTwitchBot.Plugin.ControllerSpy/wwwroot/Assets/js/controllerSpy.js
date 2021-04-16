@@ -17,13 +17,11 @@ connection.on('ControllerUpdate',
         DrawX(state.x);
         DrawY(state.y);
 
-        if (state.r)
-        {
+        if (state.r) {
             DrawR();
         }
 
-        if (state.l)
-        {
+        if (state.l) {
             DrawL();
         }
     });
@@ -59,27 +57,24 @@ var sqy0 = ch / 2 - 0.5 * fullHeight + lrHeight;
 var sqy0c = sqy0 + 0.5 * squareSize;
 var sqy1 = sqy0 + squareSize;
 
-function DrawLeftArrow(pressed)
-{
+function DrawLeftArrow(pressed) {
     ctx.beginPath();
 
     ctx.moveTo(sq1x0c - 0.05 * squareSize, sqy0c);
-    ctx.lineTo(sq1x0c - 0.05 * squareSize - squareSize/6, sqy0c - squareSize/6);
-    ctx.lineTo(sq1x0, sqy0c - squareSize/6);
-    ctx.lineTo(sq1x0, sqy0c + squareSize/6);
-    ctx.lineTo(sq1x0c - 0.05 * squareSize - squareSize/6, sqy0c + squareSize/6);
+    ctx.lineTo(sq1x0c - 0.05 * squareSize - squareSize / 6, sqy0c - squareSize / 6);
+    ctx.lineTo(sq1x0, sqy0c - squareSize / 6);
+    ctx.lineTo(sq1x0, sqy0c + squareSize / 6);
+    ctx.lineTo(sq1x0c - 0.05 * squareSize - squareSize / 6, sqy0c + squareSize / 6);
     ctx.lineTo(sq1x0c - 0.05 * squareSize, sqy0c);
-    ctx.lineTo(sq1x0c - 0.05 * squareSize - squareSize/6, sqy0c - squareSize/6);
+    ctx.lineTo(sq1x0c - 0.05 * squareSize - squareSize / 6, sqy0c - squareSize / 6);
 
     ctx.lineWidth = 5;
-    
-    if (pressed)
-    {
+
+    if (pressed) {
         ctx.fillStyle = "#091421";
         ctx.strokeStyle = "#FFFFFF";
     }
-    else
-    {
+    else {
         ctx.fillStyle = "#09142150";
         ctx.strokeStyle = "#FFFFFF50";
     }
@@ -88,27 +83,24 @@ function DrawLeftArrow(pressed)
     ctx.stroke();
 }
 
-function DrawRightArrow(pressed)
-{
+function DrawRightArrow(pressed) {
     ctx.beginPath();
 
     ctx.moveTo(sq1x0c + 0.05 * squareSize, sqy0c);
-    ctx.lineTo(sq1x0c + 0.05 * squareSize + squareSize/6, sqy0c + squareSize/6);
-    ctx.lineTo(sq2x0, sqy0c + squareSize/6);
-    ctx.lineTo(sq2x0, sqy0c - squareSize/6);
-    ctx.lineTo(sq1x0c + 0.05 * squareSize + squareSize/6, sqy0c - squareSize/6);
+    ctx.lineTo(sq1x0c + 0.05 * squareSize + squareSize / 6, sqy0c + squareSize / 6);
+    ctx.lineTo(sq2x0, sqy0c + squareSize / 6);
+    ctx.lineTo(sq2x0, sqy0c - squareSize / 6);
+    ctx.lineTo(sq1x0c + 0.05 * squareSize + squareSize / 6, sqy0c - squareSize / 6);
     ctx.lineTo(sq1x0c + 0.05 * squareSize, sqy0c);
-    ctx.lineTo(sq1x0c + 0.05 * squareSize + squareSize/6, sqy0c + squareSize/6);
+    ctx.lineTo(sq1x0c + 0.05 * squareSize + squareSize / 6, sqy0c + squareSize / 6);
 
     ctx.lineWidth = 5;
-    
-    if (pressed)
-    {
+
+    if (pressed) {
         ctx.fillStyle = "#091421";
         ctx.strokeStyle = "#FFFFFF";
     }
-    else
-    {
+    else {
         ctx.fillStyle = "#09142150";
         ctx.strokeStyle = "#FFFFFF50";
     }
@@ -117,27 +109,24 @@ function DrawRightArrow(pressed)
     ctx.stroke();
 }
 
-function DrawDownArrow(pressed)
-{
+function DrawDownArrow(pressed) {
     ctx.beginPath();
 
     ctx.moveTo(sq1x0c, sqy0c + 0.05 * squareSize);
-    ctx.lineTo(sq1x0c + squareSize/6, sqy0c + squareSize/6 + 0.05 * squareSize);
-    ctx.lineTo(sq1x0c + squareSize/6, sqy1);
-    ctx.lineTo(sq1x0c - squareSize/6, sqy1);
-    ctx.lineTo(sq1x0c - squareSize/6, sqy0c + squareSize/6 + 0.05 * squareSize);
+    ctx.lineTo(sq1x0c + squareSize / 6, sqy0c + squareSize / 6 + 0.05 * squareSize);
+    ctx.lineTo(sq1x0c + squareSize / 6, sqy1);
+    ctx.lineTo(sq1x0c - squareSize / 6, sqy1);
+    ctx.lineTo(sq1x0c - squareSize / 6, sqy0c + squareSize / 6 + 0.05 * squareSize);
     ctx.lineTo(sq1x0c, sqy0c + 0.05 * squareSize);
-    ctx.lineTo(sq1x0c + squareSize/6, sqy0c + squareSize/6 + 0.05 * squareSize);
+    ctx.lineTo(sq1x0c + squareSize / 6, sqy0c + squareSize / 6 + 0.05 * squareSize);
 
     ctx.lineWidth = 5;
-    
-    if (pressed)
-    {
+
+    if (pressed) {
         ctx.fillStyle = "#091421";
         ctx.strokeStyle = "#FFFFFF";
     }
-    else
-    {
+    else {
         ctx.fillStyle = "#09142150";
         ctx.strokeStyle = "#FFFFFF50";
     }
@@ -146,27 +135,24 @@ function DrawDownArrow(pressed)
     ctx.stroke();
 }
 
-function DrawUpArrow(pressed)
-{
+function DrawUpArrow(pressed) {
     ctx.beginPath();
 
     ctx.moveTo(sq1x0c, sqy0c - 0.05 * squareSize);
-    ctx.lineTo(sq1x0c + squareSize/6, sqy0c - squareSize/6 - 0.05 * squareSize);
-    ctx.lineTo(sq1x0c + squareSize/6, sqy0);
-    ctx.lineTo(sq1x0c - squareSize/6, sqy0);
-    ctx.lineTo(sq1x0c - squareSize/6, sqy0c - squareSize/6 - 0.05 * squareSize);
+    ctx.lineTo(sq1x0c + squareSize / 6, sqy0c - squareSize / 6 - 0.05 * squareSize);
+    ctx.lineTo(sq1x0c + squareSize / 6, sqy0);
+    ctx.lineTo(sq1x0c - squareSize / 6, sqy0);
+    ctx.lineTo(sq1x0c - squareSize / 6, sqy0c - squareSize / 6 - 0.05 * squareSize);
     ctx.lineTo(sq1x0c, sqy0c - 0.05 * squareSize);
-    ctx.lineTo(sq1x0c + squareSize/6, sqy0c - squareSize/6 - 0.05 * squareSize);
+    ctx.lineTo(sq1x0c + squareSize / 6, sqy0c - squareSize / 6 - 0.05 * squareSize);
 
     ctx.lineWidth = 5;
-    
-    if (pressed)
-    {
+
+    if (pressed) {
         ctx.fillStyle = "#091421";
         ctx.strokeStyle = "#FFFFFF";
     }
-    else
-    {
+    else {
         ctx.fillStyle = "#09142150";
         ctx.strokeStyle = "#FFFFFF50";
     }
@@ -175,19 +161,16 @@ function DrawUpArrow(pressed)
     ctx.stroke();
 }
 
-function DrawA(pressed)
-{
+function DrawA(pressed) {
     ctx.beginPath();
     ctx.arc(sq3xc + 0.25 * squareSize, sqy0c, 0.16 * squareSize, 0, 2 * Math.PI);
     ctx.lineWidth = 5;
-    
-    if (pressed)
-    {
+
+    if (pressed) {
         ctx.fillStyle = "#8a0a7e";
         ctx.strokeStyle = "#FFFFFF";
     }
-    else
-    {
+    else {
         ctx.fillStyle = "#8a0a7e50";
         ctx.strokeStyle = "#FFFFFF50";
     }
@@ -196,19 +179,16 @@ function DrawA(pressed)
     ctx.stroke();
 }
 
-function DrawB(pressed)
-{
+function DrawB(pressed) {
     ctx.beginPath();
     ctx.arc(sq3xc, sqy0c + 0.25 * squareSize, 0.16 * squareSize, 0, 2 * Math.PI);
     ctx.lineWidth = 5;
 
-    if (pressed)
-    {
+    if (pressed) {
         ctx.fillStyle = "#8a0a7e";
         ctx.strokeStyle = "#FFFFFF";
     }
-    else
-    {
+    else {
         ctx.fillStyle = "#8a0a7e50";
         ctx.strokeStyle = "#FFFFFF50";
     }
@@ -217,19 +197,16 @@ function DrawB(pressed)
     ctx.stroke();
 }
 
-function DrawX(pressed)
-{
+function DrawX(pressed) {
     ctx.beginPath();
     ctx.arc(sq3xc, sqy0c - 0.25 * squareSize, 0.16 * squareSize, 0, 2 * Math.PI);
     ctx.lineWidth = 5;
 
-    if (pressed)
-    {
+    if (pressed) {
         ctx.fillStyle = "#d49fcf";
         ctx.strokeStyle = "#FFFFFF";
     }
-    else
-    {
+    else {
         ctx.fillStyle = "#d49fcf50";
         ctx.strokeStyle = "#FFFFFF50";
     }
@@ -238,19 +215,16 @@ function DrawX(pressed)
     ctx.stroke();
 }
 
-function DrawY(pressed)
-{
+function DrawY(pressed) {
     ctx.beginPath();
     ctx.arc(sq3xc - 0.25 * squareSize, sqy0c, 0.16 * squareSize, 0, 2 * Math.PI);
     ctx.lineWidth = 5;
 
-    if (pressed)
-    {
+    if (pressed) {
         ctx.fillStyle = "#d49fcf";
         ctx.strokeStyle = "#FFFFFF";
     }
-    else
-    {
+    else {
         ctx.fillStyle = "#d49fcf50";
         ctx.strokeStyle = "#FFFFFF50";
     }
@@ -259,14 +233,13 @@ function DrawY(pressed)
     ctx.stroke();
 }
 
-function DrawL()
-{
+function DrawL() {
     ctx.beginPath();
     ctx.moveTo(sq1x0, sqy0 - 0.05 * lrHeight);
     ctx.lineTo(sq1x0 + squareSize, sqy0 - 0.05 * lrHeight);
     ctx.lineTo(sq1x0 + squareSize, sqy0 - lrHeight);
     ctx.lineTo(sq1x0, sqy0 - lrHeight);
-    ctx.lineTo(sq1x0, sqy0- 0.05 * lrHeight);
+    ctx.lineTo(sq1x0, sqy0 - 0.05 * lrHeight);
 
     ctx.lineWidth = 5;
     ctx.fillStyle = "#ccd8e6";
@@ -275,15 +248,14 @@ function DrawL()
     ctx.stroke();
 }
 
-function DrawR()
-{
+function DrawR() {
     ctx.beginPath();
     ctx.moveTo(sq3x0, sqy0 - 0.05 * lrHeight);
     ctx.lineTo(sq3x0 + squareSize, sqy0 - 0.05 * lrHeight);
     ctx.lineTo(sq3x0 + squareSize, sqy0 - lrHeight);
     ctx.lineTo(sq3x0, sqy0 - lrHeight);
     ctx.lineTo(sq3x0, sqy0 - 0.05 * lrHeight);
-    
+
     ctx.lineWidth = 5;
     ctx.fillStyle = "#ccd8e6";
     ctx.fill();
@@ -291,8 +263,7 @@ function DrawR()
     ctx.stroke();
 }
 
-function Clear()
-{
+function Clear() {
     ctx.clearRect(0, 0, cw, ch);
 }
 
