@@ -147,9 +147,10 @@ New commands just need to extend the `ICommandSystem` interface, and get registe
 
 ### Notifications
 
-In OBS, add the following four BrowserSources
+In OBS, add the following BrowserSources
 
-`http://localhost:5000/BrowserSource/overlay.html` - Image notifications
-`http://localhost:5000/BrowserSource/controllerSpy.html` - SNES NintendoSpy Overlay
-`http://localhost:5000/BrowserSource/timer.html` - Timer overlay
-`http://localhost:5000/BrowserSource/ttsmarquee.html` - Scrolling TTS Marquee
+`http://localhost:5000/BrowserSource/overlay.html` - Image notifications (example size: 800px wide x 600px tall)
+`http://localhost:5000/BrowserSource/controllerSpy.html` - SNES NintendoSpy Overlay (example size: 400px wide x 100px tall)
+`http://localhost:5000/BrowserSource/timer.html` - Timer overlay (example size: 450px wide x 150px tall)
+`http://localhost:5000/BrowserSource/ttsmarquee.html` - Scrolling TTS Marquee (example size: 1920px wide x 60px tall)
+`http://localhost:5000/BrowserSource/emoteRain.html` - Raining Emote effect (example size: 1920px wide x 1080px tall)

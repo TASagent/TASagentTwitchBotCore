@@ -104,7 +104,8 @@ namespace TASagentTwitchBot.Core
                 .AddSingleton<API.Twitch.HelixHelper>()
                 .AddSingleton<Audio.MidiKeyboardHandler>()
                 .AddSingleton<PubSub.PubSubClient>()
-                .AddSingleton<Notifications.FullActivityProvider>();
+                .AddSingleton<Notifications.FullActivityProvider>()
+                .AddSingleton<EmoteEffects.EmoteEffectListener>();
 
             services
                 .AddSingleton<API.Twitch.IBotTokenValidator, API.Twitch.BotTokenValidator>()
@@ -213,6 +214,7 @@ namespace TASagentTwitchBot.Core
             endpoints.MapHub<Web.Hubs.OverlayHub>("/Hubs/Overlay");
             endpoints.MapHub<Web.Hubs.TTSMarqueeHub>("/Hubs/TTSMarquee");
             endpoints.MapHub<Web.Hubs.TimerHub>("/Hubs/Timer");
+            endpoints.MapHub<Web.Hubs.EmoteHub>("/Hubs/Emote");
         }
 
         protected virtual void ConfigureCoreInitial(IApplicationBuilder app, IWebHostEnvironment env)
@@ -271,6 +273,7 @@ namespace TASagentTwitchBot.Core
             serviceProvider.GetRequiredService<View.IConsoleOutput>();
             serviceProvider.GetRequiredService<Chat.ChatLogger>();
             serviceProvider.GetRequiredService<Commands.CommandSystem>();
+            serviceProvider.GetRequiredService<EmoteEffects.EmoteEffectListener>();
         }
 
         protected virtual void ConfigureCoreLibraryContent(
