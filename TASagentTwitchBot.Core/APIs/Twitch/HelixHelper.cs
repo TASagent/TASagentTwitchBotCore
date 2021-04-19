@@ -215,9 +215,11 @@ namespace TASagentTwitchBot.Core.API.Twitch
             request.AddHeader("Client-ID", botConfig.TwitchClientId);
             request.AddHeader("Authorization", $"Bearer {botConfig.BotAccessToken}");
 
-            request.AddParameter("id", new List<string>() { id });
+            request.AddOptionalParameter("id", new List<string>() { id });
 
             IRestResponse response = await restClient.ExecuteAsync(request);
+
+            communication.SendDebugMessage(response.Content);
 
             TwitchUsers twitchUsers = JsonSerializer.Deserialize<TwitchUsers>(response.Content);
 
@@ -239,7 +241,7 @@ namespace TASagentTwitchBot.Core.API.Twitch
             request.AddHeader("Client-ID", botConfig.TwitchClientId);
             request.AddHeader("Authorization", $"Bearer {botConfig.BotAccessToken}");
 
-            request.AddParameter("login", new List<string>() { login.ToLower() });
+            request.AddOptionalParameter("login", new List<string>() { login.ToLower() });
 
             IRestResponse response = await restClient.ExecuteAsync(request);
 
