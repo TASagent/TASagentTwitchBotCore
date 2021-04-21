@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 using TASagentTwitchBot.Core.API.Twitch;
 
@@ -19,7 +20,7 @@ namespace TASagentTwitchBot.Core.WebSub
         private readonly Notifications.IFollowerHandler followerHandler;
         private readonly HelixHelper helixHelper;
 
-        private readonly Database.BaseDatabaseContext db;
+        private readonly IServiceScopeFactory scopeFactory;
 
         private string externalURL = null;
         private string subURL = null;
@@ -30,7 +31,7 @@ namespace TASagentTwitchBot.Core.WebSub
             ICommunication communication,
             Notifications.IFollowerHandler followerHandler,
             HelixHelper helixHelper,
-            Database.BaseDatabaseContext db)
+            IServiceScopeFactory scopeFactory)
         {
             botConfig = botConfigContainer.BotConfig;
             webAccessConfig = webAccessConfiguration;
@@ -38,7 +39,7 @@ namespace TASagentTwitchBot.Core.WebSub
             this.followerHandler = followerHandler;
             this.helixHelper = helixHelper;
 
-            this.db = db;
+            this.scopeFactory = scopeFactory;
         }
 
         public async Task Subscribe(WebSubHandler webSubHandler)
@@ -67,6 +68,8 @@ namespace TASagentTwitchBot.Core.WebSub
 
         public async Task NotifyFollower(string id, string name)
         {
+            using IServiceScope scope = scopeFactory.CreateScope();
+            Database.BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<Database.BaseDatabaseContext>();
             Database.User follower = await db.Users.FirstOrDefaultAsync(x => x.TwitchUserId == id);
 
             if (follower == null)

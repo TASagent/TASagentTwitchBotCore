@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BGC.Collections.Generic;
+using Microsoft.Extensions.DependencyInjection;
 
 using TASagentTwitchBot.Core.Database;
 using TASagentTwitchBot.Core.Commands;
@@ -18,20 +19,19 @@ namespace TASagentTwitchBot.Core.Quotes
         private readonly ICommunication communication;
 
         //Data
-        private readonly BaseDatabaseContext db;
+        private readonly IServiceScopeFactory scopeFactory;
 
         private readonly DepletableBag<string> fakeNewsBag;
 
         public QuoteSystem(
             Config.IBotConfigContainer botConfigContainer,
             ICommunication communication,
-            BaseDatabaseContext db)
+            IServiceScopeFactory scopeFactory)
         {
             botConfig = botConfigContainer.BotConfig;
 
             this.communication = communication;
-
-            this.db = db;
+            this.scopeFactory = scopeFactory;
 
             randomizer = new Random();
 
@@ -193,6 +193,9 @@ namespace TASagentTwitchBot.Core.Quotes
                 return;
             }
 
+            using IServiceScope scope = scopeFactory.CreateScope();
+            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+
             //Find Quote
             Quote matchingQuote = await db.Quotes.FindAsync(quoteId);
 
@@ -216,7 +219,9 @@ namespace TASagentTwitchBot.Core.Quotes
             matchingQuote.FakeNewsExplanation = commandText;
 
             await db.SaveChangesAsync();
-            await SendQuote(matchingQuote, "UPDATED AS FAKE NEWS ");
+
+            await db.Entry(matchingQuote).Reference(x => x.Creator).LoadAsync();
+            SendQuote(matchingQuote, "UPDATED AS FAKE NEWS ");
         }
 
         private async Task MarkRealNews(
@@ -229,6 +234,9 @@ namespace TASagentTwitchBot.Core.Quotes
                 communication.SendPublicChatMessage($"I'm afraid I can't let you do that, @{chatter.User.TwitchUserName}.");
                 return;
             }
+
+            using IServiceScope scope = scopeFactory.CreateScope();
+            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
 
             //Find Quote
             Quote matchingQuote = await db.Quotes.FindAsync(quoteId);
@@ -247,11 +255,15 @@ namespace TASagentTwitchBot.Core.Quotes
             matchingQuote.FakeNewsExplanation = null;
 
             await db.SaveChangesAsync();
-            await SendQuote(matchingQuote, "UPDATED AS REAL NEWS ");
+            await db.Entry(matchingQuote).Reference(x => x.Creator).LoadAsync();
+            SendQuote(matchingQuote, "UPDATED AS REAL NEWS ");
         }
 
         private async Task RemoveQuote(IRC.TwitchChatter chatter, int quoteId)
         {
+            using IServiceScope scope = scopeFactory.CreateScope();
+            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+
             //Look Up Quote
             Quote matchingQuote = await db.Quotes.FindAsync(quoteId);
 
@@ -293,6 +305,9 @@ namespace TASagentTwitchBot.Core.Quotes
 
         private async Task GetRandomQuote(User requestingUser)
         {
+            using IServiceScope scope = scopeFactory.CreateScope();
+            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+
             if (!db.Quotes.Any())
             {
                 communication.SendPublicChatMessage($"@{requestingUser.TwitchUserName} Sorry, no quotes can be displayed.");
@@ -303,7 +318,8 @@ namespace TASagentTwitchBot.Core.Quotes
 
                 //Return a random Quote
                 Quote randomQuote = db.Quotes.Skip(index).First();
-                await SendQuote(randomQuote);
+                await db.Entry(randomQuote).Reference(x => x.Creator).LoadAsync();
+                SendQuote(randomQuote);
             }
         }
 
@@ -370,14 +386,22 @@ namespace TASagentTwitchBot.Core.Quotes
                 CreateTime = DateTime.Now
             };
 
+
+            using IServiceScope scope = scopeFactory.CreateScope();
+            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+
             await db.Quotes.AddAsync(newQuote);
             await db.SaveChangesAsync();
 
-            await SendQuote(newQuote, "ADDED ");
+            await db.Entry(newQuote).Reference(x => x.Creator).LoadAsync();
+            SendQuote(newQuote, "ADDED ");
         }
 
         private async Task GetQuoteById(IRC.TwitchChatter chatter, int id)
         {
+            using IServiceScope scope = scopeFactory.CreateScope();
+            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+
             //Look Up Quote
             Quote matchingQuote = await db.Quotes.FindAsync(id);
 
@@ -391,11 +415,15 @@ namespace TASagentTwitchBot.Core.Quotes
                 return;
             }
 
-            await SendQuote(matchingQuote);
+            await db.Entry(matchingQuote).Reference(x => x.Creator).LoadAsync();
+            SendQuote(matchingQuote);
         }
 
         private async Task QuoteSearch(IRC.TwitchChatter chatter, string quoteText)
         {
+            using IServiceScope scope = scopeFactory.CreateScope();
+            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+
             //Clear quotation marks
             quoteText = quoteText.Replace("\"", "").ToLowerInvariant();
 
@@ -414,14 +442,13 @@ namespace TASagentTwitchBot.Core.Quotes
 
             int returnIndex = randomizer.Next(0, matchingQuoteCount);
 
-            await SendQuote(matchingQuotes.Skip(returnIndex).First());
+            Quote selectedQuote = matchingQuotes.Skip(returnIndex).First();
+            await db.Entry(selectedQuote).Reference(x => x.Creator).LoadAsync();
+            SendQuote(selectedQuote);
         }
 
-        private async Task SendQuote(Quote data, string prefix = "")
+        private void SendQuote(Quote data, string prefix = "")
         {
-            //Make sure the creator field is loaded
-            await db.Entry(data).Reference(x => x.Creator).LoadAsync();
-
             string outputQuoteText =
                 $"{prefix}" +
                 $"Quote {data.QuoteId}: \"{data.QuoteText}\" - {data.Speaker} " +

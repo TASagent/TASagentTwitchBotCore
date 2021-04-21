@@ -3,33 +3,37 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace TASagentTwitchBot.Core.Database
 {
     public interface IUserHelper
     {
-        Task<User> GetUserByTwitchLogin(string twitchLogin);
-        Task<User> GetUserByTwitchId(string twitchId);
+        Task<User> GetUserByTwitchLogin(string twitchLogin, bool create = false);
+        Task<User> GetUserByTwitchId(string twitchId, bool create = false);
     }
 
     public class UserHelper : IUserHelper
     {
         private readonly API.Twitch.HelixHelper helixHelper;
-        private readonly BaseDatabaseContext db;
+        private readonly IServiceScopeFactory scopeFactory;
 
         public UserHelper(
             API.Twitch.HelixHelper helixHelper,
-            BaseDatabaseContext db)
+            IServiceScopeFactory scopeFactory)
         {
             this.helixHelper = helixHelper;
-            this.db = db;
+            this.scopeFactory = scopeFactory;
         }
 
-        public async Task<User> GetUserByTwitchId(string twitchId)
+        public async Task<User> GetUserByTwitchId(string twitchId, bool create = true)
         {
+            using IServiceScope scope = scopeFactory.CreateScope();
+            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+
             User user = await db.Users.FirstOrDefaultAsync(x => x.TwitchUserId == twitchId);
 
-            if (user is not null)
+            if (user is not null || !create)
             {
                 return user;
             }
@@ -55,11 +59,14 @@ namespace TASagentTwitchBot.Core.Database
             return null;
         }
 
-        public async Task<User> GetUserByTwitchLogin(string twitchLogin)
+        public async Task<User> GetUserByTwitchLogin(string twitchLogin, bool create = true)
         {
+            using IServiceScope scope = scopeFactory.CreateScope();
+            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+
             User user = await db.Users.FirstOrDefaultAsync(x => x.TwitchUserName.ToLower() == twitchLogin.ToLower());
 
-            if (user is not null)
+            if (user is not null || !create)
             {
                 return user;
             }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 
 using TASagentTwitchBot.Core.Database;
 
@@ -10,18 +11,16 @@ namespace TASagentTwitchBot.Core.Commands
     public class CustomSimpleCommands : ICommandContainer
     {
         private readonly ICommunication communication;
-
-        private readonly BaseDatabaseContext db;
+        private readonly IServiceScopeFactory scopeFactory;
 
         private Dictionary<string, CommandHandler> commandsCache = null;
 
         public CustomSimpleCommands(
             ICommunication communication,
-            BaseDatabaseContext db)
+            IServiceScopeFactory scopeFactory)
         {
             this.communication = communication;
-
-            this.db = db;
+            this.scopeFactory = scopeFactory;
         }
 
         public void RegisterCommands(
@@ -35,6 +34,10 @@ namespace TASagentTwitchBot.Core.Commands
             commands.Add("enable", async (chatter, remainingCommand) => await SetCommandState(chatter, remainingCommand, true));
             commands.Add("disable", async (chatter, remainingCommand) => await SetCommandState(chatter, remainingCommand, false));
 
+            using IServiceScope scope = scopeFactory.CreateScope();
+            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+
+
             foreach (CustomTextCommand customTextCommand in db.CustomTextCommands.Where(x => x.Enabled))
             {
                 commands.Add(customTextCommand.Command, async (chatter, remainingCommand) => await HandleCommand(customTextCommand.Text));
@@ -46,6 +49,9 @@ namespace TASagentTwitchBot.Core.Commands
 
         public IEnumerable<string> GetPublicCommands()
         {
+            using IServiceScope scope = scopeFactory.CreateScope();
+            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+
             foreach (CustomTextCommand customTextCommand in db.CustomTextCommands.Where(x => x.Enabled))
             {
                 yield return customTextCommand.Command;
@@ -82,6 +88,9 @@ namespace TASagentTwitchBot.Core.Commands
                 //Remove leading Bang
                 command = command[1..];
             }
+
+            using IServiceScope scope = scopeFactory.CreateScope();
+            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
 
             if (db.CustomTextCommands.Any(x => x.Command == command))
             {
@@ -140,6 +149,9 @@ namespace TASagentTwitchBot.Core.Commands
                 command = command[1..];
             }
 
+            using IServiceScope scope = scopeFactory.CreateScope();
+            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+
             CustomTextCommand removedTextCommand = db.CustomTextCommands.Where(x => x.Command == command).FirstOrDefault();
 
             if (removedTextCommand == null)
@@ -179,6 +191,9 @@ namespace TASagentTwitchBot.Core.Commands
                 //Remove leading Bang
                 command = command[1..];
             }
+
+            using IServiceScope scope = scopeFactory.CreateScope();
+            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
 
             CustomTextCommand editedTextCommand = db.CustomTextCommands.Where(x => x.Command == command).FirstOrDefault();
 
@@ -233,6 +248,9 @@ namespace TASagentTwitchBot.Core.Commands
                 //Remove leading Bang
                 command = command[1..];
             }
+
+            using IServiceScope scope = scopeFactory.CreateScope();
+            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
 
             CustomTextCommand editedTextCommand = db.CustomTextCommands.Where(x => x.Command == command).FirstOrDefault();
 

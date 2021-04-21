@@ -7,13 +7,14 @@ using TASagentTwitchBot.Core.Audio;
 using TASagentTwitchBot.Core.Audio.Effects;
 using TASagentTwitchBot.Core.Commands;
 using TASagentTwitchBot.Core.Database;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace TASagentTwitchBot.Core.TTS
 {
     public class TTSSystem : ICommandContainer
     {
         //Subsystems
-        private readonly BaseDatabaseContext db;
+        private readonly IServiceScopeFactory scopeFactory;
         private readonly Config.IBotConfigContainer botConfigContainer;
         private readonly ICommunication communication;
         private readonly IAudioEffectSystem audioEffectSystem;
@@ -26,14 +27,13 @@ namespace TASagentTwitchBot.Core.TTS
             ICommunication communication,
             IAudioEffectSystem audioEffectSystem,
             Notifications.ITTSHandler ttsHandler,
-            BaseDatabaseContext db)
+            IServiceScopeFactory scopeFactory)
         {
             this.botConfigContainer = botConfigContainer;
             this.communication = communication;
             this.audioEffectSystem = audioEffectSystem;
             this.ttsHandler = ttsHandler;
-
-            this.db = db;
+            this.scopeFactory = scopeFactory;
         }
 
         public void RegisterCommands(
@@ -107,6 +107,9 @@ namespace TASagentTwitchBot.Core.TTS
 
             string username = remainingCommand[0].ToLower();
 
+            using IServiceScope scope = scopeFactory.CreateScope();
+            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+
             User fakeTTSUser = db.Users.FirstOrDefault(x => x.TwitchUserName.ToLower() == username);
             
             if (fakeTTSUser is null)
@@ -163,9 +166,12 @@ namespace TASagentTwitchBot.Core.TTS
             }
 
             //Update last TTS time
-            chatter.User.LastSuccessfulTTS = DateTime.Now;
-            await db.SaveChangesAsync();
+            using IServiceScope scope = scopeFactory.CreateScope();
+            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
 
+            User dbUser = await db.Users.FindAsync(chatter.User.UserId);
+            dbUser.LastSuccessfulTTS = DateTime.Now;
+            await db.SaveChangesAsync();
 
             if (chatter.User.AuthorizationLevel < AuthorizationLevel.Elevated)
             {
@@ -291,7 +297,11 @@ namespace TASagentTwitchBot.Core.TTS
                     else
                     {
                         //Accepted voice
-                        chatter.User.TTSVoicePreference = voicePreference;
+                        using IServiceScope scope = scopeFactory.CreateScope();
+                        BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+                        User dbUser = await db.Users.FindAsync(chatter.User.UserId);
+                        dbUser.TTSVoicePreference = voicePreference;
+                        await db.SaveChangesAsync();
 
                         communication.SendPublicChatMessage(
                             $"@{chatter.User.TwitchUserName}, your TTS Voice has been updated.");
@@ -321,7 +331,11 @@ namespace TASagentTwitchBot.Core.TTS
                     else
                     {
                         //Accepted pitch
-                        chatter.User.TTSPitchPreference = pitchPreference;
+                        using IServiceScope scope = scopeFactory.CreateScope();
+                        BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+                        User dbUser = await db.Users.FindAsync(chatter.User.UserId);
+                        dbUser.TTSPitchPreference = pitchPreference;
+                        await db.SaveChangesAsync();
 
                         communication.SendPublicChatMessage(
                             $"@{chatter.User.TwitchUserName}, your TTS Pitch has been updated.");
@@ -360,13 +374,18 @@ namespace TASagentTwitchBot.Core.TTS
                         return;
                     }
 
-                    chatter.User.TTSEffectsChain = parsedEffects.GetEffectsChain();
+                    {
+                        using IServiceScope scope = scopeFactory.CreateScope();
+                        BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+                        User dbUser = await db.Users.FindAsync(chatter.User.UserId);
+                        dbUser.TTSEffectsChain = parsedEffects.GetEffectsChain();
+                        await db.SaveChangesAsync();
+                    }
 
                     communication.SendPublicChatMessage(
                         $"@{chatter.User.TwitchUserName}, your TTS Effect has been updated.");
 
                     communication.SendDebugMessage($"Updated User TTS EffectChain: {chatter.User.TwitchUserName} to {parsedEffects.GetEffectsChain()}");
-                    await db.SaveChangesAsync();
                     break;
 
                 default:

@@ -16,18 +16,18 @@ namespace TASagentTwitchBot.Core.PubSub
         private readonly ICommunication communication;
 
         private readonly IRedemptionContainer[] redemptionContainers;
-        private readonly Database.BaseDatabaseContext db;
+        private readonly Database.IUserHelper userHelper;
 
         private readonly Dictionary<string, RedemptionHandler> redemptionHandlers = new Dictionary<string, RedemptionHandler>();
 
         public RedemptionSystem(
             ICommunication communication,
             IEnumerable<IRedemptionContainer> redemptionContainers,
-            Database.BaseDatabaseContext db)
+            Database.IUserHelper userHelper)
         {
             this.communication = communication;
 
-            this.db = db;
+            this.userHelper = userHelper;
 
             this.redemptionContainers = redemptionContainers.ToArray();
         }
@@ -43,7 +43,7 @@ namespace TASagentTwitchBot.Core.PubSub
                 return;
             }
 
-            Database.User user = db.Users.First(x => x.TwitchUserId == redemption.Redemption.User.Id);
+            Database.User user = await userHelper.GetUserByTwitchId(redemption.Redemption.User.Id);
 
             if (user is null)
             {

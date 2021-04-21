@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
 
 using TASagentTwitchBot.Core.Database;
 
@@ -10,16 +11,14 @@ namespace TASagentTwitchBot.Core.Commands
     public class PermissionSystem : ICommandContainer
     {
         private readonly ICommunication communication;
-
-        private readonly BaseDatabaseContext db;
+        private readonly IServiceScopeFactory scopeFactory;
 
         public PermissionSystem(
             ICommunication communication,
-            BaseDatabaseContext db)
+            IServiceScopeFactory scopeFactory)
         {
             this.communication = communication;
-
-            this.db = db;
+            this.scopeFactory = scopeFactory;
         }
 
         public void RegisterCommands(
@@ -67,6 +66,9 @@ namespace TASagentTwitchBot.Core.Commands
                 communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, {(elevate ? "Elevate" : "Demote")} who?");
                 return;
             }
+
+            using IServiceScope scope = scopeFactory.CreateScope();
+            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
 
             IEnumerable<User> matchingUsers = db.Users.Where(x => x.TwitchUserName.ToLower() == lowerUser);
 
@@ -148,6 +150,9 @@ namespace TASagentTwitchBot.Core.Commands
                 return;
             }
 
+            using IServiceScope scope = scopeFactory.CreateScope();
+            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+
             IEnumerable<User> matchingUsers = db.Users.Where(x => x.TwitchUserName.ToLower() == lowerUser);
 
             if (!matchingUsers.Any())
@@ -218,6 +223,9 @@ namespace TASagentTwitchBot.Core.Commands
                 communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, Restrict who?");
                 return;
             }
+
+            using IServiceScope scope = scopeFactory.CreateScope();
+            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
 
             IEnumerable<User> matchingUsers = db.Users.Where(x => x.TwitchUserName.ToLower() == lowerUser);
 

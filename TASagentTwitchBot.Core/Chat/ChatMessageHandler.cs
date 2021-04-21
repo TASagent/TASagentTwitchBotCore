@@ -1,4 +1,5 @@
 ﻿using System;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace TASagentTwitchBot.Core.Chat
 {
@@ -13,19 +14,19 @@ namespace TASagentTwitchBot.Core.Chat
         private readonly Notifications.ICheerHandler cheerHandler;
 
         private readonly Config.BotConfiguration botConfig;
-        private readonly Database.BaseDatabaseContext db;
+        private readonly IServiceScopeFactory scopeFactory;
 
         public ChatMessageHandler(
             ICommunication communication,
             Notifications.ICheerHandler cheerHandler,
             Config.IBotConfigContainer botConfigContainer,
-            Database.BaseDatabaseContext db)
+            IServiceScopeFactory scopeFactory)
         {
             this.communication = communication;
             this.cheerHandler = cheerHandler;
 
             botConfig = botConfigContainer.BotConfig;
-            this.db = db;
+            this.scopeFactory = scopeFactory;
         }
 
         public virtual async void HandleChatMessage(IRC.IRCMessage message)
@@ -36,7 +37,8 @@ namespace TASagentTwitchBot.Core.Chat
                 return;
             }
 
-            IRC.TwitchChatter chatter = await IRC.TwitchChatter.FromIRCMessage(message, communication, db);
+
+            IRC.TwitchChatter chatter = await IRC.TwitchChatter.FromIRCMessage(message, communication, scopeFactory);
 
             if (chatter == null)
             {

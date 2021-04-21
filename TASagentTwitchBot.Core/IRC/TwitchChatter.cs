@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-
+using Microsoft.Extensions.DependencyInjection;
 using TASagentTwitchBot.Core.Database;
 
 namespace TASagentTwitchBot.Core.IRC
@@ -21,12 +21,15 @@ namespace TASagentTwitchBot.Core.IRC
         public static async Task<TwitchChatter> FromIRCMessage(
             IRCMessage message,
             ICommunication communication,
-            BaseDatabaseContext db)
+            IServiceScopeFactory scopeFactory)
         {
             if (message.ircCommand != IRCCommand.PrivMsg && message.ircCommand != IRCCommand.Whisper)
             {
                 return null;
             }
+
+            using IServiceScope scope = scopeFactory.CreateScope();
+            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
 
             User user = await db.Users.FirstOrDefaultAsync(x => x.TwitchUserId == message.tags["user-id"]);
 

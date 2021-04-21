@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Linq;
 
 namespace TASagentTwitchBot.Core.Commands
 {
@@ -13,7 +12,7 @@ namespace TASagentTwitchBot.Core.Commands
         private readonly Notifications.IRaidHandler raidHandler;
         private readonly Notifications.ICheerHandler cheerHandler;
 
-        private readonly Database.BaseDatabaseContext db;
+        private readonly Database.IUserHelper userHelper;
 
         public TestCommandSystem(
             Config.IBotConfigContainer botConfigContainer,
@@ -21,7 +20,7 @@ namespace TASagentTwitchBot.Core.Commands
             Notifications.ISubscriptionHandler subscriptionHandler,
             Notifications.IRaidHandler raidHandler,
             Notifications.ICheerHandler cheerHandler,
-            Database.BaseDatabaseContext db)
+            Database.IUserHelper userHelper)
         {
             botConfig = botConfigContainer.BotConfig;
 
@@ -30,7 +29,7 @@ namespace TASagentTwitchBot.Core.Commands
             this.raidHandler = raidHandler;
             this.cheerHandler = cheerHandler;
 
-            this.db = db;
+            this.userHelper = userHelper;
         }
 
         public void RegisterCommands(
@@ -61,12 +60,12 @@ namespace TASagentTwitchBot.Core.Commands
             return Task.CompletedTask;
         }
 
-        private Task TestSubHandler(IRC.TwitchChatter chatter, string[] remainingCommand)
+        private async Task TestSubHandler(IRC.TwitchChatter chatter, string[] remainingCommand)
         {
             if (chatter.User.AuthorizationLevel < AuthorizationLevel.Admin)
             {
                 communication.SendPublicChatMessage($"You are not authorized to test sub notifications, @{chatter.User.TwitchUserName}.");
-                return Task.CompletedTask;
+                return;
             }
 
             string user = "TASagent";
@@ -78,12 +77,12 @@ namespace TASagentTwitchBot.Core.Commands
                 submessage = "";
             }
 
-            Database.User subUser = db.Users.FirstOrDefault(x => x.TwitchUserName.ToLower() == user.ToLower());
+            Database.User subUser = await userHelper.GetUserByTwitchLogin(user.ToLower(), false);
 
             if (subUser == null)
             {
                 communication.SendWarningMessage($"Requested user {user} not found in database. Substituting broadcaster.");
-                subUser = db.Users.Where(x => x.TwitchUserId == botConfig.BroadcasterId).FirstOrDefault();
+                subUser = await userHelper.GetUserByTwitchId(botConfig.BroadcasterId, false);
             }
 
             if (remainingCommand.Length < 2 || !int.TryParse(remainingCommand[1], out int months))
@@ -102,16 +101,14 @@ namespace TASagentTwitchBot.Core.Commands
                 monthCount: months,
                 tier: tier,
                 approved: true);
-
-            return Task.CompletedTask;
         }
 
-        private Task TestCheerHandler(IRC.TwitchChatter chatter, string[] remainingCommand)
+        private async Task TestCheerHandler(IRC.TwitchChatter chatter, string[] remainingCommand)
         {
             if (chatter.User.AuthorizationLevel < AuthorizationLevel.Admin)
             {
                 communication.SendPublicChatMessage($"You are not authorized to test cheer notifications, @{chatter.User.TwitchUserName}.");
-                return Task.CompletedTask;
+                return;
             }
 
             if (remainingCommand.Length < 4)
@@ -120,12 +117,12 @@ namespace TASagentTwitchBot.Core.Commands
             }
             else
             {
-                Database.User cheerer = db.Users.FirstOrDefault(x => x.TwitchUserName.ToLower() == remainingCommand[0].ToLower());
+                Database.User cheerer = await userHelper.GetUserByTwitchLogin(remainingCommand[0].ToLower(), false);
 
                 if (cheerer == null)
                 {
                     communication.SendWarningMessage($"Requested user {remainingCommand[0]} not found in database. Substituting broadcaster.");
-                    cheerer = db.Users.Where(x => x.TwitchUserId == botConfig.BroadcasterId).FirstOrDefault();
+                    cheerer = await userHelper.GetUserByTwitchId(botConfig.BroadcasterId, false);
                 }
 
                 if (!int.TryParse(remainingCommand[2], out int quantity))
@@ -141,8 +138,6 @@ namespace TASagentTwitchBot.Core.Commands
                     quantity: quantity,
                     approved: true);
             }
-
-            return Task.CompletedTask;
         }
     }
 }
