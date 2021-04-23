@@ -2,6 +2,7 @@
 {
     public class MicConfiguration
     {
+        public bool Enabled { get; set; } = true;
         public NoiseGateConfiguration NoiseGateConfiguration { get; set; } = new NoiseGateConfiguration();
         public ExpanderConfiguration ExpanderConfiguration { get; set; } = new ExpanderConfiguration();
         public CompressorConfiguration CompressorConfiguration { get; set; } = new CompressorConfiguration();

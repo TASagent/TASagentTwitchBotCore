@@ -24,6 +24,34 @@ namespace TASagentTwitchBot.Core.Web.Controllers
             this.audioEffectSystem = audioEffectSystem;
         }
 
+        [HttpGet]
+        public ActionResult<MicEnabled> Enabled() =>
+            new MicEnabled(botConfigContainer.BotConfig.MicConfiguration.Enabled);
+
+        [HttpPost]
+        [AuthRequired(AuthDegree.Admin)]
+        public IActionResult Enabled(MicEnabled micEnabled)
+        {
+            //Set CompressorConfig
+            botConfigContainer.BotConfig.MicConfiguration.Enabled = micEnabled.Enabled;
+
+            //Save
+            botConfigContainer.SerializeData();
+
+            //Update Microphone
+            microphoneHandler.ResetVoiceStream();
+            return Ok();
+        }
+
+        [HttpPost]
+        [AuthRequired(AuthDegree.Admin)]
+        public IActionResult Reset()
+        {
+            //Update Microphone
+            microphoneHandler.ResetVoiceStream();
+            return Ok();
+        }
+
         [HttpPost]
         [AuthRequired]
         public IActionResult Effect(MicEffect request)
@@ -86,7 +114,7 @@ namespace TASagentTwitchBot.Core.Web.Controllers
             botConfigContainer.SerializeData();
 
             //Update Microphone
-            microphoneHandler.UpdateVoiceEffect(new Audio.Effects.NoEffect());
+            microphoneHandler.ResetVoiceStream();
             return Ok();
         }
 
@@ -105,7 +133,7 @@ namespace TASagentTwitchBot.Core.Web.Controllers
             botConfigContainer.SerializeData();
 
             //Update Microphone
-            microphoneHandler.UpdateVoiceEffect(new Audio.Effects.NoEffect());
+            microphoneHandler.ResetVoiceStream();
             return Ok();
         }
 
@@ -124,7 +152,7 @@ namespace TASagentTwitchBot.Core.Web.Controllers
             botConfigContainer.SerializeData();
 
             //Update Microphone
-            microphoneHandler.UpdateVoiceEffect(new Audio.Effects.NoEffect());
+            microphoneHandler.ResetVoiceStream();
             return Ok();
         }
 
@@ -133,6 +161,7 @@ namespace TASagentTwitchBot.Core.Web.Controllers
             botConfigContainer.BotConfig.MicConfiguration.NoiseGateConfiguration;
     }
 
+    public record MicEnabled(bool Enabled);
     public record MicEffect(string Effect);
     public record MicPitchFactor(double Factor);
 }

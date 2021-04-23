@@ -237,11 +237,14 @@ namespace TASagentTwitchBot.Core.Audio
 
             CleanUpActiveStream();
 
-            outputDevice = new WasapiOut(targetOutputDevice, AudioClientShareMode.Shared, true, 10);
+            if (botConfig.MicConfiguration.Enabled)
+            {
+                outputDevice = new WasapiOut(targetOutputDevice, AudioClientShareMode.Shared, true, 10);
 
-            recordingStream = new BufferedWasapiQueuer(targetInputDevice, 1000);
-            outputDevice.Init(recordingStream.ApplyMicrophoneEffects(botConfig.MicConfiguration, currentEffect));
-            outputDevice.Play();
+                recordingStream = new BufferedWasapiQueuer(targetInputDevice, 1000);
+                outputDevice.Init(recordingStream.ApplyMicrophoneEffects(botConfig.MicConfiguration, currentEffect));
+                outputDevice.Play();
+            }
         }
 
         public void BumpPitch(bool up)

@@ -15,7 +15,7 @@
   <link href="/Assets/libs/bootstrap/4/darkly/bootstrap.min.css" rel="stylesheet">
   <script src="/Assets/libs/popper.js/1.14.3/umd/popper.min.js"></script>
   <script src="/Assets/libs/bootstrap/4.1.3/js/bootstrap.min.js"></script>
-  
+
   <script src="/Assets/js/timerUtil.js"></script>
 
   <style>
@@ -173,6 +173,13 @@
 
     function RefreshDisplay() {
       $.getJSON({
+        url: "/TASagentBotAPI/Mic/Enabled",
+        success: function (result) {
+          $("#input-Mic-Enabled").prop('checked', result.enabled);
+        }
+      });
+
+      $.getJSON({
         url: "/TASagentBotAPI/Mic/Effect",
         success: function (result) {
           $("#text-Status").val(result.effect);
@@ -234,7 +241,14 @@
           UpdateCurrentSerialDevice();
         },
         beforeSend: ApplyAuth,
-        error: HandleErrorResponse
+        error: function HandleErrorResponse(response) {
+          if (response.status && response.status === 401) {
+            SetAuthStatus("None");
+          } else if (response.status && response.status === 404) {
+            //No input capture module exists - Delete
+            $("#inputCaptureCard").remove();
+          }
+        }
       });
     }
 
@@ -275,8 +289,24 @@
             timerMainValueSelect.append($(`<option value="${timerLayoutValue.value}">${timerLayoutValue.display}</option>`));
             timerSecondaryValueSelect.append($(`<option value="${timerLayoutValue.value}">${timerLayoutValue.display}</option>`));
           });
+        },
+        error: function (error) {
+          //Timer probably not enabled - just delete it.
+          $("#timerCard").remove();
         }
       });
+    }
+
+    function SubmitMicEnabled(enabled) {
+      $.post({
+        url: "/TASagentBotAPI/Mic/Enabled",
+        headers: { "Authorization": "PASS NONE" },
+        contentType: "application/json;charset=utf-8",
+        data: JSON.stringify({ Enabled: enabled }),
+        beforeSend: ApplyAuth,
+        error: HandleErrorResponse
+      });
+      setTimeout(RefreshDisplay, 200);
     }
 
     function SubmitEffect(effect) {
@@ -885,6 +915,10 @@
 
       connection.start();
 
+      $("#button-Submit-Mic-Enabled").click(function () {
+        SubmitMicEnabled($("#input-Mic-Enabled").prop('checked'));
+      });
+
 
       $("#button-Normal").click(function () {
         SubmitEffect("");
@@ -1076,7 +1110,7 @@
         <div class="input-group-prepend">
           <span class="input-group-text" id="inputGroup-sizing-sm">Current Role</span>
         </div>
-        <input type="text" id="text-role" class="form-control" name="role" readonly="true" value="None">
+        <input type="text" id="text-role" class="form-control" name="role" value="None" readonly>
       </div>
 
     </div>
@@ -1193,13 +1227,13 @@
 
                 <div class="form-group">
                   <label for="input-TTSUser">User</label>
-                  <input type="text" class="form-control" id="input-TTSUser"></input>
+                  <input type="text" class="form-control" id="input-TTSUser">
                 </div>
               </div>
 
               <div class="form-group">
                 <label for="input-TTSEffect">Effect</label>
-                <input type="text" class="form-control" id="input-TTSEffect"></input>
+                <input type="text" class="form-control" id="input-TTSEffect">
               </div>
 
 
@@ -1216,7 +1250,7 @@
           </div>
         </div>
 
-        <div class="card adminAuthGroup">
+        <div class="card adminAuthGroup" id="timerCard">
           <div class="card-header" id="timerHeading">
             <h4 class="mb-0">
               <button class="btn btn-link" data-toggle="collapse" data-target="#timercollapser" aria-expanded="false" aria-controls="timercollapser">
@@ -1235,22 +1269,22 @@
               <div class="form-row">
                 <div class="form-group col-md-3">
                   <label for="input-TimerCumulative">Cumulative</label>
-                  <input type="text" id="input-TimerCumulative" class="form-control" readonly="true">
+                  <input type="text" id="input-TimerCumulative" class="form-control" readonly>
                 </div>
 
                 <div class="form-group col-md-3">
                   <label for="input-TimerCurrent">Current</label>
-                  <input type="text" id="input-TimerCurrent" class="form-control" readonly="true">
+                  <input type="text" id="input-TimerCurrent" class="form-control" readonly>
                 </div>
 
                 <div class="form-group col-md-3">
                   <label for="input-TimerLap">Lap Start</label>
-                  <input type="text" id="input-TimerLap" class="form-control" readonly="true">
+                  <input type="text" id="input-TimerLap" class="form-control" readonly>
                 </div>
 
                 <div class="form-group col-md-3">
                   <label for="input-TimerLapCount">Lap Count</label>
-                  <input type="text" id="input-TimerLapCount" class="form-control" readonly="true">
+                  <input type="text" id="input-TimerLapCount" class="form-control" readonly>
                 </div>
               </div>
 
@@ -1332,7 +1366,7 @@
                 <select type="text" id="select-TimerLoad" class="form-control">
                 </select>
                 <div class="input-group-append">
-                  <button id="button-TimerLoad" class="btn btn-primary" disabled="true">Load</button>
+                  <button id="button-TimerLoad" class="btn btn-primary" disabled>Load</button>
                 </div>
               </div>
 
@@ -1340,7 +1374,7 @@
           </div>
         </div>
 
-        <div class="card adminAuthGroup">
+        <div class="card adminAuthGroup" id="inputCaptureCard">
           <div class="card-header" id="inputCaptureHeading">
             <h4 class="mb-0">
               <button class="btn btn-link" data-toggle="collapse" data-target="#inputCaptureCollapser" aria-expanded="false" aria-controls="inputCaptureCollapser">
@@ -1371,20 +1405,34 @@
 
       </div>
 
+      <!--Mic Effects-->
       <div class="col-sm" id="micEffectsAccordion">
         <h3>Mic Effects</h3>
 
+        <!--Mic Enabled-->
+        <div class="input-group mb-3">
+          <div class="input-group-prepend">
+            <span class="input-group-text" id="inputGroup-sizing-default">Mic Handling Enabled</span>
+          </div>
+          <input type="checkbox" id="input-Mic-Enabled" class="form-control" name="enabled">
+          <div class="input-group-append">
+            <button id="button-Submit-Mic-Enabled" class="btn btn-primary requireAdminAuth">Submit</button>
+          </div>
+        </div>
+
+        <!--Mic Current Effect-->
         <div class="input-group mb-3">
           <div class="input-group-prepend">
             <span class="input-group-text" id="inputGroup-sizing-sm">Current Effect</span>
           </div>
-          <input type="text" id="text-Status" class="form-control" name="release" readonly="true">
+          <input type="text" id="text-Status" class="form-control" name="release" readonly>
           <div class="input-group-append">
             <button id="button-Refresh" class="btn btn-primary">Refresh</button>
           </div>
         </div>
 
 
+        <!--Mic Custom Effect-->
         <div class="input-group mb-3 userAuthGroup">
           <div class="input-group-prepend">
             <span class="input-group-text" id="inputGroup-sizing-sm">Custom Effect</span>
@@ -1394,7 +1442,6 @@
             <button id="button-SubmitCustomEffect" class="btn btn-primary requireAuth">Submit</button>
           </div>
         </div>
-
 
         <div class="card userAuthGroup">
           <div class="card-header" id="micPresentsHeading">
@@ -1426,7 +1473,7 @@
           </div>
         </div>
 
-
+        <!--Mic Effect Controls-->
         <div class="card userAuthGroup">
           <div class="card-header" id="effectControlsHeading">
             <h4 class="mb-0">
@@ -1443,191 +1490,212 @@
             </div>
           </div>
         </div>
+
+        <!--Mic Filters-->
+        <div class="card adminAuthGroup">
+          <div class="card-header" id="micFiltersHeading">
+            <h4 class="mb-0">
+              <button class="btn btn-link" data-toggle="collapse" data-target="#collapseMicFilters" aria-expanded="false" aria-controls="collapseMicFilters">
+                <h4>Mic Filters</h4>
+              </button>
+            </h4>
+          </div>
+
+          <div id="collapseMicFilters" class="collapse" aria-labelledby="micFiltersHeading" data-parent="#micEffectsAccordion">
+            <div class="card-body" id="micFiltersAccordion">
+
+
+              <!--Mic Noise Gate-->
+              <div class="card adminAuthGroup">
+                <div class="card-header" id="noiseGateHeading">
+                  <h4 class="mb-0">
+                    <button class="btn btn-link" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                      <h4>Mic Noise Gate</h4>
+                    </button>
+                  </h4>
+                </div>
+
+                <div id="collapseTwo" class="collapse" aria-labelledby="noiseGateHeading" data-parent="#micFiltersAccordion">
+                  <div class="card-body">
+
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text" id="inputGroup-sizing-default">Enabled</span>
+                      </div>
+                      <input type="checkbox" id="input-NoiseGate-Enabled" class="form-control" name="enabled">
+                    </div>
+
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text" id="inputGroup-sizing-default">Open Threshold (dB)</span>
+                      </div>
+                      <input type="number" id="input-NoiseGate-OpenThreshold" class="form-control" name="openThreshold" min="-60.0" max="0.0" step="1">
+                    </div>
+
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text" id="inputGroup-sizing-default">Close Threshold (dB)</span>
+                      </div>
+                      <input type="number" id="input-NoiseGate-CloseThreshold" class="form-control" name="closeThreshold" min="-60.0" max="0.0" step="1">
+                    </div>
+
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text" id="inputGroup-sizing-default">Attack Duration (s)</span>
+                      </div>
+                      <input type="number" id="input-NoiseGate-Attack" class="form-control" name="attack" min="0.0" max="1.0" step="0.001">
+                    </div>
+
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text" id="inputGroup-sizing-default">Hold Duration (s)</span>
+                      </div>
+                      <input type="number" id="input-NoiseGate-Hold" class="form-control" name="hold" min="0.0" max="1.0" step="0.001">
+                    </div>
+
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text" id="inputGroup-sizing-default">Release Duration (s)</span>
+                      </div>
+                      <input type="number" id="input-NoiseGate-Release" class="form-control" name="release" min="0.0" max="1.0" step="0.001">
+                    </div>
+
+                    <button class="btn btn-primary requirePrivAuth" id="button-SubmitNoiseGateSettings">Submit</button>
+
+                  </div>
+                </div>
+              </div>
+
+              <!--Mic Expander-->
+              <div class="card">
+                <div class="card-header" id="expanderHeading">
+                  <h4 class="mb-0">
+                    <button class="btn btn-link" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                      <h4>Mic Expander</h4>
+                    </button>
+                  </h4>
+                </div>
+
+                <div id="collapseThree" class="collapse" aria-labelledby="expanderHeading" data-parent="#micFiltersAccordion">
+                  <div class="card-body">
+
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text" id="inputGroup-sizing-default">Enabled</span>
+                      </div>
+                      <input type="checkbox" id="input-Expander-Enabled" class="form-control" name="enabled">
+                    </div>
+
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text" id="inputGroup-sizing-default">Ratio</span>
+                      </div>
+                      <input type="number" id="input-Expander-Ratio" class="form-control" name="ratio" min="1" max="40" step="0.1">
+                    </div>
+
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text" id="inputGroup-sizing-default">Threshold (dB)</span>
+                      </div>
+                      <input type="number" id="input-Expander-Threshold" class="form-control" name="threshold" min="-60.0" max="0.0" step="1">
+                    </div>
+
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text" id="inputGroup-sizing-default">Attack Duration (s)</span>
+                      </div>
+                      <input type="number" id="input-Expander-Attack" class="form-control" name="attack" min="0.0" max="1.0" step="0.001">
+                    </div>
+
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text" id="inputGroup-sizing-default">Release Duration (s)</span>
+                      </div>
+                      <input type="number" id="input-Expander-Release" class="form-control" name="release" min="0.0" max="1.0" step="0.001">
+                    </div>
+
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text" id="inputGroup-sizing-default">Gain (dB)</span>
+                      </div>
+                      <input type="number" id="input-Expander-Gain" class="form-control" name="gain" min="0.0" max="60.0" step="1">
+                    </div>
+
+                    <button class="btn btn-primary requirePrivAuth" id="button-SubmitExpanderSettings">Submit</button>
+
+                  </div>
+                </div>
+              </div>
+
+
+              <!--Mic Compressor-->
+              <div class="card">
+                <div class="card-header" id="compressorHeading">
+                  <h4 class="mb-0">
+                    <button class="btn btn-link" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                      <h4>Mic Compressor</h4>
+                    </button>
+                  </h4>
+                </div>
+
+                <div id="collapseOne" class="collapse" aria-labelledby="compressorHeading" data-parent="#micFiltersAccordion">
+                  <div class="card-body">
+
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text" id="inputGroup-sizing-default">Enabled</span>
+                      </div>
+                      <input type="checkbox" id="input-Compressor-Enabled" class="form-control" name="enabled">
+                    </div>
+
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text" id="inputGroup-sizing-default">Ratio</span>
+                      </div>
+                      <input type="number" id="input-Compressor-Ratio" class="form-control" name="ratio" min="1" max="40" step="0.1">
+                    </div>
+
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text" id="inputGroup-sizing-default">Threshold (dB)</span>
+                      </div>
+                      <input type="number" id="input-Compressor-Threshold" class="form-control" name="threshold" min="-60.0" max="0.0" step="1">
+                    </div>
+
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text" id="inputGroup-sizing-default">Attack Duration (s)</span>
+                      </div>
+                      <input type="number" id="input-Compressor-Attack" class="form-control" name="attack" min="0.0" max="1.0" step="0.001">
+                    </div>
+
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text" id="inputGroup-sizing-default">Release Duration (s)</span>
+                      </div>
+                      <input type="number" id="input-Compressor-Release" class="form-control" name="release" min="0.0" max="1.0" step="0.001">
+                    </div>
+
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text" id="inputGroup-sizing-default">Gain (dB)</span>
+                      </div>
+                      <input type="number" id="input-Compressor-Gain" class="form-control" name="gain" min="0.0" max="60.0" step="1">
+                    </div>
+
+                    <button class="btn btn-primary requirePrivAuth" id="button-SubmitCompressorSettings">Submit</button>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="col-sm privAuthGroup" id="micSettingsAccordion">
+      
+      <div class="col-sm privAuthGroup" id="audioSettingsAccordion">
         <h3>Audio Settings</h3>
-
-        <div class="card">
-          <div class="card-header" id="noiseGateHeading">
-            <h4 class="mb-0">
-              <button class="btn btn-link" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                <h4>Mic Noise Gate</h4>
-              </button>
-            </h4>
-          </div>
-
-          <div id="collapseTwo" class="collapse" aria-labelledby="noiseGateHeading" data-parent="#micSettingsAccordion">
-            <div class="card-body">
-
-              <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                  <span class="input-group-text" id="inputGroup-sizing-default">Enabled</span>
-                </div>
-                <input type="checkbox" id="input-NoiseGate-Enabled" class="form-control" name="enabled">
-              </div>
-
-              <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                  <span class="input-group-text" id="inputGroup-sizing-default">Open Threshold (dB)</span>
-                </div>
-                <input type="number" id="input-NoiseGate-OpenThreshold" class="form-control" name="openThreshold" min="-60.0" max="0.0" step="1">
-              </div>
-
-              <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                  <span class="input-group-text" id="inputGroup-sizing-default">Close Threshold (dB)</span>
-                </div>
-                <input type="number" id="input-NoiseGate-CloseThreshold" class="form-control" name="closeThreshold" min="-60.0" max="0.0" step="1">
-              </div>
-
-              <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                  <span class="input-group-text" id="inputGroup-sizing-default">Attack Duration (s)</span>
-                </div>
-                <input type="number" id="input-NoiseGate-Attack" class="form-control" name="attack" min="0.0" max="1.0" step="0.001">
-              </div>
-
-              <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                  <span class="input-group-text" id="inputGroup-sizing-default">Hold Duration (s)</span>
-                </div>
-                <input type="number" id="input-NoiseGate-Hold" class="form-control" name="hold" min="0.0" max="1.0" step="0.001">
-              </div>
-
-              <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                  <span class="input-group-text" id="inputGroup-sizing-default">Release Duration (s)</span>
-                </div>
-                <input type="number" id="input-NoiseGate-Release" class="form-control" name="release" min="0.0" max="1.0" step="0.001">
-              </div>
-
-              <button class="btn btn-primary requirePrivAuth" id="button-SubmitNoiseGateSettings">Submit</button>
-
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-header" id="expanderHeading">
-            <h4 class="mb-0">
-              <button class="btn btn-link" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                <h4>Mic Expander</h4>
-              </button>
-            </h4>
-          </div>
-
-          <div id="collapseThree" class="collapse" aria-labelledby="expanderHeading" data-parent="#micSettingsAccordion">
-            <div class="card-body">
-
-              <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                  <span class="input-group-text" id="inputGroup-sizing-default">Enabled</span>
-                </div>
-                <input type="checkbox" id="input-Expander-Enabled" class="form-control" name="enabled">
-              </div>
-
-              <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                  <span class="input-group-text" id="inputGroup-sizing-default">Ratio</span>
-                </div>
-                <input type="number" id="input-Expander-Ratio" class="form-control" name="ratio" min="1" max="40" step="0.1">
-              </div>
-
-              <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                  <span class="input-group-text" id="inputGroup-sizing-default">Threshold (dB)</span>
-                </div>
-                <input type="number" id="input-Expander-Threshold" class="form-control" name="threshold" min="-60.0" max="0.0" step="1">
-              </div>
-
-              <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                  <span class="input-group-text" id="inputGroup-sizing-default">Attack Duration (s)</span>
-                </div>
-                <input type="number" id="input-Expander-Attack" class="form-control" name="attack" min="0.0" max="1.0" step="0.001">
-              </div>
-
-              <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                  <span class="input-group-text" id="inputGroup-sizing-default">Release Duration (s)</span>
-                </div>
-                <input type="number" id="input-Expander-Release" class="form-control" name="release" min="0.0" max="1.0" step="0.001">
-              </div>
-
-              <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                  <span class="input-group-text" id="inputGroup-sizing-default">Gain (dB)</span>
-                </div>
-                <input type="number" id="input-Expander-Gain" class="form-control" name="gain" min="0.0" max="60.0" step="1">
-              </div>
-
-              <button class="btn btn-primary requirePrivAuth" id="button-SubmitExpanderSettings">Submit</button>
-
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-header" id="compressorHeading">
-            <h4 class="mb-0">
-              <button class="btn btn-link" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
-                <h4>Mic Compressor</h4>
-              </button>
-            </h4>
-          </div>
-
-          <div id="collapseOne" class="collapse" aria-labelledby="compressorHeading" data-parent="#micSettingsAccordion">
-            <div class="card-body">
-
-              <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                  <span class="input-group-text" id="inputGroup-sizing-default">Enabled</span>
-                </div>
-                <input type="checkbox" id="input-Compressor-Enabled" class="form-control" name="enabled">
-              </div>
-
-              <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                  <span class="input-group-text" id="inputGroup-sizing-default">Ratio</span>
-                </div>
-                <input type="number" id="input-Compressor-Ratio" class="form-control" name="ratio" min="1" max="40" step="0.1">
-              </div>
-
-              <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                  <span class="input-group-text" id="inputGroup-sizing-default">Threshold (dB)</span>
-                </div>
-                <input type="number" id="input-Compressor-Threshold" class="form-control" name="threshold" min="-60.0" max="0.0" step="1">
-              </div>
-
-              <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                  <span class="input-group-text" id="inputGroup-sizing-default">Attack Duration (s)</span>
-                </div>
-                <input type="number" id="input-Compressor-Attack" class="form-control" name="attack" min="0.0" max="1.0" step="0.001">
-              </div>
-
-              <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                  <span class="input-group-text" id="inputGroup-sizing-default">Release Duration (s)</span>
-                </div>
-                <input type="number" id="input-Compressor-Release" class="form-control" name="release" min="0.0" max="1.0" step="0.001">
-              </div>
-
-              <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                  <span class="input-group-text" id="inputGroup-sizing-default">Gain (dB)</span>
-                </div>
-                <input type="number" id="input-Compressor-Gain" class="form-control" name="gain" min="0.0" max="60.0" step="1">
-              </div>
-
-              <button class="btn btn-primary requirePrivAuth" id="button-SubmitCompressorSettings">Submit</button>
-
-            </div>
-          </div>
-        </div>
-
         <div class="card adminAuthGroup">
           <div class="card-header" id="audioDevicesHeading">
             <h4 class="mb-0">
@@ -1637,7 +1705,7 @@
             </h4>
           </div>
 
-          <div id="collapseAudioDevices" class="collapse" aria-labelledby="audioDevicesHeading" data-parent="#micSettingsAccordion">
+          <div id="collapseAudioDevices" class="collapse" aria-labelledby="audioDevicesHeading" data-parent="#audioSettingsAccordion">
             <div class="card-body">
 
               <div class="form-row">
@@ -1691,7 +1759,7 @@
             </h4>
           </div>
 
-          <div id="collapseMidi" class="collapse" aria-labelledby="midiHeading" data-parent="#micSettingsAccordion">
+          <div id="collapseMidi" class="collapse" aria-labelledby="midiHeading" data-parent="#audioSettingsAccordion">
             <div class="card-body">
 
               <div class="form-row">
