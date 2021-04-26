@@ -390,7 +390,7 @@ namespace TASagentTwitchBot.Core.Quotes
             using IServiceScope scope = scopeFactory.CreateScope();
             BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
 
-            await db.Quotes.AddAsync(newQuote);
+            db.Quotes.Add(newQuote);
             await db.SaveChangesAsync();
 
             await db.Entry(newQuote).Reference(x => x.Creator).LoadAsync();

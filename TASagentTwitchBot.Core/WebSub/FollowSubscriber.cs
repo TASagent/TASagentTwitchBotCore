@@ -83,7 +83,7 @@ namespace TASagentTwitchBot.Core.WebSub
                     AuthorizationLevel = Commands.AuthorizationLevel.None
                 };
 
-                await db.Users.AddAsync(follower);
+                db.Users.Add(follower);
                 await db.SaveChangesAsync();
             }
             else

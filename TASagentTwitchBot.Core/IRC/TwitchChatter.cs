@@ -64,7 +64,7 @@ namespace TASagentTwitchBot.Core.IRC
                     Color = color
                 };
 
-                await db.Users.AddAsync(user);
+                db.Users.Add(user);
                 await db.SaveChangesAsync();
             }
             else
