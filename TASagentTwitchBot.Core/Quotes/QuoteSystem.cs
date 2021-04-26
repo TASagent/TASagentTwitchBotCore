@@ -382,7 +382,7 @@ namespace TASagentTwitchBot.Core.Quotes
             {
                 QuoteText = quote,
                 Speaker = userName,
-                Creator = chatter.User,
+                CreatorId = chatter.User.UserId,
                 CreateTime = DateTime.Now
             };
 
