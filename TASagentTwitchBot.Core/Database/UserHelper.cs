@@ -9,8 +9,8 @@ namespace TASagentTwitchBot.Core.Database
 {
     public interface IUserHelper
     {
-        Task<User> GetUserByTwitchLogin(string twitchLogin, bool create = false);
-        Task<User> GetUserByTwitchId(string twitchId, bool create = false);
+        Task<User> GetUserByTwitchLogin(string twitchLogin, bool create = true);
+        Task<User> GetUserByTwitchId(string twitchId, bool create = true);
     }
 
     public class UserHelper : IUserHelper
