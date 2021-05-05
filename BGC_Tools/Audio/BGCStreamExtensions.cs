@@ -504,6 +504,21 @@ namespace BGC.Audio
                 rmsBehavior: rmsBehavior);
         }
 
+        public static IBGCStream EchoEffector(
+            this IBGCStream stream,
+            double delay = 0.100,
+            double decay = 0.200,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
+        {
+
+            throw new NotImplementedException();
+            //return new EchoEffector(
+            //    stream: stream,
+            //    delay: delay,
+            //    decay: decay,
+            //    rmsBehavior: rmsBehavior);
+        }
+
         public static IBGCStream AllPass(
             this IBGCStream stream,
             in Complex64 coefficient,
