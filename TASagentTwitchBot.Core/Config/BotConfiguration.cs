@@ -1,5 +1,4 @@
 ﻿using System;
-
 using TASagentTwitchBot.Core.Web.Middleware;
 
 namespace TASagentTwitchBot.Core.Config
@@ -25,7 +24,7 @@ namespace TASagentTwitchBot.Core.Config
         public bool ExhaustiveIRCLogging { get; set; } = true;
 
         public int BitTTSThreshold { get; set; } = 0;
-
+        public bool EnableErrorHandling { get; set; } = true;
         //Output configuration
         public string EffectOutputDevice { get; set; } = "";
         public string VoiceOutputDevice { get; set; } = "";
@@ -38,13 +37,15 @@ namespace TASagentTwitchBot.Core.Config
     public class AuthConfiguration
     {
         public bool PublicAuthAllowed { get; set; } = true;
-
+        //ideally each credential set might have it's own salt
+        public byte[] Salt { get; set; } = null;
         public CredentialSet Admin { get; set; } = new CredentialSet();
         public CredentialSet Privileged { get; set; } = new CredentialSet();
         public CredentialSet User { get; set; } = new CredentialSet();
 
         public AuthDegree TryCredentials(string password, out string authString)
         {
+
             if (password == Admin.Password)
             {
                 authString = Admin.AuthString;

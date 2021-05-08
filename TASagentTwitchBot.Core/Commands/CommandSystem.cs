@@ -9,6 +9,7 @@ namespace TASagentTwitchBot.Core.Commands
     {
         private readonly ICommunication communication;
         private readonly ErrorHandler errorHandler;
+        private readonly Config.IBotConfigContainer botConfigContainer;
 
         //Command Handlers
         private readonly ICommandContainer[] commandContainers;
@@ -21,10 +22,12 @@ namespace TASagentTwitchBot.Core.Commands
         private readonly Dictionary<string, ResponseHandler> whisperHandlers = new Dictionary<string, ResponseHandler>();
 
         public CommandSystem(
+            Config.IBotConfigContainer botConfigContainer,
             ICommunication communication,
             ErrorHandler errorHandler,
             IEnumerable<ICommandContainer> commandContainers)
         {
+            this.botConfigContainer = botConfigContainer;
             this.communication = communication;
             this.errorHandler = errorHandler;
 
@@ -173,7 +176,7 @@ namespace TASagentTwitchBot.Core.Commands
                         //Invoke handler
                         await commandHandlers[command](chatter, remainingCommand);
                     }
-                    else
+                    else if (this.botConfigContainer.BotConfig.EnableErrorHandling)
                     {
                         string response = GetUnrecognizedCommandMessage(chatter, splitMessage);
                         if (!string.IsNullOrEmpty(response))
