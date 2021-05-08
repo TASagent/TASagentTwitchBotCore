@@ -1,6 +1,7 @@
 ﻿using NAudio.CoreAudioApi;
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 
 namespace TASagentTwitchBot.Core
@@ -200,19 +201,47 @@ namespace TASagentTwitchBot.Core
             return successful;
         }
 
+        public static string HashPassword(string password, byte[] salt)
+        {
+            // https://stackoverflow.com/questions/4181198/how-to-hash-a-password/10402129#10402129
+
+            var pbkdf2 = new Rfc2898DeriveBytes(password, salt, 100000);
+            byte[] hash = pbkdf2.GetBytes(20);
+
+
+            byte[] hashBytes = new byte[36];
+            Array.Copy(salt, 0, hashBytes, 0, 16);
+            Array.Copy(hash, 0, hashBytes, 16, 20);
+
+            string savedPasswordHash = Convert.ToBase64String(hashBytes);
+            return savedPasswordHash;
+        }
+
+        private static byte[] GenerateSalt()
+        {
+            byte[] salt;
+            new RNGCryptoServiceProvider().GetBytes(salt = new byte[16]);
+            return salt;
+        }
+
         protected bool ConfigurePasswords()
         {
+            if (botConfig.AuthConfiguration.Salt == null)
+            {
+                botConfig.AuthConfiguration.Salt = GenerateSalt();
+                botConfigContainer.SerializeData();
+            }
             bool successful = true;
-
             if (string.IsNullOrEmpty(botConfig.AuthConfiguration.Admin.Password))
             {
+
                 WritePrompt("Admin password for bot control");
 
                 string pass = Console.ReadLine()?.Trim();
 
                 if (!string.IsNullOrEmpty(pass))
                 {
-                    botConfig.AuthConfiguration.Admin.Password = pass;
+                    botConfig.AuthConfiguration.Admin.Password = HashPassword(pass, botConfig.AuthConfiguration.Salt);
                     botConfigContainer.SerializeData();
                 }
                 else
@@ -230,7 +259,7 @@ namespace TASagentTwitchBot.Core
 
                 if (!string.IsNullOrEmpty(pass))
                 {
-                    botConfig.AuthConfiguration.Privileged.Password = pass;
+                    botConfig.AuthConfiguration.Privileged.Password = HashPassword(pass, botConfig.AuthConfiguration.Salt);
                     botConfigContainer.SerializeData();
                 }
                 else
@@ -248,7 +277,7 @@ namespace TASagentTwitchBot.Core
 
                 if (!string.IsNullOrEmpty(pass))
                 {
-                    botConfig.AuthConfiguration.User.Password = pass;
+                    botConfig.AuthConfiguration.User.Password = HashPassword(pass, botConfig.AuthConfiguration.Salt); ;
                     botConfigContainer.SerializeData();
                 }
                 else

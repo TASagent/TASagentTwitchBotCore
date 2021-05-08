@@ -26,8 +26,9 @@ namespace TASagentTwitchBot.Core.Web.Controllers
         [HttpPost]
         public ActionResult<AuthorizationResult> Authorize(AuthorizationAttempt request)
         {
+            var hash = BaseConfigurator.HashPassword(request.Password, botConfigContainer.BotConfig.AuthConfiguration.Salt);
             AuthDegree attemptedAuth = 
-                botConfigContainer.BotConfig.AuthConfiguration.TryCredentials(request.Password, out string authString);
+                botConfigContainer.BotConfig.AuthConfiguration.TryCredentials(hash, out string authString);
 
             if (!botConfigContainer.BotConfig.AuthConfiguration.PublicAuthAllowed && attemptedAuth <= AuthDegree.Privileged)
             {
