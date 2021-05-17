@@ -7,9 +7,9 @@ namespace TASagentTwitchBot.Core.Commands
 {
     public class CommandSystem
     {
+        private readonly Config.BotConfiguration botConfig;
         private readonly ICommunication communication;
         private readonly ErrorHandler errorHandler;
-        private readonly Config.IBotConfigContainer botConfigContainer;
 
         //Command Handlers
         private readonly ICommandContainer[] commandContainers;
@@ -18,6 +18,7 @@ namespace TASagentTwitchBot.Core.Commands
         private readonly Dictionary<string, CommandHandler> commandHandlers = new Dictionary<string, CommandHandler>();
         private readonly Dictionary<string, HelpFunction> helpFunctions = new Dictionary<string, HelpFunction>();
         private readonly Dictionary<string, SetFunction> setFunctions = new Dictionary<string, SetFunction>();
+        private readonly Dictionary<string, GetFunction> getFunctions = new Dictionary<string, GetFunction>();
 
         private readonly Dictionary<string, ResponseHandler> whisperHandlers = new Dictionary<string, ResponseHandler>();
 
@@ -27,7 +28,7 @@ namespace TASagentTwitchBot.Core.Commands
             ErrorHandler errorHandler,
             IEnumerable<ICommandContainer> commandContainers)
         {
-            this.botConfigContainer = botConfigContainer;
+            botConfig = botConfigContainer.BotConfig;
             this.communication = communication;
             this.errorHandler = errorHandler;
 
@@ -35,7 +36,7 @@ namespace TASagentTwitchBot.Core.Commands
 
             foreach (ICommandContainer commandContainer in this.commandContainers)
             {
-                commandContainer.RegisterCommands(commandHandlers, helpFunctions, setFunctions);
+                commandContainer.RegisterCommands(commandHandlers, helpFunctions, setFunctions, getFunctions);
             }
 
             communication.ReceiveMessageHandlers += HandleChatMessage;
@@ -158,6 +159,33 @@ namespace TASagentTwitchBot.Core.Commands
                     }
                     break;
 
+                case "get":
+                    //All Set Commands
+                    if (splitMessage.Length == 1)
+                    {
+                        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, Get what?");
+                    }
+                    else if (getFunctions.ContainsKey(splitMessage[1].ToLowerInvariant()))
+                    {
+                        string[] remainingCommand = null;
+
+                        if (splitMessage.Length > 2)
+                        {
+                            remainingCommand = splitMessage[2..];
+                        }
+                        else
+                        {
+                            remainingCommand = Array.Empty<string>();
+                        }
+
+                        await getFunctions[splitMessage[1].ToLowerInvariant()](chatter, remainingCommand);
+                    }
+                    else
+                    {
+                        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, unrecognized Get target \"{splitMessage[0].ToLowerInvariant()}\".");
+                    }
+                    break;
+
                 default:
                     //Roll over to standard command system
                     if (commandHandlers.ContainsKey(command))
@@ -176,7 +204,7 @@ namespace TASagentTwitchBot.Core.Commands
                         //Invoke handler
                         await commandHandlers[command](chatter, remainingCommand);
                     }
-                    else if (this.botConfigContainer.BotConfig.EnableErrorHandling)
+                    else if (botConfig.EnableErrorHandling)
                     {
                         string response = GetUnrecognizedCommandMessage(chatter, splitMessage);
                         if (!string.IsNullOrEmpty(response))
