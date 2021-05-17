@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 
 using TASagentTwitchBot.Core.Audio;
 using TASagentTwitchBot.Core.Audio.Effects;
 using TASagentTwitchBot.Core.Commands;
 using TASagentTwitchBot.Core.Database;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace TASagentTwitchBot.Core.TTS
 {
@@ -453,7 +454,7 @@ namespace TASagentTwitchBot.Core.TTS
                     string lowerUserName = userName.ToLower();
                     using IServiceScope scope = scopeFactory.CreateScope();
                     BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
-                    User dbUser = db.Users.FirstOrDefault(x => x.TwitchUserName.ToLower() == lowerUserName);
+                    User dbUser = await db.Users.FirstOrDefaultAsync(x => x.TwitchUserName.ToLower() == lowerUserName);
 
                     if (dbUser is null)
                     {
@@ -534,7 +535,7 @@ namespace TASagentTwitchBot.Core.TTS
                             string lowerUserName = userName.ToLower();
                             using IServiceScope scope = scopeFactory.CreateScope();
                             BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
-                            User dbUser = db.Users.FirstOrDefault(x => x.TwitchUserName.ToLower() == lowerUserName);
+                            User dbUser = await db.Users.FirstOrDefaultAsync(x => x.TwitchUserName.ToLower() == lowerUserName);
 
                             if (dbUser is null)
                             {
