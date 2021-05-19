@@ -363,7 +363,7 @@ namespace TASagentTwitchBot.Core.Notifications
             activityDispatcher.QueueActivity(
                 activity: new FullActivityRequest(
                     fullActivityProvider: this,
-                    description: $"Raid: {raider} with {count} viewers",
+                    description: $"Raid: {raider.TwitchUserName} with {count} viewers",
                     notificationMessage: await GetRaidNotificationRequest(raider, count),
                     audioRequest: await GetRaidAudioRequest(raider, count),
                     marqueeMessage: await GetRaidMarqueeMessage(raider, count)),
@@ -451,7 +451,7 @@ namespace TASagentTwitchBot.Core.Notifications
             activityDispatcher.QueueActivity(
                 activity: new FullActivityRequest(
                     fullActivityProvider: this,
-                    description: $"Gift Sub To: {recipientId}",
+                    description: $"Gift Sub To: {recipient.TwitchUserName}",
                     notificationMessage: await GetGiftSubNotificationRequest(sender, recipient, tier, months),
                     audioRequest: await GetGiftSubAudioRequest(sender, recipient, tier, months),
                     marqueeMessage: await GetGiftSubMarqueeMessage(sender, recipient, tier, months)),
@@ -559,7 +559,7 @@ namespace TASagentTwitchBot.Core.Notifications
                 return;
             }
 
-            communication.NotifyEvent($"Gift Sub from Anon to {recipient}");
+            communication.NotifyEvent($"Gift Sub from Anon to {recipient.TwitchUserName}");
 
             string chatResponse = await GetAnonGiftSubChatResponse(recipient, tier, months);
             if (!string.IsNullOrWhiteSpace(chatResponse))
@@ -570,7 +570,7 @@ namespace TASagentTwitchBot.Core.Notifications
             activityDispatcher.QueueActivity(
                 activity: new FullActivityRequest(
                     fullActivityProvider: this,
-                    description: $"Anon Gift Sub To: {recipient}",
+                    description: $"Anon Gift Sub To: {recipient.TwitchUserName}",
                     notificationMessage: await GetAnonGiftSubNotificationRequest(recipient, tier, months),
                     audioRequest: await GetAnonGiftSubAudioRequest(recipient, tier, months),
                     marqueeMessage: await GetAnonGiftSubMarqueeMessage(recipient, tier, months)),
