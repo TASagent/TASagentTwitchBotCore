@@ -10,33 +10,33 @@ namespace TASagentTwitchBot.Core.Web.Controllers
     [ConditionalFeature("Audio")]
     public class MicController : ControllerBase
     {
-        private readonly Config.IBotConfigContainer botConfigContainer;
+        private readonly Config.BotConfiguration botConfig;
         private readonly Audio.IMicrophoneHandler microphoneHandler;
         private readonly Audio.Effects.IAudioEffectSystem audioEffectSystem;
 
         public MicController(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             Audio.IMicrophoneHandler microphoneHandler,
             Audio.Effects.IAudioEffectSystem audioEffectSystem)
         {
-            this.botConfigContainer = botConfigContainer;
+            this.botConfig = botConfig;
             this.microphoneHandler = microphoneHandler;
             this.audioEffectSystem = audioEffectSystem;
         }
 
         [HttpGet]
         public ActionResult<MicEnabled> Enabled() =>
-            new MicEnabled(botConfigContainer.BotConfig.MicConfiguration.Enabled);
+            new MicEnabled(botConfig.MicConfiguration.Enabled);
 
         [HttpPost]
         [AuthRequired(AuthDegree.Admin)]
         public IActionResult Enabled(MicEnabled micEnabled)
         {
             //Set CompressorConfig
-            botConfigContainer.BotConfig.MicConfiguration.Enabled = micEnabled.Enabled;
+            botConfig.MicConfiguration.Enabled = micEnabled.Enabled;
 
             //Save
-            botConfigContainer.SerializeData();
+            botConfig.Serialize();
 
             //Update Microphone
             microphoneHandler.ResetVoiceStream();
@@ -108,10 +108,10 @@ namespace TASagentTwitchBot.Core.Web.Controllers
         public IActionResult Compressor(Config.CompressorConfiguration request)
         {
             //Set CompressorConfig
-            botConfigContainer.BotConfig.MicConfiguration.CompressorConfiguration = request;
+            botConfig.MicConfiguration.CompressorConfiguration = request;
 
             //Save
-            botConfigContainer.SerializeData();
+            botConfig.Serialize();
 
             //Update Microphone
             microphoneHandler.ResetVoiceStream();
@@ -120,17 +120,17 @@ namespace TASagentTwitchBot.Core.Web.Controllers
 
         [HttpGet]
         public ActionResult<Config.CompressorConfiguration> Compressor() =>
-            botConfigContainer.BotConfig.MicConfiguration.CompressorConfiguration;
+            botConfig.MicConfiguration.CompressorConfiguration;
 
         [HttpPost]
         [AuthRequired(AuthDegree.Admin)]
         public IActionResult Expander(Config.ExpanderConfiguration request)
         {
             //Set CompressorConfig
-            botConfigContainer.BotConfig.MicConfiguration.ExpanderConfiguration = request;
+            botConfig.MicConfiguration.ExpanderConfiguration = request;
 
             //Save
-            botConfigContainer.SerializeData();
+            botConfig.Serialize();
 
             //Update Microphone
             microphoneHandler.ResetVoiceStream();
@@ -139,17 +139,17 @@ namespace TASagentTwitchBot.Core.Web.Controllers
 
         [HttpGet]
         public ActionResult<Config.ExpanderConfiguration> Expander() =>
-            botConfigContainer.BotConfig.MicConfiguration.ExpanderConfiguration;
+            botConfig.MicConfiguration.ExpanderConfiguration;
 
         [HttpPost]
         [AuthRequired(AuthDegree.Admin)]
         public IActionResult NoiseGate(Config.NoiseGateConfiguration request)
         {
             //Set CompressorConfig
-            botConfigContainer.BotConfig.MicConfiguration.NoiseGateConfiguration = request;
+            botConfig.MicConfiguration.NoiseGateConfiguration = request;
 
             //Save
-            botConfigContainer.SerializeData();
+            botConfig.Serialize();
 
             //Update Microphone
             microphoneHandler.ResetVoiceStream();
@@ -158,7 +158,7 @@ namespace TASagentTwitchBot.Core.Web.Controllers
 
         [HttpGet]
         public ActionResult<Config.NoiseGateConfiguration> NoiseGate() =>
-            botConfigContainer.BotConfig.MicConfiguration.NoiseGateConfiguration;
+            botConfig.MicConfiguration.NoiseGateConfiguration;
     }
 
     public record MicEnabled(bool Enabled);

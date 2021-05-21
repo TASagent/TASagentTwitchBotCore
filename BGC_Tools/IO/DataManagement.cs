@@ -53,6 +53,10 @@ namespace BGC.IO
         public static string PathForDataFile(string dataDirectory, string fileName, bool create = true) =>
             Path.Combine(PathForDataDirectory(dataDirectory, create), fileName);
 
+        /// <summary> Returns the full path for specified datafile in a data directory </summary>
+        public static string PathForDataFile(string dataDirectory, string dataSubDirectory, string fileName) =>
+            Path.Combine(PathForDataSubDirectory(dataDirectory, dataSubDirectory), fileName);
+
         /// <summary> Returns the full path to the <paramref name="dataDirectory"/> directory. </summary>
         public static string PathForDataDirectory(string dataDirectory, bool create = true)
         {

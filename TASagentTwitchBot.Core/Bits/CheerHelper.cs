@@ -9,8 +9,8 @@ namespace TASagentTwitchBot.Core.Bits
 {
     public class CheerHelper
     {
-        private readonly HelixHelper helixHelper;
         private readonly Config.BotConfiguration botConfig;
+        private readonly HelixHelper helixHelper;
 
         private bool hasData = false;
 
@@ -19,10 +19,10 @@ namespace TASagentTwitchBot.Core.Bits
         private readonly Dictionary<string, List<TwitchCheermotes.Datum.Tier>> cheerLookup = new Dictionary<string, List<TwitchCheermotes.Datum.Tier>>();
 
         public CheerHelper(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             HelixHelper helixHelper)
         {
-            botConfig = botConfigContainer.BotConfig;
+            this.botConfig = botConfig;
             this.helixHelper = helixHelper;
         }
 

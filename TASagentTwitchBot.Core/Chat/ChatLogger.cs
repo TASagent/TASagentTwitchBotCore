@@ -11,10 +11,10 @@ namespace TASagentTwitchBot.Core.Chat
         private bool disposedValue;
 
         public ChatLogger(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             ICommunication communication)
         {
-            botConfig = botConfigContainer.BotConfig;
+            this.botConfig = botConfig;
 
             lineChannel = Channel.CreateUnbounded<string>();
             chatLog = new Lazy<Logs.LocalLogger>(() => new Logs.LocalLogger("ChatLogs", "chat"));

@@ -11,20 +11,20 @@ namespace TASagentTwitchBot.Core.Commands
 {
     public class ShoutOutSystem : ICommandContainer
     {
-        private readonly ICommunication communication;
         private readonly Config.BotConfiguration botConfig;
+        private readonly ICommunication communication;
         private readonly IUserHelper userHelper;
 
         private readonly HelixHelper helixHelper;
 
         public ShoutOutSystem(
+            Config.BotConfiguration botConfig,
             ICommunication communication,
-            Config.IBotConfigContainer botConfigContainer,
             IUserHelper userHelper,
             HelixHelper helixHelper)
         {
+            this.botConfig = botConfig;
             this.communication = communication;
-            botConfig = botConfigContainer.BotConfig;
             this.userHelper = userHelper;
 
             this.helixHelper = helixHelper;

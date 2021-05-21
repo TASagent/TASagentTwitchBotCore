@@ -7,19 +7,19 @@ namespace TASagentTwitchBot.Core.API.Twitch
 
     public class BotTokenValidator : TokenValidator, IBotTokenValidator
     {
-        private readonly Config.IBotConfigContainer botConfigContainer;
+        private readonly Config.BotConfiguration botConfig;
         private readonly Config.IExternalWebAccessConfiguration webAccessConfig;
 
         protected override string AccessToken
         {
-            get => botConfigContainer.BotConfig.BotAccessToken;
-            set => botConfigContainer.BotConfig.BotAccessToken = value;
+            get => botConfig.BotAccessToken;
+            set => botConfig.BotAccessToken = value;
         }
 
         protected override string RefreshToken
         {
-            get => botConfigContainer.BotConfig.BotRefreshToken;
-            set => botConfigContainer.BotConfig.BotRefreshToken = value;
+            get => botConfig.BotRefreshToken;
+            set => botConfig.BotRefreshToken = value;
         }
 
         protected override string RedirectURI => $"{webAccessConfig.GetLocalAddress()}/TASagentBotAPI/OAuth/BotCode";
@@ -27,16 +27,16 @@ namespace TASagentTwitchBot.Core.API.Twitch
         public BotTokenValidator(
             ICommunication communication,
             HelixHelper helixHelper,
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             Config.IExternalWebAccessConfiguration webAccessConfig)
             : base(communication, helixHelper)
         {
-            this.botConfigContainer = botConfigContainer;
+            this.botConfig = botConfig;
             this.webAccessConfig = webAccessConfig;
         }
 
         protected override void SaveChanges() =>
-            botConfigContainer.SerializeData();
+            botConfig.Serialize();
 
         protected override void SendCodeRequest(string stateString)
         {
@@ -62,8 +62,8 @@ namespace TASagentTwitchBot.Core.API.Twitch
                 "whispers:edit";
 
             string url = $"https://id.twitch.tv/oauth2/authorize" +
-                $"?client_id={botConfigContainer.BotConfig.TwitchClientId}" +
-                $"&client_secret={botConfigContainer.BotConfig.TwitchClientSecret}" +
+                $"?client_id={botConfig.TwitchClientId}" +
+                $"&client_secret={botConfig.TwitchClientSecret}" +
                 $"&redirect_uri={RedirectURI}" +
                 $"&response_type=code" +
                 $"&scope={scopes.Replace(" ", "+")}" +

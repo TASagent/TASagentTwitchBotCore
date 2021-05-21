@@ -11,16 +11,16 @@ namespace TASagentTwitchBot.Core.Web.Controllers
     [ConditionalFeature("Audio")]
     public class SettingsController : ControllerBase
     {
-        private readonly Config.IBotConfigContainer botConfigContainer;
+        private readonly Config.BotConfiguration botConfig;
         private readonly Audio.IMicrophoneHandler microphoneHandler;
         private readonly Audio.IAudioPlayer audioPlayer;
 
         public SettingsController(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             Audio.IMicrophoneHandler microphoneHandler,
             Audio.IAudioPlayer audioPlayer)
         {
-            this.botConfigContainer = botConfigContainer;
+            this.botConfig = botConfig;
             this.microphoneHandler = microphoneHandler;
             this.audioPlayer = audioPlayer;
         }
@@ -52,17 +52,17 @@ namespace TASagentTwitchBot.Core.Web.Controllers
 
         [HttpGet]
         public ActionResult<string> ErrorHEnabled() =>
-    botConfigContainer.BotConfig.EnableErrorHandling.ToString();
+            botConfig.EnableErrorHandling.ToString();
 
         [HttpPost]
         [AuthRequired(AuthDegree.Admin)]
         public IActionResult ErrorHEnabled(ErrHEnabled eHEnabled)
         {
             //Set CompressorConfig
-            botConfigContainer.BotConfig.EnableErrorHandling = eHEnabled.Enabled;
+            botConfig.EnableErrorHandling = eHEnabled.Enabled;
 
             //Save
-            botConfigContainer.SerializeData();
+            botConfig.Serialize();
 
             return Ok();
         }

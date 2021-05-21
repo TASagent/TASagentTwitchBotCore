@@ -799,7 +799,7 @@ namespace TASagentTwitchBot.Core.Notifications
 
         #endregion ITTSHandler
 
-        protected static Audio.AudioRequest JoinRequests(int delayMS, params Audio.AudioRequest[] audioRequests)
+        public static Audio.AudioRequest JoinRequests(int delayMS, params Audio.AudioRequest[] audioRequests)
         {
             List<Audio.AudioRequest> audioRequestList = new List<Audio.AudioRequest>(audioRequests.Where(x => x is not null));
 

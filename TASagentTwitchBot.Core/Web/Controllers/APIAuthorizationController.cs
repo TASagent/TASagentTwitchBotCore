@@ -9,16 +9,16 @@ namespace TASagentTwitchBot.Core.Web.Controllers
     [Route("/TASagentBotAPI/Auth/[Action]")]
     public class APIAuthorizationController : ControllerBase
     {
-        private readonly Config.IBotConfigContainer botConfigContainer;
+        private readonly Config.BotConfiguration botConfig;
         private readonly IMessageAccumulator messageAccumulator;
         private readonly ICommunication communication;
 
         public APIAuthorizationController(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             ICommunication communication,
             IMessageAccumulator messageAccumulator)
         {
-            this.botConfigContainer = botConfigContainer;
+            this.botConfig = botConfig;
             this.communication = communication;
             this.messageAccumulator = messageAccumulator;
         }
@@ -27,9 +27,9 @@ namespace TASagentTwitchBot.Core.Web.Controllers
         public ActionResult<AuthorizationResult> Authorize(AuthorizationAttempt request)
         {
             AuthDegree attemptedAuth = 
-                botConfigContainer.BotConfig.AuthConfiguration.TryCredentials(request.Password, out string authString);
+                botConfig.AuthConfiguration.TryCredentials(request.Password, out string authString);
 
-            if (!botConfigContainer.BotConfig.AuthConfiguration.PublicAuthAllowed && attemptedAuth <= AuthDegree.Privileged)
+            if (!botConfig.AuthConfiguration.PublicAuthAllowed && attemptedAuth <= AuthDegree.Privileged)
             {
                 communication.SendWarningMessage($"User tried to authenticate as {attemptedAuth} with password \"{request.Password}\" while locked down.");
                 return Forbid();
@@ -50,20 +50,20 @@ namespace TASagentTwitchBot.Core.Web.Controllers
         [AuthRequired(AuthDegree.Admin)]
         public IActionResult Lockdown(LockdownStatus status)
         {
-            botConfigContainer.BotConfig.AuthConfiguration.PublicAuthAllowed = !status.Locked;
+            botConfig.AuthConfiguration.PublicAuthAllowed = !status.Locked;
 
             if (status.Locked)
             {
                 //Becoming locked
                 //Generate a new Auth strings
-                botConfigContainer.BotConfig.AuthConfiguration.RegenerateAuthStrings();
+                botConfig.AuthConfiguration.RegenerateAuthStrings();
 
                 //Reset authenticated users
                 messageAccumulator.ClearAuthenticatedUsers();
             }
 
-            //Save
-            botConfigContainer.SerializeData();
+            //Save updated authstrings to file
+            botConfig.Serialize();
 
             return Ok();
         }
@@ -71,7 +71,7 @@ namespace TASagentTwitchBot.Core.Web.Controllers
         [HttpGet]
         public ActionResult<LockdownStatus> Lockdown()
         {
-            return new LockdownStatus(!botConfigContainer.BotConfig.AuthConfiguration.PublicAuthAllowed);
+            return new LockdownStatus(!botConfig.AuthConfiguration.PublicAuthAllowed);
         }
     }
 

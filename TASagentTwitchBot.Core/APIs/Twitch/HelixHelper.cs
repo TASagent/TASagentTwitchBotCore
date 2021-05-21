@@ -41,11 +41,11 @@ namespace TASagentTwitchBot.Core.API.Twitch
         /// Constructor for the Twitch_Helix api helper
         /// </summary>
         public HelixHelper(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             ICommunication communication)
         {
+            this.botConfig = botConfig;
             this.communication = communication;
-            botConfig = botConfigContainer.BotConfig;
         }
 
         #endregion
@@ -973,7 +973,9 @@ namespace TASagentTwitchBot.Core.API.Twitch
 
         public async Task<TwitchCustomRewardRedemption> UpdateCustomRewardProperties(
             string id,
+            int? cost = null,
             string prompt = null,
+            string backgroundColor = null,
             bool? paused = null)
         {
             RestClient restClient = new RestClient("https://api.twitch.tv/helix/channel_points/custom_rewards");
@@ -984,7 +986,9 @@ namespace TASagentTwitchBot.Core.API.Twitch
             request.AddQueryParameter("broadcaster_id", botConfig.BroadcasterId);
             request.AddQueryParameter("id", id);
 
+            request.AddOptionalParameter("cost", cost);
             request.AddOptionalParameter("prompt", prompt);
+            request.AddOptionalParameter("background_color", backgroundColor);
             request.AddOptionalParameter("is_paused", paused);
 
             IRestResponse response = await restClient.ExecuteAsync(request);

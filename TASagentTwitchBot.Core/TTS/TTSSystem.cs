@@ -16,7 +16,7 @@ namespace TASagentTwitchBot.Core.TTS
     {
         //Subsystems
         private readonly IServiceScopeFactory scopeFactory;
-        private readonly Config.IBotConfigContainer botConfigContainer;
+        private readonly Config.BotConfiguration botConfig;
         private readonly ICommunication communication;
         private readonly IAudioEffectSystem audioEffectSystem;
         private readonly Notifications.ITTSHandler ttsHandler;
@@ -24,13 +24,13 @@ namespace TASagentTwitchBot.Core.TTS
         private bool enabled = true;
 
         public TTSSystem(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             ICommunication communication,
             IAudioEffectSystem audioEffectSystem,
             Notifications.ITTSHandler ttsHandler,
             IServiceScopeFactory scopeFactory)
         {
-            this.botConfigContainer = botConfigContainer;
+            this.botConfig = botConfig;
             this.communication = communication;
             this.audioEffectSystem = audioEffectSystem;
             this.ttsHandler = ttsHandler;
@@ -154,7 +154,7 @@ namespace TASagentTwitchBot.Core.TTS
 
             if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator &&
                 chatter.User.LastSuccessfulTTS.HasValue &&
-                DateTime.Now < chatter.User.LastSuccessfulTTS.Value + new TimeSpan(hours: 0, minutes: 0, seconds: botConfigContainer.BotConfig.TTSTimeoutTime))
+                DateTime.Now < chatter.User.LastSuccessfulTTS.Value + new TimeSpan(hours: 0, minutes: 0, seconds: botConfig.TTSTimeoutTime))
             {
                 communication.SendDebugMessage($"User {chatter.User.TwitchUserName} rebuked for TTS Spam");
                 communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, you must wait before you can do that again.");
@@ -250,8 +250,8 @@ namespace TASagentTwitchBot.Core.TTS
                         return;
                     }
 
-                    botConfigContainer.BotConfig.BitTTSThreshold = bitThreshold;
-                    botConfigContainer.SerializeData();
+                    botConfig.BitTTSThreshold = bitThreshold;
+                    botConfig.Serialize();
                     break;
 
                 case "cooldown":
@@ -280,8 +280,8 @@ namespace TASagentTwitchBot.Core.TTS
                         return;
                     }
 
-                    botConfigContainer.BotConfig.TTSTimeoutTime = timeoutValue;
-                    botConfigContainer.SerializeData();
+                    botConfig.TTSTimeoutTime = timeoutValue;
+                    botConfig.Serialize();
                     break;
 
                 case "voice":
@@ -493,7 +493,7 @@ namespace TASagentTwitchBot.Core.TTS
                     }
 
                     communication.SendPublicChatMessage(
-                        $"@{chatter.User.TwitchUserName}, TTS Bit Threshold is set to {botConfigContainer.BotConfig.BitTTSThreshold}.");
+                        $"@{chatter.User.TwitchUserName}, TTS Bit Threshold is set to {botConfig.BitTTSThreshold}.");
                     break;
 
                 case "cooldown":
@@ -504,7 +504,7 @@ namespace TASagentTwitchBot.Core.TTS
                         return;
                     }
 
-                    communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, TTS Timeout is {botConfigContainer.BotConfig.TTSTimeoutTime} seconds.");
+                    communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, TTS Timeout is {botConfig.TTSTimeoutTime} seconds.");
                     break;
 
                 case "voice":

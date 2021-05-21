@@ -23,12 +23,12 @@ namespace TASagentTwitchBot.Core.Commands
         private readonly Dictionary<string, ResponseHandler> whisperHandlers = new Dictionary<string, ResponseHandler>();
 
         public CommandSystem(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             ICommunication communication,
             ErrorHandler errorHandler,
             IEnumerable<ICommandContainer> commandContainers)
         {
-            botConfig = botConfigContainer.BotConfig;
+            this.botConfig = botConfig;
             this.communication = communication;
             this.errorHandler = errorHandler;
 

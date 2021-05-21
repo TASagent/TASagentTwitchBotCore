@@ -43,13 +43,13 @@ namespace TASagentTwitchBot.Core.Audio
         }
 
         public MidiKeyboardHandler(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             ICommunication communication,
             ISoundEffectSystem soundEffectsSystem)
         {
+            this.botConfig = botConfig;
             this.communication = communication;
             this.soundEffectsSystem = soundEffectsSystem;
-            botConfig = botConfigContainer.BotConfig;
         }
 
         private void MidiMessageReceived(object sender, MidiInMessageEventArgs e)

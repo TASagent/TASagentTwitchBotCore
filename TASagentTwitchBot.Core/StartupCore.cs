@@ -91,6 +91,10 @@ namespace TASagentTwitchBot.Core
 
         protected virtual void ConfigureCoreServices(IServiceCollection services)
         {
+            //Construct or load BotConfiguration
+            services
+                .AddSingleton<Config.BotConfiguration>(Config.BotConfiguration.GetConfig());
+
             services
                 .AddSingleton<IConfigurator, StandardConfigurator>();
 
@@ -115,7 +119,6 @@ namespace TASagentTwitchBot.Core
                 .AddSingleton<ICommunication, CommunicationHandler>()
                 .AddSingleton<IMessageAccumulator, MessageAccumulator>()
                 .AddSingleton<Notifications.IActivityDispatcher, Notifications.ActivityDispatcher>()
-                .AddSingleton<Config.IBotConfigContainer, Config.BotConfigContainer>()
                 .AddSingleton<Audio.IAudioPlayer, Audio.AudioPlayer>()
                 .AddSingleton<Audio.IMicrophoneHandler, Audio.MicrophoneHandler>()
                 .AddSingleton<Audio.ISoundEffectSystem, Audio.SoundEffectSystem>()
@@ -269,7 +272,6 @@ namespace TASagentTwitchBot.Core
         protected virtual void ConstructCoreSingletons(IServiceProvider serviceProvider)
         {
             //Make sure required services are constructed
-            serviceProvider.GetRequiredService<Config.IBotConfigContainer>().Initialize();
             serviceProvider.GetRequiredService<View.IConsoleOutput>();
             serviceProvider.GetRequiredService<Chat.ChatLogger>();
             serviceProvider.GetRequiredService<Commands.CommandSystem>();

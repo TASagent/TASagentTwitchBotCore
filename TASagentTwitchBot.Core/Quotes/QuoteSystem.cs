@@ -14,41 +14,39 @@ namespace TASagentTwitchBot.Core.Quotes
     {
         //Subsystems
         private readonly Config.BotConfiguration botConfig;
-        private readonly Random randomizer;
-
         private readonly ICommunication communication;
 
         //Data
         private readonly IServiceScopeFactory scopeFactory;
 
-        private readonly DepletableBag<string> fakeNewsBag;
+        private readonly DepletableBag<string> fakeNewsBag = new DepletableBag<string>()
+        {
+            "dubious, at best",
+            "fake news",
+            "profoundly unreliable",
+            "wildly misrepresentative",
+            "a gratuitous fiction",
+            "a grotesque mockery of fact",
+            "hilariously untrue",
+            "fundamentally misleading",
+            "absurdly manipulated",
+            "simply incorrect",
+            "entirely wrong"
+        };
+
+        private readonly Random randomizer;
 
         public QuoteSystem(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             ICommunication communication,
             IServiceScopeFactory scopeFactory)
         {
-            botConfig = botConfigContainer.BotConfig;
+            this.botConfig = botConfig;
 
             this.communication = communication;
             this.scopeFactory = scopeFactory;
 
             randomizer = new Random();
-
-            fakeNewsBag = new DepletableBag<string>()
-            {
-                "dubious, at best",
-                "fake news",
-                "profoundly unreliable",
-                "wildly misrepresentative",
-                "a gratuitous fiction",
-                "a grotesque mockery of fact",
-                "hilariously untrue",
-                "fundamentally misleading",
-                "absurdly manipulated",
-                "simply incorrect",
-                "entirely wrong"
-            };
 
             fakeNewsBag.AutoRefill = true;
         }

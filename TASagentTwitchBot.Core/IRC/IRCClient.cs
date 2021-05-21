@@ -53,14 +53,14 @@ namespace TASagentTwitchBot.Core.IRC
         private readonly ChannelWriter<string> outgoingChatWriter = null;
 
         public IrcClient(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             IIRCLogger ircLogger,
             Chat.IChatMessageHandler chatMessageHandler,
             INoticeHandler noticeHandler,
             ICommunication communication,
             ErrorHandler errorHandler)
         {
-            botConfig = botConfigContainer.BotConfig;
+            this.botConfig = botConfig;
             this.errorHandler = errorHandler;
 
             this.ircLogger = ircLogger;

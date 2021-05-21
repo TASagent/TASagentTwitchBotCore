@@ -43,12 +43,12 @@ namespace TASagentTwitchBot.Core.PubSub
         private readonly RingBuffer<PubSubMessage> sentMessages = new RingBuffer<PubSubMessage>(20);
 
         public PubSubClient(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             ICommunication communication,
             IRedemptionSystem redemptionHandler,
             ErrorHandler errorHandler)
         {
-            botConfig = botConfigContainer.BotConfig;
+            this.botConfig = botConfig;
             this.communication = communication;
             this.errorHandler = errorHandler;
             this.redemptionHandler = redemptionHandler;

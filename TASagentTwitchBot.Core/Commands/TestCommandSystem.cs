@@ -15,14 +15,14 @@ namespace TASagentTwitchBot.Core.Commands
         private readonly Database.IUserHelper userHelper;
 
         public TestCommandSystem(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             ICommunication communication,
             Notifications.ISubscriptionHandler subscriptionHandler,
             Notifications.IRaidHandler raidHandler,
             Notifications.ICheerHandler cheerHandler,
             Database.IUserHelper userHelper)
         {
-            botConfig = botConfigContainer.BotConfig;
+            this.botConfig = botConfig;
 
             this.communication = communication;
             this.subscriptionHandler = subscriptionHandler;

@@ -21,11 +21,11 @@ namespace TASagentTwitchBot.Core.View
         private void WriteErrorLine(string line) => DebugMessageHandler(line, MessageType.Error);
 
         public BasicView(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             ICommunication communication,
             ApplicationManagement applicationManagement)
         {
-            botConfig = botConfigContainer.BotConfig;
+            this.botConfig = botConfig;
             this.communication = communication;
             this.applicationManagement = applicationManagement;
 
