@@ -240,6 +240,12 @@ namespace TASagentTwitchBot.Plugin.TTTAS
                         .Replace("?", "_ques_")
                         .Replace("!", "_bang_");
 
+                    //Truncate fileName to first 20 characters
+                    if (fileName.Length > 20)
+                    {
+                        fileName = fileName[0..20];
+                    }
+
                     string filePath = Path.Combine(TTTASFilesPath, $"{fileName}_{Guid.NewGuid()}.mp3");
 
                     PendingRecording pendingRecording = new PendingRecording(word, filePath);
