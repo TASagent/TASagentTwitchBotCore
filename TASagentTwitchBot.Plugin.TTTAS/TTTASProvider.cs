@@ -24,6 +24,8 @@ namespace TASagentTwitchBot.Plugin.TTTAS
 
         void ClearPrompt();
 
+        List<string> GetPendingRecordings();
+
         void Rerecord(string words);
 
         AudioRequest GetWord(string word, Effect effect = null);
@@ -114,6 +116,12 @@ namespace TASagentTwitchBot.Plugin.TTTAS
                         .Replace("'", "_apos_")
                         .Replace("?", "_ques_")
                         .Replace("!", "_bang_");
+
+                    //Truncate fileName to first 20 characters
+                    if (fileName.Length > 20)
+                    {
+                        fileName = fileName[0..20];
+                    }
 
                     string filePath = Path.Combine(TTTASFilesPath, $"{fileName}_{Guid.NewGuid()}.mp3");
 
@@ -260,6 +268,8 @@ namespace TASagentTwitchBot.Plugin.TTTAS
             monitorHubContext.Clients.All.SendAsync("ClearPrompt");
         }
 
+        public List<string> GetPendingRecordings() => pendingRecordings.Values.Select(x => x.Name).ToList();
+
         private class RecordingData
         {
             public List<Recording> Recordings { get; init; } = new List<Recording>();
@@ -310,5 +320,4 @@ namespace TASagentTwitchBot.Plugin.TTTAS
             public void MarkReady() => requestReadyTrigger.TrySetResult();
         }
     }
-
 }

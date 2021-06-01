@@ -52,5 +52,15 @@ namespace TASagentTwitchBot.Plugin.TTTAS.Web.Controllers
             tttasProvider.ClearPrompt();
             return Ok();
         }
+
+        [HttpGet]
+        [AuthRequired(AuthDegree.Admin)]
+        public ActionResult<PendingRecordings> GetPendingRecordings()
+        {
+            return new PendingRecordings(tttasProvider.GetPendingRecordings());
+        }
     }
+
+    public record PendingRecordings(List<string> Words);
+
 }
