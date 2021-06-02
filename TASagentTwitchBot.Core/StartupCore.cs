@@ -108,7 +108,11 @@ namespace TASagentTwitchBot.Core
                 .AddSingleton<API.Twitch.HelixHelper>()
                 .AddSingleton<Audio.MidiKeyboardHandler>()
                 .AddSingleton<PubSub.PubSubClient>()
-                .AddSingleton<Notifications.FullActivityProvider>()
+                .AddSingleton<Notifications.FullActivityProvider>();
+
+            services
+                .AddSingleton<API.BTTV.BTTVHelper>()
+                .AddSingleton<EmoteEffects.EmoteEffectConfiguration>(EmoteEffects.EmoteEffectConfiguration.GetConfig())
                 .AddSingleton<EmoteEffects.EmoteEffectListener>();
 
             services

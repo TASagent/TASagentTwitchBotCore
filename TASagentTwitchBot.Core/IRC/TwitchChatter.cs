@@ -120,6 +120,9 @@ namespace TASagentTwitchBot.Core.IRC
                 }
             }
 
+            //Sort emotes in order of appearance
+            emotes.Sort(OrderEmotes);
+
             if (message.ircCommand == IRCCommand.Whisper)
             {
                 return new TwitchChatter()
@@ -153,5 +156,7 @@ namespace TASagentTwitchBot.Core.IRC
         public string ToLogString() => Whisper ? $"[{CreatedAt:G}] {User.TwitchUserName} WHISPER: {Message}" : $"[{CreatedAt:G}] {User.TwitchUserName}: {Message}";
 
         public record Emote(string URL, int StartIndex, int EndIndex);
+
+        private static int OrderEmotes(Emote lhs, Emote rhs) => lhs.StartIndex.CompareTo(rhs.StartIndex);
     }
 }
