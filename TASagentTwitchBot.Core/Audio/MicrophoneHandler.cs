@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using BGC.Mathematics;
+using NAudio.MediaFoundation;
 
 namespace TASagentTwitchBot.Core.Audio
 {
@@ -27,6 +28,9 @@ namespace TASagentTwitchBot.Core.Audio
         void BumpPitch(bool up);
         void SetPitch(double pitchFactor);
         string GetCurrentEffect();
+
+        void RecordVoiceStream(string filePath);
+        void StopRecordingVoiceStream();
     }
 
     /// <summary>
@@ -44,15 +48,18 @@ namespace TASagentTwitchBot.Core.Audio
         private WasapiOut outputDevice;
         private BufferedWasapiQueuer recordingStream;
 
+        private BufferedWasapiQueuer fileRecordingStream;
+        private string fileRecordingPath;
+
         private Effects.Effect currentEffect = null;
         private Effects.PitchShiftEffect lastPitchShiftEffect = null;
 
         public MicrophoneHandler(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             ICommunication communication)
         {
             this.communication = communication;
-            botConfig = botConfigContainer.BotConfig;
+            this.botConfig = botConfig;
         }
 
         public void Start()
@@ -177,6 +184,14 @@ namespace TASagentTwitchBot.Core.Audio
                 recordingStream = null;
             }
 
+            if (fileRecordingStream is not null)
+            {
+                //Clean up last effect
+                fileRecordingStream.StopRecording();
+                fileRecordingStream.Dispose();
+                fileRecordingStream = null;
+            }
+
             if (outputDevice is not null)
             {
                 outputDevice.Stop();
@@ -247,6 +262,62 @@ namespace TASagentTwitchBot.Core.Audio
             }
         }
 
+        public void RecordVoiceStream(string filePath)
+        {
+            if (targetInputDevice is null)
+            {
+                //Set up device
+                targetInputDevice = GetInputDevice(botConfig.VoiceInputDevice);
+                if (targetInputDevice is null)
+                {
+                    targetInputDevice = GetDefaultInputDevice();
+
+                    if (targetInputDevice is null)
+                    {
+                        //Failed to get a device
+                        communication.SendErrorMessage("Unable to initialize voice input device.");
+                        return;
+                    }
+                    else
+                    {
+                        communication.SendWarningMessage($"Audio input device {botConfig.VoiceInputDevice} not found. " +
+                            $"Fell back to default audio input device: {targetInputDevice.DeviceFriendlyName}");
+                    }
+                }
+            }
+
+            if (fileRecordingStream is not null)
+            {
+                fileRecordingStream.StopRecording();
+                fileRecordingStream.Dispose();
+                fileRecordingStream = null;
+            }
+
+            fileRecordingPath = filePath;
+            fileRecordingStream = new BufferedWasapiQueuer(targetInputDevice, 10000);
+        }
+
+        public void StopRecordingVoiceStream()
+        {
+            if (fileRecordingStream is null)
+            {
+                return;
+            }
+
+            fileRecordingStream.StopRecording();
+
+            MediaFoundationApi.Startup();
+
+            MediaFoundationEncoder.EncodeToMp3(
+                fileRecordingStream.ApplyMicrophoneEffects(botConfig.MicConfiguration, new Effects.NoEffect()).ToWaveProvider(),
+                fileRecordingPath);
+
+            MediaFoundationApi.Shutdown();
+
+            fileRecordingStream.Dispose();
+            fileRecordingStream = null;
+        }
+
         public void BumpPitch(bool up)
         {
             if (lastPitchShiftEffect is not null)
@@ -310,6 +381,9 @@ namespace TASagentTwitchBot.Core.Audio
                 {
                     recordingStream?.Dispose();
                     recordingStream = null;
+
+                    fileRecordingStream?.Dispose();
+                    fileRecordingStream = null;
 
                     outputDevice?.Dispose();
                     outputDevice = null;

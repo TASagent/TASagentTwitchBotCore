@@ -91,6 +91,10 @@ namespace TASagentTwitchBot.Core
 
         protected virtual void ConfigureCoreServices(IServiceCollection services)
         {
+            //Construct or load BotConfiguration
+            services
+                .AddSingleton<Config.BotConfiguration>(Config.BotConfiguration.GetConfig());
+
             services
                 .AddSingleton<IConfigurator, StandardConfigurator>();
 
@@ -104,7 +108,11 @@ namespace TASagentTwitchBot.Core
                 .AddSingleton<API.Twitch.HelixHelper>()
                 .AddSingleton<Audio.MidiKeyboardHandler>()
                 .AddSingleton<PubSub.PubSubClient>()
-                .AddSingleton<Notifications.FullActivityProvider>()
+                .AddSingleton<Notifications.FullActivityProvider>();
+
+            services
+                .AddSingleton<API.BTTV.BTTVHelper>()
+                .AddSingleton<EmoteEffects.EmoteEffectConfiguration>(EmoteEffects.EmoteEffectConfiguration.GetConfig())
                 .AddSingleton<EmoteEffects.EmoteEffectListener>();
 
             services
@@ -115,7 +123,6 @@ namespace TASagentTwitchBot.Core
                 .AddSingleton<ICommunication, CommunicationHandler>()
                 .AddSingleton<IMessageAccumulator, MessageAccumulator>()
                 .AddSingleton<Notifications.IActivityDispatcher, Notifications.ActivityDispatcher>()
-                .AddSingleton<Config.IBotConfigContainer, Config.BotConfigContainer>()
                 .AddSingleton<Audio.IAudioPlayer, Audio.AudioPlayer>()
                 .AddSingleton<Audio.IMicrophoneHandler, Audio.MicrophoneHandler>()
                 .AddSingleton<Audio.ISoundEffectSystem, Audio.SoundEffectSystem>()
@@ -185,6 +192,7 @@ namespace TASagentTwitchBot.Core
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public virtual void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            SetupDatabase(app);
             ConfigureCoreInitial(app, env);
             ConfigureStaticFiles(app, env);
             ConfigureCoreMiddleware(app);
@@ -195,6 +203,8 @@ namespace TASagentTwitchBot.Core
             ConstructCoreSingletons(app.ApplicationServices);
             ConstructCustomSingletons(app.ApplicationServices);
         }
+
+        protected virtual void SetupDatabase(IApplicationBuilder app) { }
 
         protected virtual void BuildEndpointRoutes(IEndpointRouteBuilder endpoints)
         {
@@ -269,7 +279,6 @@ namespace TASagentTwitchBot.Core
         protected virtual void ConstructCoreSingletons(IServiceProvider serviceProvider)
         {
             //Make sure required services are constructed
-            serviceProvider.GetRequiredService<Config.IBotConfigContainer>().Initialize();
             serviceProvider.GetRequiredService<View.IConsoleOutput>();
             serviceProvider.GetRequiredService<Chat.ChatLogger>();
             serviceProvider.GetRequiredService<Commands.CommandSystem>();

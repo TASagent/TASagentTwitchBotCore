@@ -11,10 +11,10 @@ namespace TASagentTwitchBot.Core.Web.Hubs
         private readonly IMessageAccumulator messsageAccumulator;
 
         public MonitorHub(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             IMessageAccumulator messsageAccumulator)
         {
-            botConfig = botConfigContainer.BotConfig;
+            this.botConfig = botConfig;
             this.messsageAccumulator = messsageAccumulator;
         }
 

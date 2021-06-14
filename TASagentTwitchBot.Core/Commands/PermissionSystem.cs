@@ -24,7 +24,8 @@ namespace TASagentTwitchBot.Core.Commands
         public void RegisterCommands(
             Dictionary<string, CommandHandler> commands,
             Dictionary<string, HelpFunction> helpFunctions,
-            Dictionary<string, SetFunction> setFunctions)
+            Dictionary<string, SetFunction> setFunctions,
+            Dictionary<string, GetFunction> getFunctions)
         {
             commands.Add("mod", async (chatter, remainingCommand) => await ModUser(chatter, remainingCommand, true));
             commands.Add("unmod", async (chatter, remainingCommand) => await ModUser(chatter, remainingCommand, false));

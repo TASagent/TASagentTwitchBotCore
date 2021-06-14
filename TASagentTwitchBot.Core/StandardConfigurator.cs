@@ -10,13 +10,13 @@ namespace TASagentTwitchBot.Core
         protected readonly API.Twitch.IBroadcasterTokenValidator broadcasterTokenValidator;
 
         public StandardConfigurator(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             ICommunication communication,
             ErrorHandler errorHandler,
             API.Twitch.HelixHelper helixHelper,
             API.Twitch.IBotTokenValidator botTokenValidator,
             API.Twitch.IBroadcasterTokenValidator broadcasterTokenValidator)
-            : base(botConfigContainer, communication, errorHandler)
+            : base(botConfig, communication, errorHandler)
         {
             this.helixHelper = helixHelper;
             this.botTokenValidator = botTokenValidator;

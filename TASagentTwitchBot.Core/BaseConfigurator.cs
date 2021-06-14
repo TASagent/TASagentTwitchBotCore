@@ -1,25 +1,21 @@
 ﻿using NAudio.CoreAudioApi;
 using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
+using TASagentTwitchBot.Core.Core;
 
 namespace TASagentTwitchBot.Core
 {
     public abstract class BaseConfigurator : IConfigurator
     {
-        protected readonly Config.IBotConfigContainer botConfigContainer;
         protected readonly Config.BotConfiguration botConfig;
 
         public BaseConfigurator(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             ICommunication communication,
             ErrorHandler errorHandler)
         {
-            this.botConfigContainer = botConfigContainer;
-
-            botConfigContainer.SerializeData();
-            botConfig = botConfigContainer.BotConfig;
+            this.botConfig = botConfig;
 
             //Assign library log handlers
             BGC.Debug.ExceptionCallback += errorHandler.LogExternalException;
@@ -64,7 +60,7 @@ namespace TASagentTwitchBot.Core
                 if (!string.IsNullOrEmpty(clientID))
                 {
                     botConfig.TwitchClientId = clientID;
-                    botConfigContainer.SerializeData();
+                    botConfig.Serialize();
                 }
                 else
                 {
@@ -81,7 +77,7 @@ namespace TASagentTwitchBot.Core
                 if (!string.IsNullOrEmpty(clientSecret))
                 {
                     botConfig.TwitchClientSecret = clientSecret;
-                    botConfigContainer.SerializeData();
+                    botConfig.Serialize();
                 }
                 else
                 {
@@ -108,7 +104,7 @@ namespace TASagentTwitchBot.Core
                 if (!string.IsNullOrEmpty(inputUserName))
                 {
                     botConfig.Broadcaster = inputUserName;
-                    botConfigContainer.SerializeData();
+                    botConfig.Serialize();
                 }
                 else
                 {
@@ -132,7 +128,7 @@ namespace TASagentTwitchBot.Core
                         if (userData.Data is not null && userData.Data.Count > 0)
                         {
                             botConfig.BroadcasterId = userData.Data[0].ID;
-                            botConfigContainer.SerializeData();
+                            botConfig.Serialize();
                         }
                         else
                         {
@@ -169,7 +165,7 @@ namespace TASagentTwitchBot.Core
                 if (!string.IsNullOrEmpty(inputUserName))
                 {
                     botConfig.BotName = inputUserName;
-                    botConfigContainer.SerializeData();
+                    botConfig.Serialize();
                 }
                 else
                 {
@@ -201,36 +197,9 @@ namespace TASagentTwitchBot.Core
             return successful;
         }
 
-        public static string HashPassword(string password, byte[] salt)
-        {
-            // https://stackoverflow.com/questions/4181198/how-to-hash-a-password/10402129#10402129
-
-            var pbkdf2 = new Rfc2898DeriveBytes(password, salt, 100000);
-            byte[] hash = pbkdf2.GetBytes(20);
-
-
-            byte[] hashBytes = new byte[36];
-            Array.Copy(salt, 0, hashBytes, 0, 16);
-            Array.Copy(hash, 0, hashBytes, 16, 20);
-
-            string savedPasswordHash = Convert.ToBase64String(hashBytes);
-            return savedPasswordHash;
-        }
-
-        private static byte[] GenerateSalt()
-        {
-            byte[] salt;
-            new RNGCryptoServiceProvider().GetBytes(salt = new byte[16]);
-            return salt;
-        }
 
         protected bool ConfigurePasswords()
         {
-            if (botConfig.AuthConfiguration.Salt == null)
-            {
-                botConfig.AuthConfiguration.Salt = GenerateSalt();
-                botConfigContainer.SerializeData();
-            }
             bool successful = true;
             if (string.IsNullOrEmpty(botConfig.AuthConfiguration.Admin.Password))
             {
@@ -241,7 +210,7 @@ namespace TASagentTwitchBot.Core
 
                 if (!string.IsNullOrEmpty(pass))
                 {
-                    botConfig.AuthConfiguration.Admin.Password = HashPassword(pass, botConfig.AuthConfiguration.Salt);
+                    botConfig.AuthConfiguration.Admin.Password = Cryptography.HashPassword(pass);
                     botConfigContainer.SerializeData();
                 }
                 else
@@ -259,7 +228,7 @@ namespace TASagentTwitchBot.Core
 
                 if (!string.IsNullOrEmpty(pass))
                 {
-                    botConfig.AuthConfiguration.Privileged.Password = HashPassword(pass, botConfig.AuthConfiguration.Salt);
+                    botConfig.AuthConfiguration.Privileged.Password = Cryptography.HashPassword(pass);
                     botConfigContainer.SerializeData();
                 }
                 else
@@ -277,7 +246,7 @@ namespace TASagentTwitchBot.Core
 
                 if (!string.IsNullOrEmpty(pass))
                 {
-                    botConfig.AuthConfiguration.User.Password = HashPassword(pass, botConfig.AuthConfiguration.Salt); ;
+                    botConfig.AuthConfiguration.User.Password = Cryptography.HashPassword(pass);
                     botConfigContainer.SerializeData();
                 }
                 else
@@ -318,7 +287,7 @@ namespace TASagentTwitchBot.Core
                         if (value >= 0 && value < devices.Count)
                         {
                             botConfig.EffectOutputDevice = devices[value];
-                            botConfigContainer.SerializeData();
+                            botConfig.Serialize();
                         }
                         else
                         {
@@ -346,7 +315,7 @@ namespace TASagentTwitchBot.Core
                         if (value >= 0 && value < devices.Count)
                         {
                             botConfig.VoiceOutputDevice = devices[value];
-                            botConfigContainer.SerializeData();
+                            botConfig.Serialize();
                         }
                         else
                         {
@@ -395,7 +364,7 @@ namespace TASagentTwitchBot.Core
                     if (value >= 0 && value < devices.Count)
                     {
                         botConfig.VoiceInputDevice = devices[value];
-                        botConfigContainer.SerializeData();
+                        botConfig.Serialize();
                     }
                     else
                     {

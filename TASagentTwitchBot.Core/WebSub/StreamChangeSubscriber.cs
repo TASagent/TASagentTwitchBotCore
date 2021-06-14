@@ -38,14 +38,14 @@ namespace TASagentTwitchBot.Core.WebSub
         private string subURL = null;
 
         public StreamChangeSubscriber(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             Config.IExternalWebAccessConfiguration webAccessConfiguration,
             ICommunication communication,
             HelixHelper helixHelper,
             IEnumerable<IStreamLiveListener> streamLiveListeners,
             IEnumerable<IStreamDetailListener> streamDetailListeners)
         {
-            botConfig = botConfigContainer.BotConfig;
+            this.botConfig = botConfig;
             webAccessConfig = webAccessConfiguration;
 
             this.communication = communication;

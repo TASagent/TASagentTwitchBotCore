@@ -631,136 +631,136 @@
             </div>
 
             <div class="col-sm privAuthGroup" id="audioSettingsAccordion">
-                <h3>Audio Settings</h3>
-                <div class="card adminAuthGroup">
-                    <div class="card-header" id="audioDevicesHeading">
-                        <h4 class="mb-0">
-                            <button class="btn btn-link" data-toggle="collapse" data-target="#collapseAudioDevices" aria-expanded="false" aria-controls="collapseAudioDevices">
-                                <h4>Audio Devices</h4>
-                            </button>
-                        </h4>
-                    </div>
-
-                    <div id="collapseAudioDevices" class="collapse" aria-labelledby="audioDevicesHeading" data-parent="#audioSettingsAccordion">
-                        <div class="card-body">
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="select-EffectOutputDevice">Effect Output Device</label>
-                                    <select class="form-control" id="select-EffectOutputDevice">
-                                        <option selected>None</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="select-VoiceOutputDevice">Voice Output Device</label>
-                                    <select class="form-control" id="select-VoiceOutputDevice">
-                                        <option selected>None</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="select-VoiceInputDevice">Voice Input Device</label>
-                                    <select class="form-control" id="select-VoiceInputDevice">
-                                        <option selected>None</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="select-MidiOutputDevice">Midi Output Device</label>
-                                    <select class="form-control" id="select-MidiOutputDevice">
-                                        <option selected>None</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <button class="btn btn-primary requireAdminAuth" id="button-RefreshAudioDevices">Refresh</button>
-
-                        </div>
-                    </div>
+              <h3>Audio Settings</h3>
+              <div class="card adminAuthGroup">
+                <div class="card-header" id="audioDevicesHeading">
+                  <h4 class="mb-0">
+                    <button class="btn btn-link" data-toggle="collapse" data-target="#collapseAudioDevices" aria-expanded="false" aria-controls="collapseAudioDevices">
+                      <h4>Audio Devices</h4>
+                    </button>
+                  </h4>
                 </div>
 
-                <div class="card adminAuthGroup">
-                    <div class="card-header" id="midiHeading">
-                        <h4 class="mb-0">
-                            <button class="btn btn-link" data-toggle="collapse" data-target="#collapseMidi" aria-expanded="false" aria-controls="collapseMidi">
-                                <h4>Midi</h4>
-                            </button>
-                        </h4>
+                <div id="collapseAudioDevices" class="collapse" aria-labelledby="audioDevicesHeading" data-parent="#audioSettingsAccordion">
+                  <div class="card-body">
+
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="select-EffectOutputDevice">Effect Output Device</label>
+                        <select class="form-control" id="select-EffectOutputDevice">
+                          <option selected>None</option>
+                        </select>
+                      </div>
                     </div>
 
-                    <div id="collapseMidi" class="collapse" aria-labelledby="midiHeading" data-parent="#audioSettingsAccordion">
-                        <div class="card-body">
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="select-MidiDevice">Midi Device</label>
-                                    <select class="form-control" id="select-MidiDevice">
-                                        <option selected>None</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="input-group mb-3">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text" id="inputGroup-sizing-sm">Bind To Instrument</span>
-                                </div>
-                                <select class="form-control" id="select-MidiInstrument">
-                                    <option selected>None</option>
-                                </select>
-                                <div class="input-group-append">
-                                    <button class="btn btn-primary" id="button-MidiBindInstrument">Bind</button>
-                                </div>
-                            </div>
-
-                            <div class="input-group mb-3">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text" id="inputGroup-sizing-sm">Bind To Sound Effect</span>
-                                </div>
-                                <input type="text" id="input-MidiBindSFX" class="form-control" name="midiSFX">
-                                <div class="input-group-append">
-                                    <button class="btn btn-primary" id="button-MidiBindSFX">Bind</button>
-                                </div>
-                            </div>
-
-                        </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="select-VoiceOutputDevice">Voice Output Device</label>
+                        <select class="form-control" id="select-VoiceOutputDevice">
+                          <option selected>None</option>
+                        </select>
+                      </div>
                     </div>
+
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="select-VoiceInputDevice">Voice Input Device</label>
+                        <select class="form-control" id="select-VoiceInputDevice">
+                          <option selected>None</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="select-MidiOutputDevice">Midi Output Device</label>
+                        <select class="form-control" id="select-MidiOutputDevice">
+                          <option selected>None</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <button class="btn btn-primary requireAdminAuth" id="button-RefreshAudioDevices">Refresh</button>
+
+                  </div>
+                </div>
+              </div>
+
+              <div class="card adminAuthGroup">
+                <div class="card-header" id="midiHeading">
+                  <h4 class="mb-0">
+                    <button class="btn btn-link" data-toggle="collapse" data-target="#collapseMidi" aria-expanded="false" aria-controls="collapseMidi">
+                      <h4>Midi</h4>
+                    </button>
+                  </h4>
                 </div>
 
-            </div>
+                <div id="collapseMidi" class="collapse" aria-labelledby="midiHeading" data-parent="#audioSettingsAccordion">
+                  <div class="card-body">
 
-            <div class="col-sm privAuthGroup" id="miscSettingsAccordion">
-                <h3>Misc. Settings</h3>
-                <div class="card adminAuthGroup">
-                    <div class="card-header" id="miscHeading">
-                        <h4 class="mb-0">
-                            <button class="btn btn-link" data-toggle="collapse" data-target="#collapseMisc" aria-expanded="false" aria-controls="collapseMisc">
-                                <h4>Error Handling</h4>
-                            </button>
-                        </h4>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="select-MidiDevice">Midi Device</label>
+                        <select class="form-control" id="select-MidiDevice">
+                          <option selected>None</option>
+                        </select>
+                      </div>
                     </div>
 
-                    <div id="collapseMisc" class="collapse" aria-labelledby="miscHeading" data-parent="#miscSettingsAccordion">
-                        <div class="card-body">
-                            <!--Error Handling-->
-                            <div class="input-group mb-3">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text" id="inputGroup-sizing-default">Error Handling Enabled ('u wot mate')</span>
-                                </div>
-                                <input type="checkbox" id="input-errorh-Enabled" class="form-control" name="enabled">
-                                <div class="input-group-append">
-                                    <button id="button-Submit-errorh-Enabled" class="btn btn-primary requireAdminAuth">Submit</button>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text" id="inputGroup-sizing-sm">Bind To Instrument</span>
+                      </div>
+                      <select class="form-control" id="select-MidiInstrument">
+                        <option selected>None</option>
+                      </select>
+                      <div class="input-group-append">
+                        <button class="btn btn-primary" id="button-MidiBindInstrument">Bind</button>
+                      </div>
                     </div>
+
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text" id="inputGroup-sizing-sm">Bind To Sound Effect</span>
+                      </div>
+                      <input type="text" id="input-MidiBindSFX" class="form-control" name="midiSFX">
+                      <div class="input-group-append">
+                        <button class="btn btn-primary" id="button-MidiBindSFX">Bind</button>
+                      </div>
+                    </div>
+
+                  </div>
                 </div>
+              </div>
+
+              <br />
+
+              <h3>Misc. Settings</h3>
+              <div class="card adminAuthGroup">
+                <div class="card-header" id="miscHeading">
+                  <h4 class="mb-0">
+                    <button class="btn btn-link" data-toggle="collapse" data-target="#collapseMisc" aria-expanded="false" aria-controls="collapseMisc">
+                      <h4>Error Handling</h4>
+                    </button>
+                  </h4>
+                </div>
+
+                <div id="collapseMisc" class="collapse" aria-labelledby="miscHeading" data-parent="#audioSettingsAccordion">
+                  <div class="card-body">
+                    <!--Error Handling-->
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text" id="inputGroup-sizing-default">Error Handling Enabled ('u wot mate')</span>
+                      </div>
+                      <input type="checkbox" id="input-errorh-Enabled" class="form-control" name="enabled">
+                      <div class="input-group-append">
+                        <button id="button-Submit-errorh-Enabled" class="btn btn-primary requireAdminAuth">Submit</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
             </div>
 
         </div>

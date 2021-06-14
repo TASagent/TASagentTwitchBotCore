@@ -26,14 +26,14 @@ namespace TASagentTwitchBot.Core.WebSub
         private string subURL = null;
 
         public FollowSubscriber(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             Config.IExternalWebAccessConfiguration webAccessConfiguration,
             ICommunication communication,
             Notifications.IFollowerHandler followerHandler,
             HelixHelper helixHelper,
             IServiceScopeFactory scopeFactory)
         {
-            botConfig = botConfigContainer.BotConfig;
+            this.botConfig = botConfig;
             webAccessConfig = webAccessConfiguration;
             this.communication = communication;
             this.followerHandler = followerHandler;

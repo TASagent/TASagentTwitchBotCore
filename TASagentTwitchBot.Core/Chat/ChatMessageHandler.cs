@@ -10,22 +10,24 @@ namespace TASagentTwitchBot.Core.Chat
 
     public class ChatMessageHandler : IChatMessageHandler
     {
+        private readonly Config.BotConfiguration botConfig;
+        
         private readonly ICommunication communication;
         private readonly Notifications.ICheerHandler cheerHandler;
 
-        private readonly Config.BotConfiguration botConfig;
         private readonly IServiceScopeFactory scopeFactory;
 
         public ChatMessageHandler(
+            Config.BotConfiguration botConfig,
             ICommunication communication,
             Notifications.ICheerHandler cheerHandler,
-            Config.IBotConfigContainer botConfigContainer,
             IServiceScopeFactory scopeFactory)
         {
+            this.botConfig = botConfig;
+
             this.communication = communication;
             this.cheerHandler = cheerHandler;
 
-            botConfig = botConfigContainer.BotConfig;
             this.scopeFactory = scopeFactory;
         }
 

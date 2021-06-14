@@ -1,10 +1,16 @@
 ﻿using System;
+using System.Text.Json;
+using System.IO;
+using TASagentTwitchBot.Core.Core;
 using TASagentTwitchBot.Core.Web.Middleware;
 
 namespace TASagentTwitchBot.Core.Config
 {
     public class BotConfiguration
     {
+        private static string ConfigFilePath => BGC.IO.DataManagement.PathForDataFile("Config", "Config.json");
+        private static object _lock = new object();
+
         public string BotName { get; set; } = "";
         public string Broadcaster { get; set; } = "";
         public string BroadcasterId { get; set; } = "";
@@ -21,10 +27,12 @@ namespace TASagentTwitchBot.Core.Config
 
         public int TTSTimeoutTime { get; set; } = 20;
 
+        public bool LogAllErrors { get; set; } = true;
         public bool ExhaustiveIRCLogging { get; set; } = true;
 
         public int BitTTSThreshold { get; set; } = 0;
         public bool EnableErrorHandling { get; set; } = true;
+
         //Output configuration
         public string EffectOutputDevice { get; set; } = "";
         public string VoiceOutputDevice { get; set; } = "";
@@ -32,31 +40,66 @@ namespace TASagentTwitchBot.Core.Config
 
         public MicConfiguration MicConfiguration { get; set; } = new MicConfiguration();
         public AuthConfiguration AuthConfiguration { get; set; } = new AuthConfiguration();
+
+        public static BotConfiguration GetConfig()
+        {
+            BotConfiguration config;
+            if (File.Exists(ConfigFilePath))
+            {
+                //Load existing config
+                config = JsonSerializer.Deserialize<BotConfiguration>(File.ReadAllText(ConfigFilePath));
+            }
+            else
+            {
+                config = new BotConfiguration();
+            }
+
+            config.AuthConfiguration.RegenerateAuthStrings();
+
+            File.WriteAllText(ConfigFilePath, JsonSerializer.Serialize(config));
+
+            return config;
+        }
+
+        public void Serialize()
+        {
+            lock (_lock)
+            {
+                File.WriteAllText(ConfigFilePath, JsonSerializer.Serialize(this));
+            }
+        }
     }
 
     public class AuthConfiguration
     {
         public bool PublicAuthAllowed { get; set; } = true;
-        //ideally each credential set might have it's own salt
-        public byte[] Salt { get; set; } = null;
+
         public CredentialSet Admin { get; set; } = new CredentialSet();
         public CredentialSet Privileged { get; set; } = new CredentialSet();
         public CredentialSet User { get; set; } = new CredentialSet();
 
         public AuthDegree TryCredentials(string password, out string authString)
         {
+            byte[] adminHashBytes = Cryptography.GetSaltFromPasswordString(Admin.Password);
+            byte[] privHashBytes = Cryptography.GetSaltFromPasswordString(Privileged.Password);
+            byte[] userHashBytes = Cryptography.GetSaltFromPasswordString(User.Password);
 
-            if (password == Admin.Password)
+            var adminHash = Cryptography.HashPassword(password, adminHashBytes);
+            var privHash = Cryptography.HashPassword(password, privHashBytes);
+            var userHash = Cryptography.HashPassword(password, userHashBytes);
+
+
+            if (adminHash == Admin.Password)
             {
                 authString = Admin.AuthString;
                 return AuthDegree.Admin;
             }
-            else if (password == Privileged.Password)
+            else if (privHash == Privileged.Password)
             {
                 authString = Privileged.AuthString;
                 return AuthDegree.Privileged;
             }
-            else if (password == User.Password)
+            else if (userHash == User.Password)
             {
                 authString = User.AuthString;
                 return AuthDegree.User;

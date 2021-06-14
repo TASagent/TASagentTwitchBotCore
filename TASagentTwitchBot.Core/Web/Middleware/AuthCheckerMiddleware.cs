@@ -13,11 +13,11 @@ namespace TASagentTwitchBot.Core.Web.Middleware
 
         public AuthCheckerMiddleware(
             RequestDelegate next,
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             ICommunication communication)
         {
             _next = next;
-            botConfig = botConfigContainer.BotConfig;
+            this.botConfig = botConfig;
             this.communication = communication;
         }
 
