@@ -360,13 +360,58 @@ namespace TASagentTwitchBot.Core.IRC
             {
                 readers.Signal();
             }
-
         }
 
-        private void SendMessage(string message) =>
-            outgoingChatWriter.TryWrite($"PRIVMSG #{channel} :{message}");
-        private void SendWhisper(string user, string message) =>
-            outgoingChatWriter.TryWrite($"PRIVMSG #{channel} :/w {username} {message}");
+        private void SendMessageWithPrefix(string message, string prefix)
+        {
+            if (prefix == null)
+            {
+                prefix = "";
+            }
+            else if (prefix.Length > 0 && !prefix.EndsWith(' '))
+            {
+                prefix += ' ';
+            }
+
+            if (message.Length + prefix.Length <= 510)
+            {
+                outgoingChatWriter.TryWrite($"PRIVMSG #{channel} :{prefix}{message}");
+            }
+            else
+            {
+                while (message.Length + prefix.Length > 510)
+                {
+                    //Split message
+                    int endMessage = 510 - prefix.Length;
+
+                    //Find last space in first message to split
+                    while (message[endMessage] != ' ' && endMessage > 0)
+                    {
+                        --endMessage;
+                    }
+
+                    //Fallback for space-less messages
+                    if (endMessage == 0)
+                    {
+                        endMessage = 510 - prefix.Length;
+                    }
+
+                    outgoingChatWriter.TryWrite($"PRIVMSG #{channel} :{prefix}{message[0..endMessage]}");
+
+                    //Keep rest of message
+                    message = message[endMessage..].Trim();
+                }
+
+                if (message.Length > 0)
+                {
+                    //Send remainder
+                    outgoingChatWriter.TryWrite($"PRIVMSG #{channel} :{prefix}{message}");
+                }
+            }
+        }
+
+        private void SendMessage(string message) => SendMessageWithPrefix(message, "");
+        private void SendWhisper(string user, string message) => SendMessageWithPrefix(message, $"/w {username} ");
 
         private async void HandleOutgoingMessages()
         {
