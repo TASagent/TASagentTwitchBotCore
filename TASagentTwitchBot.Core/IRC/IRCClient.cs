@@ -373,16 +373,16 @@ namespace TASagentTwitchBot.Core.IRC
                 prefix += ' ';
             }
 
-            if (message.Length + prefix.Length <= 510)
+            if (message.Length + prefix.Length <= 500)
             {
                 outgoingChatWriter.TryWrite($"PRIVMSG #{channel} :{prefix}{message}");
             }
             else
             {
-                while (message.Length + prefix.Length > 510)
+                while (message.Length + prefix.Length > 500)
                 {
                     //Split message
-                    int endMessage = 510 - prefix.Length;
+                    int endMessage = 500 - prefix.Length;
 
                     //Find last space in first message to split
                     while (message[endMessage] != ' ' && endMessage > 0)
@@ -393,7 +393,7 @@ namespace TASagentTwitchBot.Core.IRC
                     //Fallback for space-less messages
                     if (endMessage == 0)
                     {
-                        endMessage = 510 - prefix.Length;
+                        endMessage = 500 - prefix.Length;
                     }
 
                     outgoingChatWriter.TryWrite($"PRIVMSG #{channel} :{prefix}{message[0..endMessage]}");
