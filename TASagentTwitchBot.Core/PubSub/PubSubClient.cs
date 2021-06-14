@@ -37,7 +37,7 @@ namespace TASagentTwitchBot.Core.PubSub
 
         private readonly BasicPubSubMessage pingMessage;
         private readonly BasicPubSubMessage pongMessage;
-        private readonly byte[] incomingData = new byte[16384];
+        private readonly byte[] incomingData = new byte[4096];
         private bool pongReceived = false;
 
         private readonly RingBuffer<PubSubMessage> sentMessages = new RingBuffer<PubSubMessage>(20);
@@ -242,6 +242,7 @@ namespace TASagentTwitchBot.Core.PubSub
         private async void ReadMessages()
         {
             WebSocketReceiveResult webSocketReceiveResult = null;
+            string lastMessage = null;
 
             try
             {
@@ -289,8 +290,65 @@ namespace TASagentTwitchBot.Core.PubSub
                         continue;
                     }
 
-                    string result = Encoding.UTF8.GetString(incomingData, 0, webSocketReceiveResult.Count);
-                    BasicPubSubMessage message = JsonSerializer.Deserialize<BasicPubSubMessage>(result);
+                    lastMessage = Encoding.UTF8.GetString(incomingData, 0, webSocketReceiveResult.Count);
+
+                    while (!webSocketReceiveResult.EndOfMessage)
+                    {
+                        readCompleted = false;
+                        try
+                        {
+                            webSocketReceiveResult = await clientWebSocket.ReceiveAsync(incomingData, readerTokenSource.Token);
+                            readCompleted = true;
+                        }
+                        catch (TaskCanceledException) { /* swallow */ }
+                        catch (ThreadAbortException) { /* swallow */ }
+                        catch (ObjectDisposedException) { /* swallow */ }
+                        catch (OperationCanceledException) { /* swallow */ }
+                        catch (WebSocketException)
+                        {
+                            communication.SendWarningMessage($"PubSub Websocket closed unexpectedly.");
+                        }
+                        catch (Exception ex)
+                        {
+                            communication.SendErrorMessage($"PubSub Exception: {ex.GetType().Name}");
+                            errorHandler.LogMessageException(ex, "");
+                        }
+
+                        if (generalTokenSource.IsCancellationRequested)
+                        {
+                            //We are quitting
+                            break;
+                        }
+
+                        if ((readerTokenSource?.IsCancellationRequested ?? true) || !readCompleted)
+                        {
+                            //We are just restarting reader, since it was intercepted with an exception or the reader token source was cancelled
+                            break;
+                        }
+
+                        if (webSocketReceiveResult.Count < 1)
+                        {
+                            communication.SendWarningMessage($"WebSocketMessage returned no characters despite not being at end.  {lastMessage}");
+                            break;
+                        }
+
+                        lastMessage += Encoding.UTF8.GetString(incomingData, 0, webSocketReceiveResult.Count);
+                    }
+
+
+                    if (generalTokenSource.IsCancellationRequested)
+                    {
+                        //We are quitting
+                        break;
+                    }
+
+                    if ((readerTokenSource?.IsCancellationRequested ?? true) || !readCompleted)
+                    {
+                        //We are just restarting reader, since it was intercepted with an exception or the reader token source was cancelled
+                        continue;
+                    }
+
+                    BasicPubSubMessage message = JsonSerializer.Deserialize<BasicPubSubMessage>(lastMessage);
 
                     switch (message.TypeString)
                     {
@@ -309,7 +367,7 @@ namespace TASagentTwitchBot.Core.PubSub
 
                         case "RESPONSE":
                             {
-                                PubSubResponseMessage response = JsonSerializer.Deserialize<PubSubResponseMessage>(result);
+                                PubSubResponseMessage response = JsonSerializer.Deserialize<PubSubResponseMessage>(lastMessage);
                                 PubSubMessage sentMessage = sentMessages.Where(x => x.Nonce == response.Nonce).FirstOrDefault();
 
                                 if (!string.IsNullOrEmpty(response.ErrorString))
@@ -333,7 +391,7 @@ namespace TASagentTwitchBot.Core.PubSub
 
                         case "MESSAGE":
                             {
-                                ListenResponse listenResponse = JsonSerializer.Deserialize<ListenResponse>(result);
+                                ListenResponse listenResponse = JsonSerializer.Deserialize<ListenResponse>(lastMessage);
 
                                 BaseMessageData messageData = JsonSerializer.Deserialize<BaseMessageData>(listenResponse.Data.Message);
 
@@ -352,7 +410,7 @@ namespace TASagentTwitchBot.Core.PubSub
                             break;
 
                         default:
-                            communication.SendErrorMessage($"Unsupported PubSub Message Type: {message.TypeString} - {result}");
+                            communication.SendErrorMessage($"Unsupported PubSub Message Type: {message.TypeString} - {lastMessage}");
                             break;
                     }
                 }
@@ -364,6 +422,11 @@ namespace TASagentTwitchBot.Core.PubSub
             catch (Exception ex)
             {
                 communication.SendErrorMessage($"PubSub Exception: {ex.GetType().Name}");
+                if (lastMessage is not null)
+                {
+                    communication.SendErrorMessage($"Last PubSub Message: {lastMessage}");
+                }
+
                 errorHandler.LogMessageException(ex, "");
             }
             finally

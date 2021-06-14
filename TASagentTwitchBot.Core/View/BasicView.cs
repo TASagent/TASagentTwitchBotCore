@@ -18,8 +18,6 @@ namespace TASagentTwitchBot.Core.View
 
         private bool disposedValue = false;
 
-        private void WriteErrorLine(string line) => DebugMessageHandler(line, MessageType.Error);
-
         public BasicView(
             Config.BotConfiguration botConfig,
             ICommunication communication,
@@ -108,7 +106,7 @@ namespace TASagentTwitchBot.Core.View
             }
             catch (Exception ex)
             {
-                WriteErrorLine($"Exception: {ex}");
+                communication.SendErrorMessage($"BasicView Exception: {ex}");
             }
 
             return keyInfo;
@@ -138,14 +136,13 @@ namespace TASagentTwitchBot.Core.View
             catch (Exception ex)
             {
                 //Log Error
-                WriteErrorLine($"Exception: {ex}");
+                communication.SendErrorMessage($"BasicView Exception: {ex}");
             }
             finally
             {
                 readers.Signal();
             }
         }
-
 
         private async void HandleKeysLoop()
         {
@@ -188,7 +185,6 @@ namespace TASagentTwitchBot.Core.View
 
         public void Dispose()
         {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }

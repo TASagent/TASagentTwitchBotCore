@@ -192,6 +192,7 @@ namespace TASagentTwitchBot.Core
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public virtual void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            SetupDatabase(app);
             ConfigureCoreInitial(app, env);
             ConfigureStaticFiles(app, env);
             ConfigureCoreMiddleware(app);
@@ -202,6 +203,8 @@ namespace TASagentTwitchBot.Core
             ConstructCoreSingletons(app.ApplicationServices);
             ConstructCustomSingletons(app.ApplicationServices);
         }
+
+        protected virtual void SetupDatabase(IApplicationBuilder app) { }
 
         protected virtual void BuildEndpointRoutes(IEndpointRouteBuilder endpoints)
         {

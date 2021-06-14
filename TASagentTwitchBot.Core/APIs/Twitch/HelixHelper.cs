@@ -131,7 +131,7 @@ namespace TASagentTwitchBot.Core.API.Twitch
 
             if (response.StatusCode != HttpStatusCode.OK)
             {
-                communication.SendErrorMessage($"Failed Refresh response:");
+                communication.SendErrorMessage($"Failed OAuth Refresh response:");
                 communication.SendErrorMessage($"  {response.Content}");
                 return null;
             }
@@ -153,8 +153,8 @@ namespace TASagentTwitchBot.Core.API.Twitch
 
             if (response.StatusCode != HttpStatusCode.OK)
             {
-                communication.SendErrorMessage($"Failed validation response:");
-                communication.SendErrorMessage($"  {response.Content}");
+                communication.SendWarningMessage($"Failed OAuth AccessToken validation response:");
+                communication.SendWarningMessage($"  {response.Content}");
                 return null;
             }
 

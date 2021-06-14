@@ -409,7 +409,7 @@ namespace TASagentTwitchBot.Core.API.Twitch
             [property: JsonPropertyName("broadcaster_name")] string BroadcasterName,
             [property: JsonPropertyName("broadcaster_id")] string BroadcasterID,
             [property: JsonPropertyName("id")] string Id,
-            [property: JsonPropertyName("image")] string Image,
+            [property: JsonPropertyName("image")] Datum.ImageData Image,
             [property: JsonPropertyName("background_color")] string BackgroundColor,
             [property: JsonPropertyName("is_enabled")] bool IsEnabled,
             [property: JsonPropertyName("cost")] int Cost,

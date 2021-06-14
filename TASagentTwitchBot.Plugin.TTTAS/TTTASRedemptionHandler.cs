@@ -77,7 +77,8 @@ namespace TASagentTwitchBot.Plugin.TTTAS
                     id: tttasConfig.Redemption.RedemptionID,
                     onlyManageableRewards: true);
 
-                if (customRewards.Data is not null &&
+                if (customRewards is not null &&
+                    customRewards.Data is not null &&
                     customRewards.Data.Count == 1 &&
                     customRewards.Data[0].Title == tttasConfig.Redemption.Name)
                 {
