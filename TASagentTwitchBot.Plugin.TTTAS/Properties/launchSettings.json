@@ -15,7 +15,7 @@
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
-    "TASagentTwitchBot.Plugin.ControllerSpy": {
+    "TASagentTwitchBot.Plugin.TTTAS": {
       "commandName": "Project",
       "launchBrowser": true,
       "environmentVariables": {

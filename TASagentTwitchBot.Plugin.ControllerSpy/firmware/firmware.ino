@@ -1,245 +1,419 @@
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// NintendoSpy Firmware for Arduino
-// v1.0.1
-// Written by jaburns
+///////////////////////////////////////////////////////////////////////////////
+// RetroSpy Firmware for Arduino Uno & Teensy 3.5
+// v4.2.3
+// RetroSpy written by zoggins of RetroSpy Technologies
+// NintendoSpy originally written by jaburns
 
+// NOTE: If you are having input display lag problems try uncommenting out this line.
+// #define LAG_FIX
+// WARNING!!! If you do uncomment out this line you must enable "Options -> Use Lag Fix" in the UI
 
-// ---------- Uncomment one of these options to select operation mode --------------
-//#define MODE_GC
-//#define MODE_N64
-#define MODE_SNES
+// ---------- Uncomment one of these options to select operation mode ---------
+// 
 //#define MODE_NES
-// Bridge one of the analog GND to the right analog IN to enable your selected mode
-//#define MODE_DETECT
-// ---------------------------------------------------------------------------------
-// The only reason you'd want to use 2-wire SNES mode is if you built a NintendoSpy
-// before the 3-wire firmware was implemented.  This mode is for backwards
-// compatibility only.
-//#define MODE_2WIRE_SNES
-// ---------------------------------------------------------------------------------
+#define MODE_SNES
 
+// Some consoles care about PAL/NTSC for timing purposes
+#define VIDEO_OUTPUT VIDEO_NTSC
 
-#define PIN_READ( pin )  (PIND&(1<<(pin)))
-#define PINC_READ( pin ) (PINC&(1<<(pin)))
-#define MICROSECOND_NOPS "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n"
+///////////////////////////////////////////////////////////////////////////////
+// ---------- NOTHING BELOW THIS LINE SHOULD BE MODIFIED  -------------------//
+///////////////////////////////////////////////////////////////////////////////
 
-#define WAIT_FALLING_EDGE( pin ) while( !PIN_READ(pin) ); while( PIN_READ(pin) );
+#include "common.h"
 
-#define MODEPIN_SNES 0
-#define MODEPIN_N64  1
-#define MODEPIN_GC   2
+#include "SNES.h"
 
-#define N64_PIN        2
-#define N64_PREFIX     9
-#define N64_BITCOUNT  32
-
-#define SNES_LATCH      3
-#define SNES_DATA       4
-#define SNES_CLOCK      6
-#define SNES_BITCOUNT  16
-#define  NES_BITCOUNT   8
-
-#define GC_PIN        5
-#define GC_PREFIX    25
-#define GC_BITCOUNT  64
-
-#define ZERO  '\0'  // Use a byte value of 0x00 to represent a bit with value 0.
-#define ONE    '1'  // Use an ASCII one to represent a bit with value 1.  This makes Arduino debugging easier.
-#define SPLIT '\n'  // Use a new-line character to split up the controller state packets.
-
-
-
-
-// Declare some space to store the bits we read from a controller.
-unsigned char rawData[ 128 ];
-
+#if defined(MODE_NES)
+NESSpy NESSpy;
+#endif
+#if defined(MODE_POWERGLOVE)
+PowerGloveSpy PowerGloveSpy;
+#endif
+#if defined(MODE_SNES)
+SNESSpy SNESSpy;
+#endif
+#if defined(MODE_N64)
+N64Spy N64Spy;
+#endif
+#if defined(MODE_GC)
+GCSpy GCSpy;
+#endif
+#if defined(MODE_BOOSTER_GRIP)
+BoosterGripSpy BoosterGripSpy;
+#endif
+#if defined(MODE_GENESIS)
+GenesisSpy GenesisSpy;
+#endif
+#if defined(MODE_GENESIS_MOUSE)
+GenesisMouseSpy GenesisMouseSpy;
+#endif
+#if defined(MODE_SMS)
+SMSSpy SMSSpy;
+#endif
+#if defined(MODE_SMS_PADDLE)
+SMSPaddleSpy SMSPaddleSpy;
+#endif
+#if defined(MODE_SMS_SPORTS_PAD)
+SMSSportsPadSpy SMSSportsPadSpy;
+#endif
+#if defined(MODE_SMS_ON_GENESIS)
+SMSSpy SMSOnGenesisSpy;
+#endif
+#if defined(MODE_SATURN)
+SaturnSpy SaturnSpy;
+#endif
+#if defined(MODE_SATURN3D)
+Saturn3DSpy Saturn3DSpy;
+#endif
+#if defined(MODE_COLECOVISION)
+ColecoVisionSpy ColecoVisionSpy;
+#endif
+#if defined(MODE_FMTOWNS)
+FMTownsSpy FMTownsSpy;
+#endif
+#if defined(MODE_INTELLIVISION)
+IntellivisionSpy IntelliVisionSpy;
+#endif
+#if defined(MODE_JAGUAR)
+JaguarSpy JaguarSpy;
+#endif
+#if defined(MODE_NEOGEO)
+NeoGeoSpy NeoGeoSpy;
+#endif
+#if defined(MODE_PCFX)
+PCFXSpy PCFXSpy;
+#endif
+#if  defined(MODE_PLAYSTATION)
+PlayStationSpy PlayStationSpy;
+#endif
+#if defined(MODE_TG16)
+TG16Spy TG16Spy;
+#endif
+#if defined(MODE_3DO)
+ThreeDOSpy ThreeDOSpy;
+#endif
+#if defined(MODE_DREAMCAST)
+DreamcastSpy DCSpy;
+#endif
+#if defined(MODE_WII)
+WiiSpy WiiSpy;
+#endif
+#if defined(MODE_CD32)
+AmigaCd32Spy Cd32Spy;
+#endif
+#if defined(MODE_DRIVING_CONTROLLER)
+DrivingControllerSpy DrivingControllerSpy;
+#endif
+#if defined(MODE_PIPPIN)
+PippinSpy PippinSpy;
+#endif
+#if defined(MODE_AMIGA_KEYBOARD)
+AmigaKeyboardSpy AmigaKeyboardSpy;
+#endif
+#if defined(MODE_AMIGA_MOUSE)                                            
+AmigaMouseSpy AmigaMouseSpy;
+#endif
+#if defined(MODE_CDTV_WIRED)
+CDTVWiredSpy CDTVWiredSpy;
+#endif
+#if defined(MODE_CDTV_WIRELESS)
+CDTVWirelessSpy CDTVWirelessSpy;
+#endif
+#if defined(MODE_FMTOWNS_KEYBOARD_AND_MOUSE)
+FMTownsKeyboardAndMouseSpy FMTownsKeyboardAndMouseSpy;
+#endif
+#if defined(MODE_CDI)
+CDiSpy CDiSpy(CDI_WIRED_TIMEOUT, CDI_WIRELESS_TIMEOUT);
+#endif
+#if defined(MODE_CDI_KEYBOARD)
+CDiKeyboardSpy CDiKeyboardSpy;
+#endif
+#if defined(MODE_GAMEBOY_PRINTER)
+GameBoyPrinterEmulator GameBoyPrinterEmulator;
+#endif
+#if defined(MODE_AMIGA_ANALOG_1) || defined(MODE_AMIGA_ANALOG_2)
+AmigaAnalogSpy AmigaAnalogSpy;
+#endif
+#if defined(MODE_ATARI5200_1) || defined(MODE_ATARI5200_2)
+Atari5200Spy Atari5200Spy;
+#endif
+#if defined(MODE_COLECOVISION_ROLLER)                                                  
+ColecoVisionRollerSpy ColecoVisionRollerSpy;
+#endif
+#if defined(MODE_ATARI_PADDLES)                                                  
+AtariPaddlesSpy AtariPaddlesSpy;
+#endif
+#if defined(MODE_KEYBOARD_CONTROLLER) \
+	|| defined(MODE_KEYBOARD_CONTROLLER_STAR_RAIDERS) \
+	|| defined(MODE_KEYBOARD_CONTROLLER_BIG_BIRD)
+KeyboardControllerSpy KeyboardControllerSpy;
+#endif
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // General initialization, just sets all pins to input and starts serial communication.
 void setup()
 {
-    PORTD = 0x00;
-    DDRD  = 0x00;
+  // for MODE_DETECT
+#if defined(__arm__) && defined(CORE_TEENSY)
+  for(int i = 33; i < 40; ++i)
+    pinMode(i, INPUT_PULLUP);
+#else
+#if !defined(MODE_ATARI_PADDLES) && !defined(MODE_ATARI5200_1) && !defined(MODE_ATARI5200_2) && !defined(MODE_AMIGA_ANALOG_1) && !defined(MODE_AMIGA_ANALOG_2)
     PORTC = 0xFF; // Set the pull-ups on the port we use to check operation mode.
     DDRC  = 0x00;
-    Serial.begin( 115200 );
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Performs a read cycle from one of Nintendo's one-wire interface based controllers.
-// This includes the N64 and the Gamecube.
-//     pin  = Pin index on Port D where the data wire is attached.
-//     bits = Number of bits to read from the line.
-template< unsigned char pin >
-void read_oneWire( unsigned char bits )
-{
-    unsigned char *rawDataPtr = rawData;
-
-read_loop:
-
-    // Wait for the line to go high then low.
-    WAIT_FALLING_EDGE( pin );
-
-    // Wait ~2us between line reads
-    asm volatile( MICROSECOND_NOPS MICROSECOND_NOPS );
-
-    // Read a bit from the line and store as a byte in "rawData"
-    *rawDataPtr = PIN_READ(pin);
-    ++rawDataPtr;
-    if( --bits == 0 ) return;
-
-    goto read_loop;
-}
-
-// Verifies that the 9 bits prefixing N64 controller data in 'rawData'
-// are actually indicative of a controller state signal.
-inline bool checkPrefixN64 ()
-{
-    if( rawData[0] != 0 ) return false; // 0
-    if( rawData[1] != 0 ) return false; // 0
-    if( rawData[2] != 0 ) return false; // 0
-    if( rawData[3] != 0 ) return false; // 0
-    if( rawData[4] != 0 ) return false; // 0
-    if( rawData[5] != 0 ) return false; // 0
-    if( rawData[6] != 0 ) return false; // 0
-    if( rawData[7] == 0 ) return false; // 1
-    if( rawData[8] == 0 ) return false; // 1
-    return true;
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Performs a read cycle from a shift register based controller (SNES + NES) using only the data and latch
-// wires, and waiting a fixed time between reads.  This read method is deprecated due to being finicky,
-// but still exists here to support older builds.
-//     latch = Pin index on Port D where the latch wire is attached.
-//     data  = Pin index on Port D where the output data wire is attached.
-//     bits  = Number of bits to read from the controller.
-//  longWait = The NES takes a bit longer between reads to get valid results back.
-template< unsigned char latch, unsigned char data, unsigned char longWait >
-void read_shiftRegister_2wire( unsigned char bits )
-{
-    unsigned char *rawDataPtr = rawData;
-
-    WAIT_FALLING_EDGE( latch );
-
-read_loop:
-
-    // Read the data from the line and store in "rawData"
-    *rawDataPtr = !PIN_READ(data);
-    ++rawDataPtr;
-    if( --bits == 0 ) return;
-
-    // Wait until the next button value is on the data line. ~12us between each.
-    asm volatile(
-        MICROSECOND_NOPS MICROSECOND_NOPS MICROSECOND_NOPS MICROSECOND_NOPS
-        MICROSECOND_NOPS MICROSECOND_NOPS MICROSECOND_NOPS MICROSECOND_NOPS
-        MICROSECOND_NOPS MICROSECOND_NOPS
-    );
-    if( longWait ) {
-        asm volatile(
-            MICROSECOND_NOPS MICROSECOND_NOPS MICROSECOND_NOPS MICROSECOND_NOPS
-            MICROSECOND_NOPS MICROSECOND_NOPS MICROSECOND_NOPS MICROSECOND_NOPS
-            MICROSECOND_NOPS MICROSECOND_NOPS
-        );
-    }
-
-    goto read_loop;
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Preferred method for reading SNES + NES controller data.
-template< unsigned char latch, unsigned char data, unsigned char clock >
-void read_shiftRegister( unsigned char bits )
-{
-    unsigned char *rawDataPtr = rawData;
-
-    WAIT_FALLING_EDGE( latch );
-
-    do {
-        WAIT_FALLING_EDGE( clock );
-        *rawDataPtr = !PIN_READ(data);
-        ++rawDataPtr;
-    }
-    while( --bits > 0 );
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Sends a packet of controller data over the Arduino serial interface.
-inline void sendRawData( unsigned char first, unsigned char count )
-{
-    for( unsigned char i = first ; i < first + count ; i++ ) {
-        Serial.write( rawData[i] ? ONE : ZERO );
-    }
-    Serial.write( SPLIT );
-}
-
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Update loop definitions for the various console modes.
-
-inline void loop_GC()
-{
-    noInterrupts();
-    read_oneWire< GC_PIN >( GC_PREFIX + GC_BITCOUNT );
-    interrupts();
-    sendRawData( GC_PREFIX , GC_BITCOUNT );
-}
-
-inline void loop_N64()
-{
-    noInterrupts();
-    read_oneWire< N64_PIN >( N64_PREFIX + N64_BITCOUNT );
-    interrupts();
-    if( checkPrefixN64() ) {
-        sendRawData( N64_PREFIX , N64_BITCOUNT );
-    }
-}
-
-inline void loop_SNES()
-{
-    noInterrupts();
-#ifdef MODE_2WIRE_SNES
-    read_shiftRegister_2wire< SNES_LATCH , SNES_DATA , false >( SNES_BITCOUNT );
-#else
-    read_shiftRegister< SNES_LATCH , SNES_DATA , SNES_CLOCK >( SNES_BITCOUNT );
 #endif
-    interrupts();
-    sendRawData( 0 , SNES_BITCOUNT );
-}
-
-inline void loop_NES()
-{
-    noInterrupts();
-#ifdef MODE_2WIRE_SNES
-    read_shiftRegister< SNES_LATCH , SNES_DATA , true >( NES_BITCOUNT );
-#else
-    read_shiftRegister< SNES_LATCH , SNES_DATA , SNES_CLOCK >( NES_BITCOUNT );
 #endif
-    interrupts();
-    sendRawData( 0 , NES_BITCOUNT );
+
+#ifdef LAG_FIX
+	Serial.begin(57600);
+#else
+	Serial.begin(115200);
+#endif
+
+#if defined(MODE_DETECT)
+    if ( !PINC_READ(MODEPIN_SNES)) {
+	    delay(1000);
+		Serial.println("Starting up in SNES mode");
+	    delay(1000);
+        SNESSpy.setup();
+    } else if ( !PINC_READ(MODEPIN_N64))  {
+	    delay(1000);
+	    Serial.println("Starting up in N64 mode");
+	    delay(1000);
+        N64Spy.setup();
+    } else if ( !PINC_READ(MODEPIN_GC)) {
+	    delay(1000);
+	    Serial.println("Starting up in Gamecube mode");
+	    delay(1000);
+        GCSpy.setup();
+    }
+#if defined(__arm__) && defined(CORE_TEENSY)
+  else if( !PINC_READ( MODEPIN_DREAMCAST ) ) {
+	  delay(1000);
+	  Serial.println("Starting up in Dreamcast mode");
+	  delay(1000);
+       DCSpy.setup();
+    } else if( !PINC_READ( MODEPIN_WII ) ) {
+	    delay(1000);
+	    Serial.println("Starting up in Wii mode");
+	    delay(1000);
+        WiiSpy.setup();
+    }
+#endif 
+    else {
+	    delay(1000);
+	    Serial.println("Starting up in NES mode");
+	    delay(1000);
+        NESSpy.setup();
+    }
+#elif defined(MODE_NES)
+    NESSpy.setup();
+#elif defined(MODE_POWERGLOVE)
+	PowerGloveSpy.setup();
+#elif defined(MODE_SNES)
+    SNESSpy.setup();
+#elif defined(MODE_N64)
+    N64Spy.setup();
+#elif defined(MODE_GC)
+    GCSpy.setup();
+#elif defined(MODE_BOOSTER_GRIP)
+    BoosterGripSpy.setup();
+#elif defined(MODE_GENESIS)
+    GenesisSpy.setup();
+#elif defined(MODE_GENESIS_MOUSE)
+    GenesisMouseSpy.setup();
+#elif defined(MODE_SMS)
+    SMSSpy.setup();
+#elif defined(MODE_SMS_PADDLE)
+	SMSPaddleSpy.setup();
+#elif defined(MODE_SMS_SPORTS_PAD)
+	SMSSportsPadSpy.setup();
+#elif defined(MODE_SMS_ON_GENESIS)
+    SMSOnGenesisSpy.setup(SMSSpy::OUTPUT_GENESIS);
+#elif defined(MODE_SATURN)
+    SaturnSpy.setup();
+#elif defined(MODE_SATURN3D)
+    Saturn3DSpy.setup();
+#elif defined(MODE_COLECOVISION)
+    ColecoVisionSpy.setup();
+#elif defined(MODE_FMTOWNS)
+    FMTownsSpy.setup();
+#elif defined(MODE_INTELLIVISION)
+    IntelliVisionSpy.setup();
+#elif defined(MODE_JAGUAR)
+    JaguarSpy.setup();
+#elif defined(MODE_NEOGEO)
+    NeoGeoSpy.setup();
+#elif defined(MODE_PCFX)
+    PCFXSpy.setup();
+#elif defined(MODE_PLAYSTATION)
+    PlayStationSpy.setup();
+#elif defined(MODE_TG16)
+    TG16Spy.setup();
+#elif defined(MODE_3DO)
+    ThreeDOSpy.setup();
+#elif defined(MODE_DREAMCAST)
+    DCSpy.setup();
+#elif defined(MODE_WII)
+    WiiSpy.setup();
+#elif defined(MODE_CD32)
+    Cd32Spy.setup();    
+#elif defined(MODE_DRIVING_CONTROLLER)
+	DrivingControllerSpy.setup();
+#elif defined(MODE_PIPPIN)
+	PippinSpy.setup(PIPPIN_CONTROLLER_SPY_ADDRESS, PIPPIN_MOUSE_SPY_ADDRESS);
+#elif defined(MODE_AMIGA_KEYBOARD)
+	AmigaKeyboardSpy.setup();
+#elif defined(MODE_AMIGA_MOUSE)
+	AmigaMouseSpy.setup(VIDEO_OUTPUT);
+#elif defined(MODE_CDTV_WIRED)
+	CDTVWiredSpy.setup();
+#elif defined(MODE_CDTV_WIRELESS)
+	CDTVWirelessSpy.setup();
+#elif defined(MODE_FMTOWNS_KEYBOARD_AND_MOUSE)
+	FMTownsKeyboardAndMouseSpy.setup();
+#elif defined(MODE_CDI)
+	CDiSpy.setup();
+#elif defined(MODE_CDI_KEYBOARD)
+	CDiKeyboardSpy.setup();
+#elif defined(MODE_GAMEBOY_PRINTER)
+	GameBoyPrinterEmulator.setup();
+#elif defined(MODE_AMIGA_ANALOG_1)
+	AmigaAnalogSpy.setup(false);
+#elif defined(MODE_AMIGA_ANALOG_2)
+	AmigaAnalogSpy.setup(true);
+#elif defined(MODE_ATARI5200_1)
+	Atari5200Spy.setup(false);
+#elif defined(MODE_ATARI5200_2)
+	Atari5200Spy.setup(true);
+#elif defined(MODE_KEYBOARD_CONTROLLER)
+	KeyboardControllerSpy.setup(KeyboardControllerSpy::MODE_NORMAL);
+#elif defined(MODE_KEYBOARD_CONTROLLER_STAR_RAIDERS)
+	KeyboardControllerSpy.setup(KeyboardControllerSpy::MODE_STAR_RAIDERS);
+#elif defined(MODE_KEYBOARD_CONTROLLER_BIG_BIRD)
+	KeyboardControllerSpy.setup(KeyboardControllerSpy::MODE_BIG_BIRD);
+#elif defined(MODE_COLECOVISION_ROLLER)
+	ColecoVisionRollerSpy.setup(VIDEO_OUTPUT);
+#elif defined(MODE_ATARI_PADDLES)
+	AtariPaddlesSpy.setup();
+#endif
+
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wunused-value"
+  T_DELAY(5000);
+  A_DELAY(200);
+  #pragma GCC diagnostic pop
+  
+
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Arduino sketch main loop definition.
 void loop()
 {
-#ifdef MODE_GC
-    loop_GC();
-#elif defined MODE_N64
-    loop_N64();
-#elif defined MODE_SNES
-    loop_SNES();
-#elif defined MODE_NES
-    loop_NES();
-#elif defined MODE_DETECT
+#if defined(MODE_DETECT)
     if( !PINC_READ( MODEPIN_SNES ) ) {
-        loop_SNES();
+        SNESSpy.loop();
     } else if( !PINC_READ( MODEPIN_N64 ) ) {
-        loop_N64();
+        N64Spy.loop();
     } else if( !PINC_READ( MODEPIN_GC ) ) {
-        loop_GC();
-    } else {
-        loop_NES();
+        GCSpy.loop();
+    } 
+#if defined(__arm__) && defined(CORE_TEENSY)
+  else if( !PINC_READ( MODEPIN_DREAMCAST ) ) {
+        DCSpy.loop();
+    } else if( !PINC_READ( MODEPIN_WII ) ) {
+        WiiSpy.loop();
     }
 #endif
+  else {
+        NESSpy.loop();
+    }
+#elif defined(MODE_GC)
+    GCSpy.loop();
+#elif defined(MODE_N64)
+    N64Spy.loop();
+#elif defined(MODE_SNES)
+    SNESSpy.loop();
+#elif defined(MODE_NES)
+    NESSpy.loop();
+#elif defined(MODE_POWERGLOVE)
+	PowerGloveSpy.loop();
+#elif defined(MODE_BOOSTER_GRIP)
+    BoosterGripSpy.loop();
+#elif defined(MODE_GENESIS)
+    GenesisSpy.loop();
+#elif defined(MODE_GENESIS_MOUSE)
+    GenesisMouseSpy.loop();
+#elif defined(MODE_SMS)
+    SMSSpy.loop();
+#elif defined(MODE_SMS_PADDLE)
+	SMSPaddleSpy.loop();
+#elif defined(MODE_SMS_SPORTS_PAD)
+	SMSSportsPadSpy.loop();
+#elif defined(MODE_SMS_ON_GENESIS)
+    SMSOnGenesisSpy.loop();
+#elif defined(MODE_SATURN)
+    SaturnSpy.loop();
+#elif defined(MODE_SATURN3D)
+    Saturn3DSpy.loop();
+#elif defined(MODE_COLECOVISION)
+    ColecoVisionSpy.loop();
+#elif defined(MODE_FMTOWNS)
+    FMTownsSpy.loop();
+#elif defined(MODE_INTELLIVISION)
+    IntelliVisionSpy.loop();
+#elif defined(MODE_JAGUAR)
+    JaguarSpy.loop();
+#elif defined(MODE_NEOGEO)
+    NeoGeoSpy.loop();
+#elif defined(MODE_PCFX)
+    PCFXSpy.loop();
+#elif defined(MODE_PLAYSTATION)
+    PlayStationSpy.loop();
+#elif defined(MODE_TG16)
+    TG16Spy.loop();
+#elif defined(MODE_3DO)
+    ThreeDOSpy.loop();
+#elif defined(MODE_DREAMCAST)
+    DCSpy.loop();
+#elif defined(MODE_WII)
+    WiiSpy.loop();
+#elif defined(MODE_CD32)
+   Cd32Spy.loop();
+#elif defined(MODE_DRIVING_CONTROLLER)
+   DrivingControllerSpy.loop();
+#elif defined(MODE_PIPPIN)
+	PippinSpy.loop();
+#elif defined(MODE_AMIGA_KEYBOARD)
+	AmigaKeyboardSpy.loop();
+#elif defined(MODE_AMIGA_MOUSE)
+	AmigaMouseSpy.loop();
+#elif defined(MODE_CDTV_WIRED)
+	CDTVWiredSpy.loop();
+#elif defined(MODE_CDTV_WIRELESS)
+	CDTVWirelessSpy.loop();
+#elif defined(MODE_FMTOWNS_KEYBOARD_AND_MOUSE)
+	FMTownsKeyboardAndMouseSpy.loop();
+#elif defined(MODE_CDI)
+	CDiSpy.loop();
+#elif defined(MODE_CDI_KEYBOARD)
+	CDiKeyboardSpy.loop();
+#elif defined(MODE_GAMEBOY_PRINTER)
+	GameBoyPrinterEmulator.loop();
+#elif defined(MODE_AMIGA_ANALOG_1) || defined(MODE_AMIGA_ANALOG_2)
+	AmigaAnalogSpy.loop();
+#elif defined(MODE_ATARI5200_1) || defined(MODE_ATARI5200_2)
+	Atari5200Spy.loop();
+#elif defined(MODE_COLECOVISION_ROLLER)
+	ColecoVisionRollerSpy.loop();
+#elif defined(MODE_ATARI_PADDLES)
+	AtariPaddlesSpy.loop();
+#elif defined(MODE_KEYBOARD_CONTROLLER) \
+	|| defined(MODE_KEYBOARD_CONTROLLER_STAR_RAIDERS) \
+	|| defined(MODE_KEYBOARD_CONTROLLER_BIG_BIRD) 
+	KeyboardControllerSpy.loop();
+#endif
+
 }

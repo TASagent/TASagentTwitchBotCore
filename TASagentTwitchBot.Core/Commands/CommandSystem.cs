@@ -10,7 +10,6 @@ namespace TASagentTwitchBot.Core.Commands
         private readonly Config.BotConfiguration botConfig;
         private readonly ICommunication communication;
         private readonly ErrorHandler errorHandler;
-        private readonly Config.IBotConfigContainer botConfigContainer;
 
         //Command Handlers
         private readonly ICommandContainer[] commandContainers;
