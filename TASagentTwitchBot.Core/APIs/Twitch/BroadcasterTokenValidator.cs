@@ -7,36 +7,36 @@ namespace TASagentTwitchBot.Core.API.Twitch
 
     public class BroadcasterTokenValidator : TokenValidator, IBroadcasterTokenValidator
     {
-        private readonly Config.IBotConfigContainer botConfigContainer;
+        private readonly Config.BotConfiguration botConfig;
         private readonly Config.IExternalWebAccessConfiguration webAccessConfig;
 
         protected override string AccessToken
         {
-            get => botConfigContainer.BotConfig.BroadcasterAccessToken;
-            set => botConfigContainer.BotConfig.BroadcasterAccessToken = value;
+            get => botConfig.BroadcasterAccessToken;
+            set => botConfig.BroadcasterAccessToken = value;
         }
 
         protected override string RefreshToken
         {
-            get => botConfigContainer.BotConfig.BroadcasterRefreshToken;
-            set => botConfigContainer.BotConfig.BroadcasterRefreshToken = value;
+            get => botConfig.BroadcasterRefreshToken;
+            set => botConfig.BroadcasterRefreshToken = value;
         }
 
         protected override string RedirectURI => $"{webAccessConfig.GetLocalAddress()}/TASagentBotAPI/OAuth/BroadcasterCode";
 
         public BroadcasterTokenValidator(
+            Config.BotConfiguration botConfig,
             ICommunication communication,
             HelixHelper helixHelper,
-            Config.IBotConfigContainer botConfigContainer,
             Config.IExternalWebAccessConfiguration webAccessConfig)
             : base(communication, helixHelper)
         {
-            this.botConfigContainer = botConfigContainer;
+            this.botConfig = botConfig;
             this.webAccessConfig = webAccessConfig;
         }
 
         protected override void SaveChanges() =>
-            botConfigContainer.SerializeData();
+            botConfig.Serialize();
 
         protected override void SendCodeRequest(string stateString)
         {
@@ -49,8 +49,8 @@ namespace TASagentTwitchBot.Core.API.Twitch
                 "channel:read:subscriptions";
 
             string url = $"https://id.twitch.tv/oauth2/authorize" +
-                $"?client_id={botConfigContainer.BotConfig.TwitchClientId}" +
-                $"&client_secret={botConfigContainer.BotConfig.TwitchClientSecret}" +
+                $"?client_id={botConfig.TwitchClientId}" +
+                $"&client_secret={botConfig.TwitchClientSecret}" +
                 $"&redirect_uri={RedirectURI}" +
                 $"&response_type=code" +
                 $"&scope={scopes.Replace(" ", "+")}" +

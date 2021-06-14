@@ -15,14 +15,14 @@ namespace TASagentTwitchBot.Core.Commands
         private readonly Database.IUserHelper userHelper;
 
         public TestCommandSystem(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             ICommunication communication,
             Notifications.ISubscriptionHandler subscriptionHandler,
             Notifications.IRaidHandler raidHandler,
             Notifications.ICheerHandler cheerHandler,
             Database.IUserHelper userHelper)
         {
-            botConfig = botConfigContainer.BotConfig;
+            this.botConfig = botConfig;
 
             this.communication = communication;
             this.subscriptionHandler = subscriptionHandler;
@@ -35,7 +35,8 @@ namespace TASagentTwitchBot.Core.Commands
         public void RegisterCommands(
             Dictionary<string, CommandHandler> commands,
             Dictionary<string, HelpFunction> helpFunctions,
-            Dictionary<string, SetFunction> setFunctions)
+            Dictionary<string, SetFunction> setFunctions,
+            Dictionary<string, GetFunction> getFunctions)
         {
             commands.Add("testraid", TestRaidHandler);
             commands.Add("testsub", TestSubHandler);
@@ -47,17 +48,37 @@ namespace TASagentTwitchBot.Core.Commands
             yield break;
         }
 
-        private Task TestRaidHandler(IRC.TwitchChatter chatter, string[] remainingCommand)
+        private async Task TestRaidHandler(IRC.TwitchChatter chatter, string[] remainingCommand)
         {
             if (chatter.User.AuthorizationLevel < AuthorizationLevel.Admin)
             {
                 communication.SendPublicChatMessage($"You are not authorized to test raid notifications, @{chatter.User.TwitchUserName}.");
-                return Task.CompletedTask;
+                return;
             }
 
-            raidHandler.HandleRaid(botConfig.BroadcasterId, 100, true);
+            string userId = botConfig.BroadcasterId;
+            int userCount = 100;
 
-            return Task.CompletedTask;
+            //Optional Raider Name
+            if (remainingCommand.Length > 0)
+            {
+                Database.User raider = await userHelper.GetUserByTwitchLogin(remainingCommand[0]);
+
+                if (raider is not null)
+                {
+                    userId = raider.TwitchUserId;
+                }
+            }
+
+            //Optional Raider Count
+            if (remainingCommand.Length > 1 && int.TryParse(remainingCommand[1], out int newUserCount))
+            {
+                userCount = newUserCount;
+            }
+
+            raidHandler.HandleRaid(userId, userCount, true);
+
+            return;
         }
 
         private async Task TestSubHandler(IRC.TwitchChatter chatter, string[] remainingCommand)

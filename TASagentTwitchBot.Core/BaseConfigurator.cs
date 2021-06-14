@@ -7,18 +7,14 @@ namespace TASagentTwitchBot.Core
 {
     public abstract class BaseConfigurator : IConfigurator
     {
-        protected readonly Config.IBotConfigContainer botConfigContainer;
         protected readonly Config.BotConfiguration botConfig;
 
         public BaseConfigurator(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             ICommunication communication,
             ErrorHandler errorHandler)
         {
-            this.botConfigContainer = botConfigContainer;
-
-            botConfigContainer.SerializeData();
-            botConfig = botConfigContainer.BotConfig;
+            this.botConfig = botConfig;
 
             //Assign library log handlers
             BGC.Debug.ExceptionCallback += errorHandler.LogExternalException;
@@ -63,7 +59,7 @@ namespace TASagentTwitchBot.Core
                 if (!string.IsNullOrEmpty(clientID))
                 {
                     botConfig.TwitchClientId = clientID;
-                    botConfigContainer.SerializeData();
+                    botConfig.Serialize();
                 }
                 else
                 {
@@ -80,7 +76,7 @@ namespace TASagentTwitchBot.Core
                 if (!string.IsNullOrEmpty(clientSecret))
                 {
                     botConfig.TwitchClientSecret = clientSecret;
-                    botConfigContainer.SerializeData();
+                    botConfig.Serialize();
                 }
                 else
                 {
@@ -107,7 +103,7 @@ namespace TASagentTwitchBot.Core
                 if (!string.IsNullOrEmpty(inputUserName))
                 {
                     botConfig.Broadcaster = inputUserName;
-                    botConfigContainer.SerializeData();
+                    botConfig.Serialize();
                 }
                 else
                 {
@@ -131,7 +127,7 @@ namespace TASagentTwitchBot.Core
                         if (userData.Data is not null && userData.Data.Count > 0)
                         {
                             botConfig.BroadcasterId = userData.Data[0].ID;
-                            botConfigContainer.SerializeData();
+                            botConfig.Serialize();
                         }
                         else
                         {
@@ -168,7 +164,7 @@ namespace TASagentTwitchBot.Core
                 if (!string.IsNullOrEmpty(inputUserName))
                 {
                     botConfig.BotName = inputUserName;
-                    botConfigContainer.SerializeData();
+                    botConfig.Serialize();
                 }
                 else
                 {
@@ -213,7 +209,7 @@ namespace TASagentTwitchBot.Core
                 if (!string.IsNullOrEmpty(pass))
                 {
                     botConfig.AuthConfiguration.Admin.Password = pass;
-                    botConfigContainer.SerializeData();
+                    botConfig.Serialize();
                 }
                 else
                 {
@@ -231,7 +227,7 @@ namespace TASagentTwitchBot.Core
                 if (!string.IsNullOrEmpty(pass))
                 {
                     botConfig.AuthConfiguration.Privileged.Password = pass;
-                    botConfigContainer.SerializeData();
+                    botConfig.Serialize();
                 }
                 else
                 {
@@ -249,7 +245,7 @@ namespace TASagentTwitchBot.Core
                 if (!string.IsNullOrEmpty(pass))
                 {
                     botConfig.AuthConfiguration.User.Password = pass;
-                    botConfigContainer.SerializeData();
+                    botConfig.Serialize();
                 }
                 else
                 {
@@ -289,7 +285,7 @@ namespace TASagentTwitchBot.Core
                         if (value >= 0 && value < devices.Count)
                         {
                             botConfig.EffectOutputDevice = devices[value];
-                            botConfigContainer.SerializeData();
+                            botConfig.Serialize();
                         }
                         else
                         {
@@ -317,7 +313,7 @@ namespace TASagentTwitchBot.Core
                         if (value >= 0 && value < devices.Count)
                         {
                             botConfig.VoiceOutputDevice = devices[value];
-                            botConfigContainer.SerializeData();
+                            botConfig.Serialize();
                         }
                         else
                         {
@@ -366,7 +362,7 @@ namespace TASagentTwitchBot.Core
                     if (value >= 0 && value < devices.Count)
                     {
                         botConfig.VoiceInputDevice = devices[value];
-                        botConfigContainer.SerializeData();
+                        botConfig.Serialize();
                     }
                     else
                     {

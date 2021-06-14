@@ -51,7 +51,7 @@ namespace TASagentTwitchBot.Core.Web.Controllers
             }
             else
             {
-                effect = audioEffectSystem.Parse(request.Effect);
+                effect = audioEffectSystem.SafeParse(request.Effect);
             }
 
             ttsHandler.HandleTTS(

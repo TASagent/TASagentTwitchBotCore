@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using BGC.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
+using BGC.Collections.Generic;
 
 using TASagentTwitchBot.Core.Database;
 using TASagentTwitchBot.Core.Commands;
@@ -14,41 +14,39 @@ namespace TASagentTwitchBot.Core.Quotes
     {
         //Subsystems
         private readonly Config.BotConfiguration botConfig;
-        private readonly Random randomizer;
-
         private readonly ICommunication communication;
 
         //Data
         private readonly IServiceScopeFactory scopeFactory;
 
-        private readonly DepletableBag<string> fakeNewsBag;
+        private readonly DepletableBag<string> fakeNewsBag = new DepletableBag<string>()
+        {
+            "dubious, at best",
+            "fake news",
+            "profoundly unreliable",
+            "wildly misrepresentative",
+            "a gratuitous fiction",
+            "a grotesque mockery of fact",
+            "hilariously untrue",
+            "fundamentally misleading",
+            "absurdly manipulated",
+            "simply incorrect",
+            "entirely wrong"
+        };
+
+        private readonly Random randomizer;
 
         public QuoteSystem(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             ICommunication communication,
             IServiceScopeFactory scopeFactory)
         {
-            botConfig = botConfigContainer.BotConfig;
+            this.botConfig = botConfig;
 
             this.communication = communication;
             this.scopeFactory = scopeFactory;
 
             randomizer = new Random();
-
-            fakeNewsBag = new DepletableBag<string>()
-            {
-                "dubious, at best",
-                "fake news",
-                "profoundly unreliable",
-                "wildly misrepresentative",
-                "a gratuitous fiction",
-                "a grotesque mockery of fact",
-                "hilariously untrue",
-                "fundamentally misleading",
-                "absurdly manipulated",
-                "simply incorrect",
-                "entirely wrong"
-            };
 
             fakeNewsBag.AutoRefill = true;
         }
@@ -56,7 +54,8 @@ namespace TASagentTwitchBot.Core.Quotes
         public void RegisterCommands(
             Dictionary<string, CommandHandler> commands,
             Dictionary<string, HelpFunction> helpFunctions,
-            Dictionary<string, SetFunction> setFunctions)
+            Dictionary<string, SetFunction> setFunctions,
+            Dictionary<string, GetFunction> getFunctions)
         {
             commands.Add("quote", QuoteCommandHandler);
             commands.Add("addquote", AddQuoteCommandHandler);
@@ -255,6 +254,7 @@ namespace TASagentTwitchBot.Core.Quotes
             matchingQuote.FakeNewsExplanation = null;
 
             await db.SaveChangesAsync();
+
             await db.Entry(matchingQuote).Reference(x => x.Creator).LoadAsync();
             SendQuote(matchingQuote, "UPDATED AS REAL NEWS ");
         }
@@ -266,6 +266,7 @@ namespace TASagentTwitchBot.Core.Quotes
 
             //Look Up Quote
             Quote matchingQuote = await db.Quotes.FindAsync(quoteId);
+            await db.Entry(matchingQuote).Reference(x => x.Creator).LoadAsync();
 
             if (matchingQuote is null)
             {
@@ -300,6 +301,7 @@ namespace TASagentTwitchBot.Core.Quotes
 
             db.Quotes.Remove(matchingQuote);
             await db.SaveChangesAsync();
+
             communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, quote #{quoteId} has been expunged.");
         }
 
@@ -318,6 +320,7 @@ namespace TASagentTwitchBot.Core.Quotes
 
                 //Return a random Quote
                 Quote randomQuote = db.Quotes.Skip(index).First();
+
                 await db.Entry(randomQuote).Reference(x => x.Creator).LoadAsync();
                 SendQuote(randomQuote);
             }
@@ -443,6 +446,7 @@ namespace TASagentTwitchBot.Core.Quotes
             int returnIndex = randomizer.Next(0, matchingQuoteCount);
 
             Quote selectedQuote = matchingQuotes.Skip(returnIndex).First();
+
             await db.Entry(selectedQuote).Reference(x => x.Creator).LoadAsync();
             SendQuote(selectedQuote);
         }

@@ -43,12 +43,12 @@ namespace TASagentTwitchBot.Core
         private bool disposedValue;
 
         public MessageAccumulator(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             ICommunication communication,
             IHubContext<MonitorHub> monitorHubContext)
         {
+            this.botConfig = botConfig;
             this.monitorHubContext = monitorHubContext;
-            botConfig = botConfigContainer.BotConfig;
 
             communication.ReceiveEventHandlers += ReceiveEvent;
             communication.ReceiveMessageLoggers += ReceiveChatter;

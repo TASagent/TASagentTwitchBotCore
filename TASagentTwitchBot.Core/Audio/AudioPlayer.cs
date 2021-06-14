@@ -5,8 +5,6 @@ using System.Threading.Tasks;
 using System.Linq;
 using NAudio.CoreAudioApi;
 
-
-
 namespace TASagentTwitchBot.Core.Audio
 {
     public interface IAudioPlayer
@@ -30,11 +28,11 @@ namespace TASagentTwitchBot.Core.Audio
         private string overrideDevice = "";
 
         public AudioPlayer(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             ICommunication communication)
         {
             this.communication = communication;
-            defaultAudioDevice = botConfigContainer.BotConfig.EffectOutputDevice;
+            defaultAudioDevice = botConfig.EffectOutputDevice;
         }
 
         private AudioRequest currentAudioRequest = null;

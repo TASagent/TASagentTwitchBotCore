@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 
 using TASagentTwitchBot.Core.Audio;
 using TASagentTwitchBot.Core.Audio.Effects;
 using TASagentTwitchBot.Core.Commands;
 using TASagentTwitchBot.Core.Database;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace TASagentTwitchBot.Core.TTS
 {
@@ -15,7 +16,7 @@ namespace TASagentTwitchBot.Core.TTS
     {
         //Subsystems
         private readonly IServiceScopeFactory scopeFactory;
-        private readonly Config.IBotConfigContainer botConfigContainer;
+        private readonly Config.BotConfiguration botConfig;
         private readonly ICommunication communication;
         private readonly IAudioEffectSystem audioEffectSystem;
         private readonly Notifications.ITTSHandler ttsHandler;
@@ -23,13 +24,13 @@ namespace TASagentTwitchBot.Core.TTS
         private bool enabled = true;
 
         public TTSSystem(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             ICommunication communication,
             IAudioEffectSystem audioEffectSystem,
             Notifications.ITTSHandler ttsHandler,
             IServiceScopeFactory scopeFactory)
         {
-            this.botConfigContainer = botConfigContainer;
+            this.botConfig = botConfig;
             this.communication = communication;
             this.audioEffectSystem = audioEffectSystem;
             this.ttsHandler = ttsHandler;
@@ -39,12 +40,14 @@ namespace TASagentTwitchBot.Core.TTS
         public void RegisterCommands(
             Dictionary<string, CommandHandler> commands,
             Dictionary<string, HelpFunction> helpFunctions,
-            Dictionary<string, SetFunction> setFunctions)
+            Dictionary<string, SetFunction> setFunctions,
+            Dictionary<string, GetFunction> getFunctions)
         {
             commands.Add("tts", HandleTTSRequest);
             commands.Add("faketts", HandleFakeTTSRequest);
             helpFunctions.Add("tts", HandleTTSHelpRequest);
             setFunctions.Add("tts", HandleTTSSetRequest);
+            getFunctions.Add("tts", HandleTTSGetRequest);
         }
 
         public IEnumerable<string> GetPublicCommands()
@@ -151,7 +154,7 @@ namespace TASagentTwitchBot.Core.TTS
 
             if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator &&
                 chatter.User.LastSuccessfulTTS.HasValue &&
-                DateTime.Now < chatter.User.LastSuccessfulTTS.Value + new TimeSpan(hours: 0, minutes: 0, seconds: botConfigContainer.BotConfig.TTSTimeoutTime))
+                DateTime.Now < chatter.User.LastSuccessfulTTS.Value + new TimeSpan(hours: 0, minutes: 0, seconds: botConfig.TTSTimeoutTime))
             {
                 communication.SendDebugMessage($"User {chatter.User.TwitchUserName} rebuked for TTS Spam");
                 communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, you must wait before you can do that again.");
@@ -220,6 +223,8 @@ namespace TASagentTwitchBot.Core.TTS
                     communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, TTS service has been {settingName}.");
                     break;
 
+                case "bit":
+                case "bits":
                 case "bitthreshold":
                     if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
                     {
@@ -245,10 +250,11 @@ namespace TASagentTwitchBot.Core.TTS
                         return;
                     }
 
-                    botConfigContainer.BotConfig.BitTTSThreshold = bitThreshold;
-                    botConfigContainer.SerializeData();
+                    botConfig.BitTTSThreshold = bitThreshold;
+                    botConfig.Serialize();
                     break;
 
+                case "cooldown":
                 case "timeout":
                     if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
                     {
@@ -274,8 +280,8 @@ namespace TASagentTwitchBot.Core.TTS
                         return;
                     }
 
-                    botConfigContainer.BotConfig.TTSTimeoutTime = timeoutValue;
-                    botConfigContainer.SerializeData();
+                    botConfig.TTSTimeoutTime = timeoutValue;
+                    botConfig.Serialize();
                     break;
 
                 case "voice":
@@ -359,17 +365,24 @@ namespace TASagentTwitchBot.Core.TTS
 
                     if (remainingCommand.Length == 2)
                     {
+                        //Check for predefined defaults
                         parsedEffects = remainingCommand[1].TranslateTTSEffect();
                     }
 
                     if (parsedEffects is null)
                     {
-                        parsedEffects = audioEffectSystem.Parse(string.Join(' ', remainingCommand[1..]));
+                        //Try to parse
+                        if (!audioEffectSystem.TryParse(string.Join(' ', remainingCommand[1..]), out parsedEffects, out string errorMessage))
+                        {
+                            //Parsing failed
+                            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, unable to parse effects chain: {errorMessage}");
+                            return;
+                        }
                     }
 
                     if (parsedEffects is null)
                     {
-                        //Parsing failed
+                        //Process failed, somehow
                         communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, unable to parse effects chain.");
                         return;
                     }
@@ -382,10 +395,162 @@ namespace TASagentTwitchBot.Core.TTS
                         await db.SaveChangesAsync();
                     }
 
-                    communication.SendPublicChatMessage(
-                        $"@{chatter.User.TwitchUserName}, your TTS Effect has been updated.");
+                    communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, your TTS Effect has been updated.");
 
                     communication.SendDebugMessage($"Updated User TTS EffectChain: {chatter.User.TwitchUserName} to {parsedEffects.GetEffectsChain()}");
+                    break;
+
+                default:
+                    communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, TTS setting not recognized ({string.Join(' ', remainingCommand)}).");
+                    break;
+            }
+        }
+
+        private static string GetUserTTSSettings(User user) =>
+            $"{DisplayTTSVoice(user.TTSVoicePreference)} with {DisplayTTSPitch(user.TTSPitchPreference)} pitch. Effects: {user.TTSEffectsChain}";
+
+        private static string DisplayTTSVoice(TTSVoice voice)
+        {
+            if (voice == TTSVoice.Unassigned)
+            {
+                return "Joanna";
+            }
+
+            return voice.Serialize();
+        }
+
+        private static string DisplayTTSPitch(TTSPitch pitch) =>
+            pitch switch
+            {
+                TTSPitch.X_Low => "X-Low",
+                TTSPitch.Low => "Low",
+                TTSPitch.High => "High",
+                TTSPitch.X_High => "X-High",
+                TTSPitch.Unassigned or TTSPitch.Medium => "Normal",
+                _ => "Normal",
+            };
+
+        private async Task HandleTTSGetRequest(IRC.TwitchChatter chatter, string[] remainingCommand)
+        {
+            if (remainingCommand == null || remainingCommand.Length == 0)
+            {
+                communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, your TTS settings: {GetUserTTSSettings(chatter.User)}");
+                return;
+            }
+
+            if (remainingCommand.Length == 1 && remainingCommand[0].StartsWith('@'))
+            {
+                //Try to find other user
+
+                string userName = remainingCommand[0];
+
+                //Strip off optional leading @
+                if (userName.StartsWith('@'))
+                {
+                    userName = userName[1..].ToLower();
+                }
+
+                {
+                    string lowerUserName = userName.ToLower();
+                    using IServiceScope scope = scopeFactory.CreateScope();
+                    BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+                    User dbUser = await db.Users.FirstOrDefaultAsync(x => x.TwitchUserName.ToLower() == lowerUserName);
+
+                    if (dbUser is null)
+                    {
+                        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, no user named {userName} found.");
+                        return;
+                    }
+
+                    communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, the TTS settings of @{dbUser.TwitchUserName}: {GetUserTTSSettings(dbUser)}");
+                    return;
+                }
+            }
+
+            string settingName = remainingCommand[0].ToLowerInvariant();
+
+            switch (settingName)
+            {
+                case "enabled":
+                case "disabled":
+                case "status":
+                    if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
+                    {
+                        communication.SendPublicChatMessage($"I'm afraid I can't let you do that, @{chatter.User.TwitchUserName}.");
+                        return;
+                    }
+
+                    communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, TTS service is {(enabled ? "enabled" : "disabled")}.");
+                    break;
+
+                case "bit":
+                case "bits":
+                case "bitthreshold":
+                    if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
+                    {
+                        communication.SendPublicChatMessage($"I'm afraid I can't let you do that, @{chatter.User.TwitchUserName}.");
+                        return;
+                    }
+
+                    communication.SendPublicChatMessage(
+                        $"@{chatter.User.TwitchUserName}, TTS Bit Threshold is set to {botConfig.BitTTSThreshold}.");
+                    break;
+
+                case "cooldown":
+                case "timeout":
+                    if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
+                    {
+                        communication.SendPublicChatMessage($"I'm afraid I can't let you do that, @{chatter.User.TwitchUserName}.");
+                        return;
+                    }
+
+                    communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, TTS Timeout is {botConfig.TTSTimeoutTime} seconds.");
+                    break;
+
+                case "voice":
+                case "pitch":
+                case "effect":
+                case "effects":
+                case "effectchain":
+                case "effect_chain":
+                    if (remainingCommand.Length == 1)
+                    {
+                        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, your TTS settings: {GetUserTTSSettings(chatter.User)}");
+                        return;
+                    }
+
+                    if (remainingCommand.Length == 2 && remainingCommand[1].Length > 1)
+                    {
+                        //Try to find other user
+
+                        string userName = remainingCommand[1];
+
+                        //Strip off optional leading @
+                        if (userName.StartsWith('@'))
+                        {
+                            userName = userName[1..].ToLower();
+                        }
+
+                        {
+                            string lowerUserName = userName.ToLower();
+                            using IServiceScope scope = scopeFactory.CreateScope();
+                            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+                            User dbUser = await db.Users.FirstOrDefaultAsync(x => x.TwitchUserName.ToLower() == lowerUserName);
+
+                            if (dbUser is null)
+                            {
+                                communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, no user named {userName} found.");
+                                return;
+                            }
+
+                            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, the TTS settings of @{dbUser.TwitchUserName}: {GetUserTTSSettings(dbUser)}");
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, unable to query specified TTS settings.");
+                    }
                     break;
 
                 default:

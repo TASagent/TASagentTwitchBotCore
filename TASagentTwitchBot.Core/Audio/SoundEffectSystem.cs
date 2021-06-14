@@ -342,24 +342,6 @@ namespace TASagentTwitchBot.Core.Audio
             }
         }
 
-
-        //public static double GetFilterGain(this ReverbType reverbType) =>
-        //    reverbType switch
-        //    {
-        //        ReverbType.MildReverb => 5.5489,
-        //        ReverbType.MediumReverb => 11.9750,
-        //        ReverbType.StrongReverb => 11.1198,
-        //        ReverbType.Echo => 4.4411,
-        //        ReverbType.StrongEcho => 27.8841,
-        //        ReverbType.CrappySpeaker => 16.5696,
-        //        ReverbType.SmallSpeaker => 9.7307,
-        //        ReverbType.VeryWarm => 7.9696,
-        //        ReverbType.InsideEar => 7.2728,
-        //        ReverbType.InsideBox => 13.4947,
-        //        _ => throw new NotImplementedException($"ReverbType not implemented: {reverbType}")
-        //    };
-
-
         public static IBGCStream Spatialize(
             IBGCStream stream,
             double angle)

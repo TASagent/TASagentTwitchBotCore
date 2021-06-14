@@ -1,11 +1,15 @@
 ﻿using System;
-
+using System.Text.Json;
+using System.IO;
 using TASagentTwitchBot.Core.Web.Middleware;
 
 namespace TASagentTwitchBot.Core.Config
 {
     public class BotConfiguration
     {
+        private static string ConfigFilePath => BGC.IO.DataManagement.PathForDataFile("Config", "Config.json");
+        private static object _lock = new object();
+
         public string BotName { get; set; } = "";
         public string Broadcaster { get; set; } = "";
         public string BroadcasterId { get; set; } = "";
@@ -22,9 +26,11 @@ namespace TASagentTwitchBot.Core.Config
 
         public int TTSTimeoutTime { get; set; } = 20;
 
+        public bool LogAllErrors { get; set; } = true;
         public bool ExhaustiveIRCLogging { get; set; } = true;
 
         public int BitTTSThreshold { get; set; } = 0;
+        public bool EnableErrorHandling { get; set; } = true;
 
         //Output configuration
         public string EffectOutputDevice { get; set; } = "";
@@ -33,6 +39,34 @@ namespace TASagentTwitchBot.Core.Config
 
         public MicConfiguration MicConfiguration { get; set; } = new MicConfiguration();
         public AuthConfiguration AuthConfiguration { get; set; } = new AuthConfiguration();
+
+        public static BotConfiguration GetConfig()
+        {
+            BotConfiguration config;
+            if (File.Exists(ConfigFilePath))
+            {
+                //Load existing config
+                config = JsonSerializer.Deserialize<BotConfiguration>(File.ReadAllText(ConfigFilePath));
+            }
+            else
+            {
+                config = new BotConfiguration();
+            }
+
+            config.AuthConfiguration.RegenerateAuthStrings();
+
+            File.WriteAllText(ConfigFilePath, JsonSerializer.Serialize(config));
+
+            return config;
+        }
+
+        public void Serialize()
+        {
+            lock (_lock)
+            {
+                File.WriteAllText(ConfigFilePath, JsonSerializer.Serialize(this));
+            }
+        }
     }
 
     public class AuthConfiguration
@@ -45,6 +79,7 @@ namespace TASagentTwitchBot.Core.Config
 
         public AuthDegree TryCredentials(string password, out string authString)
         {
+
             if (password == Admin.Password)
             {
                 authString = Admin.AuthString;

@@ -17,11 +17,11 @@ namespace TASagentTwitchBot.Core.Web.Controllers
         private readonly Config.BotConfiguration botConfig;
 
         public SFXController(
-            Config.IBotConfigContainer botConfigContainer,
+            Config.BotConfiguration botConfig,
             ISoundEffectSystem soundEffectSystem,
             IAudioPlayer audioPlayer)
         {
-            botConfig = botConfigContainer.BotConfig;
+            this.botConfig = botConfig;
             this.soundEffectSystem = soundEffectSystem;
             this.audioPlayer = audioPlayer;
         }

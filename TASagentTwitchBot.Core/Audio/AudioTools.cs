@@ -27,6 +27,9 @@ namespace TASagentTwitchBot.Core.Audio
                 case ".wave":
                     return new WaveFileReader(filePath).ToDisposableProvider();
 
+                case ".ogg":
+                    return new NAudio.Vorbis.VorbisWaveReader(filePath).ToDisposableProvider();
+
                 default:
                     return null;
             }
