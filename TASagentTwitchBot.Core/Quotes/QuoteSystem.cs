@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using BGC.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
+using BGC.Collections.Generic;
 
 using TASagentTwitchBot.Core.Database;
 using TASagentTwitchBot.Core.Commands;
@@ -254,6 +254,7 @@ namespace TASagentTwitchBot.Core.Quotes
             matchingQuote.FakeNewsExplanation = null;
 
             await db.SaveChangesAsync();
+
             await db.Entry(matchingQuote).Reference(x => x.Creator).LoadAsync();
             SendQuote(matchingQuote, "UPDATED AS REAL NEWS ");
         }
@@ -265,6 +266,7 @@ namespace TASagentTwitchBot.Core.Quotes
 
             //Look Up Quote
             Quote matchingQuote = await db.Quotes.FindAsync(quoteId);
+            await db.Entry(matchingQuote).Reference(x => x.Creator).LoadAsync();
 
             if (matchingQuote is null)
             {
@@ -299,6 +301,7 @@ namespace TASagentTwitchBot.Core.Quotes
 
             db.Quotes.Remove(matchingQuote);
             await db.SaveChangesAsync();
+
             communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, quote #{quoteId} has been expunged.");
         }
 
@@ -317,6 +320,7 @@ namespace TASagentTwitchBot.Core.Quotes
 
                 //Return a random Quote
                 Quote randomQuote = db.Quotes.Skip(index).First();
+
                 await db.Entry(randomQuote).Reference(x => x.Creator).LoadAsync();
                 SendQuote(randomQuote);
             }
@@ -442,6 +446,7 @@ namespace TASagentTwitchBot.Core.Quotes
             int returnIndex = randomizer.Next(0, matchingQuoteCount);
 
             Quote selectedQuote = matchingQuotes.Skip(returnIndex).First();
+
             await db.Entry(selectedQuote).Reference(x => x.Creator).LoadAsync();
             SendQuote(selectedQuote);
         }

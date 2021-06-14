@@ -34,7 +34,7 @@ namespace TASagentTwitchBot.Core.Commands
 
         private async Task QuitHandler(IRC.TwitchChatter chatter, string[] remainingCommand)
         {
-            if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
+            if (chatter.User.AuthorizationLevel < AuthorizationLevel.Admin)
             {
                 communication.SendPublicChatMessage($"You are not authorized to disconnect me, @{chatter.User.TwitchUserName}.");
                 return;

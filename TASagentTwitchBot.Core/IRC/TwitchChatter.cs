@@ -91,6 +91,13 @@ namespace TASagentTwitchBot.Core.IRC
                     saveChanges = true;
                 }
 
+                if (message.tags["mod"] == "1" && user.AuthorizationLevel < Commands.AuthorizationLevel.Moderator)
+                {
+                    communication.SendDebugMessage($"Updating user {user.TwitchUserName} Authorization Level to Moderator");
+                    user.AuthorizationLevel = Commands.AuthorizationLevel.Moderator;
+                    saveChanges = true;
+                }
+
                 if (saveChanges)
                 {
                     await db.SaveChangesAsync();
