@@ -37,13 +37,6 @@ namespace TASagentTwitchBot.Core.Core
             return Convert.ToBase64String(hashBytes);
         }
 
-        public static byte[] GetSaltFromPasswordString(string password) {
-            byte[] hash = Convert.FromBase64String(password);
-            var salt = new byte[16];
-            Array.Copy(hash, 0, salt, 0, 16);
-            return salt;
-        }
-
         private static byte[] GenerateSalt()
         {
             byte[] salt;

@@ -22,8 +22,6 @@ namespace TASagentTwitchBot.Core.Config
 
         public string BotAccessToken { get; set; } = "";
         public string BotRefreshToken { get; set; } = "";
-
-
         public string BroadcasterAccessToken { get; set; } = "";
         public string BroadcasterRefreshToken { get; set; } = "";
 
@@ -82,26 +80,18 @@ namespace TASagentTwitchBot.Core.Config
 
         public AuthDegree TryCredentials(string password, out string authString)
         {
-            byte[] adminHashBytes = Cryptography.GetSaltFromPasswordString(Admin.Password);
-            byte[] privHashBytes = Cryptography.GetSaltFromPasswordString(Privileged.Password);
-            byte[] userHashBytes = Cryptography.GetSaltFromPasswordString(User.Password);
-
-            var adminHash = Cryptography.HashPassword(password, adminHashBytes);
-            var privHash = Cryptography.HashPassword(password, privHashBytes);
-            var userHash = Cryptography.HashPassword(password, userHashBytes);
-
-
-            if (adminHash == Admin.Password)
+            Cryptography.ComparePassword(password, Admin.Password);
+            if (Cryptography.ComparePassword(password, Admin.Password))
             {
                 authString = Admin.AuthString;
                 return AuthDegree.Admin;
             }
-            else if (privHash == Privileged.Password)
+            else if (Cryptography.ComparePassword(password, Privileged.Password))
             {
                 authString = Privileged.AuthString;
                 return AuthDegree.Privileged;
             }
-            else if (userHash == User.Password)
+            else if (Cryptography.ComparePassword(password, User.Password))
             {
                 authString = User.AuthString;
                 return AuthDegree.User;
