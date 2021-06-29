@@ -14,7 +14,6 @@ namespace TASagentTwitchBot.Core.Chat
         
         private readonly ICommunication communication;
         private readonly Notifications.ICheerHandler cheerHandler;
-
         private readonly IServiceScopeFactory scopeFactory;
 
         public ChatMessageHandler(
@@ -53,6 +52,9 @@ namespace TASagentTwitchBot.Core.Chat
             {
                 cheerHandler.HandleCheer(chatter.User, chatter.Message, chatter.Bits, true);
             }
+
+
+
         }
     }
 

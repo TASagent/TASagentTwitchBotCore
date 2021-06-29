@@ -1,14 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Security.Cryptography;
 
-namespace TASagentTwitchBot.Core.Core
+namespace TASagentTwitchBot.Core
 {
-    using System;
-    using System.Collections;
-    using System.Collections.Generic;
-    using System.Security.Cryptography;
 
     public static class Cryptography
     {
@@ -21,7 +15,8 @@ namespace TASagentTwitchBot.Core.Core
             byte[] hash;
             byte[] hashBytes;
 
-            if (salt == null) {
+            if (salt == null)
+            {
                 salt = GenerateSalt();
             }
 
