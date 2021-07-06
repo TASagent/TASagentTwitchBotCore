@@ -812,7 +812,7 @@ namespace TASagentTwitchBot.Core.API.Twitch
 
             if (response.StatusCode != HttpStatusCode.Accepted)
             {
-                communication.SendErrorMessage($"Bad Response code from webhooks subscription: {response}");
+                communication.SendErrorMessage($"Bad Response code from webhooks subscription: {response.Content}");
             }
 
             return response.StatusCode == HttpStatusCode.Accepted;
