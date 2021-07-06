@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text.Json;
 using System.IO;
+using TASagentTwitchBot.Core;
 using TASagentTwitchBot.Core.Web.Middleware;
 
 namespace TASagentTwitchBot.Core.Config
@@ -19,8 +20,6 @@ namespace TASagentTwitchBot.Core.Config
 
         public string BotAccessToken { get; set; } = "";
         public string BotRefreshToken { get; set; } = "";
-
-
         public string BroadcasterAccessToken { get; set; } = "";
         public string BroadcasterRefreshToken { get; set; } = "";
 
@@ -79,18 +78,17 @@ namespace TASagentTwitchBot.Core.Config
 
         public AuthDegree TryCredentials(string password, out string authString)
         {
-
-            if (password == Admin.Password)
+            if (Cryptography.ComparePassword(password, Admin.Password))
             {
                 authString = Admin.AuthString;
                 return AuthDegree.Admin;
             }
-            else if (password == Privileged.Password)
+            else if (Cryptography.ComparePassword(password, Privileged.Password))
             {
                 authString = Privileged.AuthString;
                 return AuthDegree.Privileged;
             }
-            else if (password == User.Password)
+            else if (Cryptography.ComparePassword(password, User.Password))
             {
                 authString = User.AuthString;
                 return AuthDegree.User;

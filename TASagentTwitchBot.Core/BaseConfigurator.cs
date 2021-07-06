@@ -196,19 +196,20 @@ namespace TASagentTwitchBot.Core
             return successful;
         }
 
+
         protected bool ConfigurePasswords()
         {
             bool successful = true;
-
             if (string.IsNullOrEmpty(botConfig.AuthConfiguration.Admin.Password))
             {
+
                 WritePrompt("Admin password for bot control");
 
                 string pass = Console.ReadLine()?.Trim();
 
                 if (!string.IsNullOrEmpty(pass))
                 {
-                    botConfig.AuthConfiguration.Admin.Password = pass;
+                    botConfig.AuthConfiguration.Admin.Password = Cryptography.HashPassword(pass);
                     botConfig.Serialize();
                 }
                 else
@@ -226,7 +227,7 @@ namespace TASagentTwitchBot.Core
 
                 if (!string.IsNullOrEmpty(pass))
                 {
-                    botConfig.AuthConfiguration.Privileged.Password = pass;
+                    botConfig.AuthConfiguration.Privileged.Password = Cryptography.HashPassword(pass);
                     botConfig.Serialize();
                 }
                 else
@@ -244,7 +245,7 @@ namespace TASagentTwitchBot.Core
 
                 if (!string.IsNullOrEmpty(pass))
                 {
-                    botConfig.AuthConfiguration.User.Password = pass;
+                    botConfig.AuthConfiguration.User.Password = Cryptography.HashPassword(pass);
                     botConfig.Serialize();
                 }
                 else

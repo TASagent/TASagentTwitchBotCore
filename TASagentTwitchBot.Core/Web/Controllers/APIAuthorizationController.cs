@@ -26,6 +26,7 @@ namespace TASagentTwitchBot.Core.Web.Controllers
         [HttpPost]
         public ActionResult<AuthorizationResult> Authorize(AuthorizationAttempt request)
         {
+
             AuthDegree attemptedAuth = 
                 botConfig.AuthConfiguration.TryCredentials(request.Password, out string authString);
 
