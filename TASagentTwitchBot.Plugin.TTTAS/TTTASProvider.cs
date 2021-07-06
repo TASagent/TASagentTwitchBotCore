@@ -39,7 +39,7 @@ namespace TASagentTwitchBot.Plugin.TTTAS
 
         private static string TTTASFilesPath => BGC.IO.DataManagement.PathForDataDirectory("TTTASFiles");
 
-        private RecordingData recordingData;
+        private readonly RecordingData recordingData;
         private readonly string dataFilePath;
         private readonly Random randomizer = new Random();
 

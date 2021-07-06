@@ -75,10 +75,10 @@ namespace TASagentTwitchBot.Core.Commands
         }
 
         protected virtual string GetGenericHelpMessage() =>
-            $"Commands: {string.Join(", ", GetAllPublicCommandStrings())}. For more information, visit https://info.tas.wtf";
+            $"Commands: {string.Join(", ", GetAllPublicCommandStrings())}. {botConfig.CommandConfiguration.GenericHelpMessage}";
 
         protected virtual string GetUnrecognizedCommandMessage(IRC.TwitchChatter chatter, string[] splitMessage) =>
-            $"@{chatter.User.TwitchUserName}, You wot m8‽ ({splitMessage[0]})";
+            $"@{chatter.User.TwitchUserName}, {botConfig.CommandConfiguration.UnknownCommandResponse} ({splitMessage[0]})";
 
         public async Task HandleCommand(IRC.TwitchChatter chatter)
         {
@@ -94,127 +94,135 @@ namespace TASagentTwitchBot.Core.Commands
 
             string command = splitMessage[0][1..].ToLowerInvariant();
 
-            switch (command)
+            //Check Help Commands
+            if (botConfig.CommandConfiguration.HelpEnabled &&
+                (command == "help" ||
+                command == "commands" ||
+                command == "man"))
             {
-                case "help":
-                case "commands":
-                case "man":
-                    //Get Help
-                    if (splitMessage.Length == 1)
+                //Handle Help Commands
+                if (splitMessage.Length == 1)
+                {
+                    //General Help
+                    string response = GetGenericHelpMessage();
+                    if (!string.IsNullOrEmpty(response))
                     {
-                        //General Help
-                        string response = GetGenericHelpMessage();
-                        if (!string.IsNullOrEmpty(response))
-                        {
-                            communication.SendPublicChatMessage(response);
-                        }
+                        communication.SendPublicChatMessage(response);
                     }
-                    else if (helpFunctions.ContainsKey(splitMessage[1].ToLowerInvariant()))
+                }
+                else if (helpFunctions.ContainsKey(splitMessage[1].ToLowerInvariant()))
+                {
+                    string[] remainingCommand = null;
+
+                    if (splitMessage.Length > 2)
                     {
-                        string[] remainingCommand = null;
-
-                        if (splitMessage.Length > 2)
-                        {
-                            remainingCommand = splitMessage[2..];
-                        }
-                        else
-                        {
-                            remainingCommand = Array.Empty<string>();
-                        }
-
-                        string helpString = helpFunctions[splitMessage[1].ToLowerInvariant()](chatter, remainingCommand);
-
-                        communication.SendPublicChatMessage(helpString);
+                        remainingCommand = splitMessage[2..];
                     }
                     else
                     {
-                        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, unrecognized command for Help: \"{string.Join(' ', splitMessage[1..])}\".");
+                        remainingCommand = Array.Empty<string>();
                     }
-                    break;
 
-                case "set":
-                    //All Set Commands
-                    if (splitMessage.Length == 1)
+                    string helpString = helpFunctions[splitMessage[1].ToLowerInvariant()](chatter, remainingCommand);
+
+                    communication.SendPublicChatMessage(helpString);
+                }
+                else
+                {
+                    communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, unrecognized command for Help: \"{string.Join(' ', splitMessage[1..])}\".");
+                }
+
+                return;
+            }
+
+            //Check Set Commands
+            if (botConfig.CommandConfiguration.SetEnabled && command == "set")
+            {
+                //Handle Set Commands
+                if (splitMessage.Length == 1)
+                {
+                    communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, Set what?");
+                }
+                else if (setFunctions.ContainsKey(splitMessage[1].ToLowerInvariant()))
+                {
+                    string[] remainingCommand = null;
+
+                    if (splitMessage.Length > 2)
                     {
-                        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, Set what?");
-                    }
-                    else if (setFunctions.ContainsKey(splitMessage[1].ToLowerInvariant()))
-                    {
-                        string[] remainingCommand = null;
-
-                        if (splitMessage.Length > 2)
-                        {
-                            remainingCommand = splitMessage[2..];
-                        }
-                        else
-                        {
-                            remainingCommand = Array.Empty<string>();
-                        }
-
-                        await setFunctions[splitMessage[1].ToLowerInvariant()](chatter, remainingCommand);
+                        remainingCommand = splitMessage[2..];
                     }
                     else
                     {
-                        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, unrecognized Set target \"{splitMessage[0].ToLowerInvariant()}\".");
+                        remainingCommand = Array.Empty<string>();
                     }
-                    break;
 
-                case "get":
-                    //All Set Commands
-                    if (splitMessage.Length == 1)
+                    await setFunctions[splitMessage[1].ToLowerInvariant()](chatter, remainingCommand);
+                }
+                else
+                {
+                    communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, unrecognized Set target \"{splitMessage[0].ToLowerInvariant()}\".");
+                }
+
+                return;
+            }
+
+            //Check Get Commands
+            if (botConfig.CommandConfiguration.GetEnabled && command == "get")
+            {
+                //Handle Get Commands
+                if (splitMessage.Length == 1)
+                {
+                    communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, Get what?");
+                }
+                else if (getFunctions.ContainsKey(splitMessage[1].ToLowerInvariant()))
+                {
+                    string[] remainingCommand = null;
+
+                    if (splitMessage.Length > 2)
                     {
-                        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, Get what?");
-                    }
-                    else if (getFunctions.ContainsKey(splitMessage[1].ToLowerInvariant()))
-                    {
-                        string[] remainingCommand = null;
-
-                        if (splitMessage.Length > 2)
-                        {
-                            remainingCommand = splitMessage[2..];
-                        }
-                        else
-                        {
-                            remainingCommand = Array.Empty<string>();
-                        }
-
-                        await getFunctions[splitMessage[1].ToLowerInvariant()](chatter, remainingCommand);
+                        remainingCommand = splitMessage[2..];
                     }
                     else
                     {
-                        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, unrecognized Get target \"{splitMessage[0].ToLowerInvariant()}\".");
+                        remainingCommand = Array.Empty<string>();
                     }
-                    break;
 
-                default:
-                    //Roll over to standard command system
-                    if (commandHandlers.ContainsKey(command))
-                    {
-                        string[] remainingCommand = null;
+                    await getFunctions[splitMessage[1].ToLowerInvariant()](chatter, remainingCommand);
+                }
+                else
+                {
+                    communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, unrecognized Get target \"{splitMessage[0].ToLowerInvariant()}\".");
+                }
 
-                        if (splitMessage.Length > 1)
-                        {
-                            remainingCommand = splitMessage[1..];
-                        }
-                        else
-                        {
-                            remainingCommand = Array.Empty<string>();
-                        }
+                return;
+            }
 
-                        //Invoke handler
-                        await commandHandlers[command](chatter, remainingCommand);
-                    }
-                    else if (botConfig.EnableErrorHandling)
-                    {
-                        string response = GetUnrecognizedCommandMessage(chatter, splitMessage);
-                        if (!string.IsNullOrEmpty(response))
-                        {
-                            communication.SendPublicChatMessage(response);
-                        }
+            //Roll over to standard command system
+            if (commandHandlers.ContainsKey(command))
+            {
+                string[] remainingCommand = null;
 
-                        communication.SendDebugMessage($"Unrecognized command: {cleanMessage}");
-                    }
-                    break;
+                if (splitMessage.Length > 1)
+                {
+                    remainingCommand = splitMessage[1..];
+                }
+                else
+                {
+                    remainingCommand = Array.Empty<string>();
+                }
+
+                //Invoke handler
+                await commandHandlers[command](chatter, remainingCommand);
+            }
+            else if (botConfig.CommandConfiguration.EnableErrorHandling)
+            {
+                string response = GetUnrecognizedCommandMessage(chatter, splitMessage);
+                if (!string.IsNullOrEmpty(response))
+                {
+                    communication.SendPublicChatMessage(response);
+                }
+
+                communication.SendDebugMessage($"Unrecognized command: {cleanMessage}");
             }
         }
 
@@ -232,9 +240,9 @@ namespace TASagentTwitchBot.Core.Commands
                 whisperHandlers.Remove(chatter.User.TwitchUserName);
                 await responseHandler(chatter);
             }
-            else
+            else if (botConfig.CommandConfiguration.EnableErrorHandling)
             {
-                communication.SendChatWhisper(chatter.User.TwitchUserName, $"You wot m8‽");
+                communication.SendChatWhisper(chatter.User.TwitchUserName, botConfig.CommandConfiguration.UnknownCommandResponse);
             }
         }
 

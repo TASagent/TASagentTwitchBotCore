@@ -29,6 +29,7 @@ namespace TASagentTwitchBot.Core.Config
         public bool ExhaustiveIRCLogging { get; set; } = true;
 
         public int BitTTSThreshold { get; set; } = 0;
+        [Obsolete("Moved to CommandConfiguration.EnableErrorHandling")]
         public bool EnableErrorHandling { get; set; } = true;
 
         //Output configuration
@@ -38,6 +39,8 @@ namespace TASagentTwitchBot.Core.Config
 
         public MicConfiguration MicConfiguration { get; set; } = new MicConfiguration();
         public AuthConfiguration AuthConfiguration { get; set; } = new AuthConfiguration();
+
+        public CommandConfiguration CommandConfiguration { get; set; } = new CommandConfiguration();
 
         public static BotConfiguration GetConfig()
         {
@@ -51,6 +54,15 @@ namespace TASagentTwitchBot.Core.Config
             {
                 config = new BotConfiguration();
             }
+
+#pragma warning disable CS0618 // Type or member is obsolete
+            if (!config.EnableErrorHandling)
+            {
+                //Move field over
+                config.CommandConfiguration.EnableErrorHandling = false;
+                config.EnableErrorHandling = true;
+            }
+#pragma warning restore CS0618 // Type or member is obsolete
 
             config.AuthConfiguration.RegenerateAuthStrings();
 
@@ -150,5 +162,16 @@ namespace TASagentTwitchBot.Core.Config
         public string Password { get; set; } = "";
         public string PasswordHash { get; set; } = "";
         public string AuthString { get; set; } = "";
+    }
+
+    public class CommandConfiguration
+    {
+        public bool HelpEnabled { get; set; } = true;
+        public bool GetEnabled { get; set; } = true;
+        public bool SetEnabled { get; set; } = true;
+
+        public bool EnableErrorHandling { get; set; } = true;
+        public string GenericHelpMessage { get; set; } = "For more information, visit https://info.tas.wtf";
+        public string UnknownCommandResponse { get; set; } = "You wot m8‽";
     }
 }

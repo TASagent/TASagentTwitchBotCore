@@ -7,7 +7,7 @@ namespace TASagentTwitchBot.Core.EmoteEffects
     public class EmoteEffectConfiguration
     {
         private static string ConfigFilePath => BGC.IO.DataManagement.PathForDataFile("Config", "EmoteEffectsConfig.json");
-        private static object _lock = new object();
+        private static readonly object _lock = new object();
 
         public bool EnableBTTVEmotes { get; init; } = false;
 

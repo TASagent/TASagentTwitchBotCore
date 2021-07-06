@@ -52,14 +52,14 @@ namespace TASagentTwitchBot.Core.Web.Controllers
 
         [HttpGet]
         public ActionResult<string> ErrorHEnabled() =>
-            botConfig.EnableErrorHandling.ToString();
+            botConfig.CommandConfiguration.EnableErrorHandling.ToString();
 
         [HttpPost]
         [AuthRequired(AuthDegree.Admin)]
         public IActionResult ErrorHEnabled(ErrHEnabled eHEnabled)
         {
             //Set CompressorConfig
-            botConfig.EnableErrorHandling = eHEnabled.Enabled;
+            botConfig.CommandConfiguration.EnableErrorHandling = eHEnabled.Enabled;
 
             //Save
             botConfig.Serialize();
