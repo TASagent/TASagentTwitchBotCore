@@ -6,25 +6,25 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.Core" Version="3.7.0.12" />
-    <PackageReference Include="AWSSDK.Polly" Version="3.7.0.11" />
-    <PackageReference Include="Google.Cloud.TextToSpeech.V1" Version="2.1.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.5">
+    <PackageReference Include="AWSSDK.Core" Version="3.7.0.38" />
+    <PackageReference Include="AWSSDK.Polly" Version="3.7.1.7" />
+    <PackageReference Include="Google.Cloud.TextToSpeech.V1" Version="2.2.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.7">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="5.0.5" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="5.0.5">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="5.0.7" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="5.0.7">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="NAudio.Core" Version="2.0.0" />
-    <PackageReference Include="NAudio.Midi" Version="2.0.0" />
+    <PackageReference Include="NAudio.Midi" Version="2.0.1" />
     <PackageReference Include="NAudio.Vorbis" Version="1.3.1" />
     <PackageReference Include="NAudio.Wasapi" Version="2.0.0" />
-    <PackageReference Include="NAudio.WinMM" Version="2.0.0" />
+    <PackageReference Include="NAudio.WinMM" Version="2.0.1" />
     <PackageReference Include="RestSharp" Version="106.11.7" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.1.2" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.1.4" />
   </ItemGroup>
 
   <ItemGroup>
