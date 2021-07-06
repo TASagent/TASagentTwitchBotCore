@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+
 using TASagentTwitchBot.Core.Database;
 
 namespace TASagentTwitchBot.Core.IRC

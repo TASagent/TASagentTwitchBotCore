@@ -1,5 +1,6 @@
-﻿using BGC.Audio.Filters;
+﻿using System;
 using System.Collections.Generic;
+using BGC.Audio.Filters;
 
 namespace TASagentTwitchBot.Core.Audio.Effects
 {

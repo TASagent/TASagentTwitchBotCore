@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Channels;
+
 using TASagentTwitchBot.Core.Logs;
 
 namespace TASagentTwitchBot.Core.IRC

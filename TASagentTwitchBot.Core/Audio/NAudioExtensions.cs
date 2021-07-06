@@ -1,4 +1,5 @@
-﻿using NAudio.Wave;
+﻿using System;
+using NAudio.Wave;
 using BGC.Audio;
 using BGC.Audio.NAudio;
 

@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Security.Cryptography;
 using Microsoft.AspNetCore.Mvc;
+
 using TASagentTwitchBot.Core.Web.Middleware;
 
 namespace TASagentTwitchBot.Core.Web.Controllers

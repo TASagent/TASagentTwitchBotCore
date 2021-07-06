@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+﻿using System;
 using System.Web;
 
 namespace TASagentTwitchBot.Core.API.Twitch

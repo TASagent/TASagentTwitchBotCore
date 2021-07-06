@@ -52,10 +52,6 @@ namespace TASagentTwitchBot.Core.Chat
             {
                 cheerHandler.HandleCheer(chatter.User, chatter.Message, chatter.Bits, true);
             }
-
-
-
         }
     }
-
 }

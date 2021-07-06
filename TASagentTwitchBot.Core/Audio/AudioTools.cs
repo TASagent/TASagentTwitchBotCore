@@ -1,7 +1,8 @@
-﻿using BGC.Audio;
-using BGC.Audio.NAudio;
-using NAudio.Wave;
+﻿using System;
 using System.IO;
+using NAudio.Wave;
+using BGC.Audio;
+using BGC.Audio.NAudio;
 
 namespace TASagentTwitchBot.Core.Audio
 {

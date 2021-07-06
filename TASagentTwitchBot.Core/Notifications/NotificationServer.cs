@@ -2,9 +2,9 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using BGC.Collections.Generic;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
+using BGC.Collections.Generic;
 
 using TASagentTwitchBot.Core.Web.Hubs;
 

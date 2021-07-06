@@ -1,7 +1,7 @@
-﻿using NAudio.CoreAudioApi;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using NAudio.CoreAudioApi;
 
 namespace TASagentTwitchBot.Core
 {
@@ -45,6 +45,10 @@ namespace TASagentTwitchBot.Core
             Console.Write($"Enter {message}:\n    > ");
         }
 
+        protected void WriteMessage(string message)
+        {
+            Console.WriteLine(message);
+        }
 
         protected bool ConfigureTwitchClient()
         {
@@ -199,61 +203,103 @@ namespace TASagentTwitchBot.Core
 
         protected bool ConfigurePasswords()
         {
+#pragma warning disable CS0618 // Type or member is obsolete - Conversion of old Password field
+
             bool successful = true;
-            if (string.IsNullOrEmpty(botConfig.AuthConfiguration.Admin.Password))
+            if (string.IsNullOrEmpty(botConfig.AuthConfiguration.Admin.PasswordHash))
             {
-
-                WritePrompt("Admin password for bot control");
-
-                string pass = Console.ReadLine()?.Trim();
-
-                if (!string.IsNullOrEmpty(pass))
+                //Check obsolete field
+                if (!string.IsNullOrEmpty(botConfig.AuthConfiguration.Admin.Password))
                 {
-                    botConfig.AuthConfiguration.Admin.Password = Cryptography.HashPassword(pass);
+                    //Convert the obsolete field
+                    botConfig.AuthConfiguration.Admin.PasswordHash = Cryptography.HashPassword(botConfig.AuthConfiguration.Admin.Password);
+                    botConfig.AuthConfiguration.Admin.Password = null;
                     botConfig.Serialize();
+
+                    WriteMessage("Converted Old Admin Password");
                 }
                 else
                 {
-                    WriteError("Empty Admin Password received.");
-                    successful = false;
+                    WritePrompt("Admin password for bot control");
+
+                    string pass = Console.ReadLine()?.Trim();
+
+                    if (!string.IsNullOrEmpty(pass))
+                    {
+                        botConfig.AuthConfiguration.Admin.PasswordHash = Cryptography.HashPassword(pass);
+                        botConfig.Serialize();
+                    }
+                    else
+                    {
+                        WriteError("Empty Admin Password received.");
+                        successful = false;
+                    }
                 }
             }
 
-            if (string.IsNullOrEmpty(botConfig.AuthConfiguration.Privileged.Password))
+            if (string.IsNullOrEmpty(botConfig.AuthConfiguration.Privileged.PasswordHash))
             {
-                WritePrompt("Moderator password for bot control");
-
-                string pass = Console.ReadLine()?.Trim();
-
-                if (!string.IsNullOrEmpty(pass))
+                //Check obsolete field
+                if (!string.IsNullOrEmpty(botConfig.AuthConfiguration.Privileged.Password))
                 {
-                    botConfig.AuthConfiguration.Privileged.Password = Cryptography.HashPassword(pass);
+                    //Convert the obsolete field
+                    botConfig.AuthConfiguration.Privileged.PasswordHash = Cryptography.HashPassword(botConfig.AuthConfiguration.Privileged.Password);
+                    botConfig.AuthConfiguration.Privileged.Password = null;
                     botConfig.Serialize();
+
+                    WriteMessage("Converted Old Privileged Password");
                 }
                 else
                 {
-                    WriteError("Empty Moderator Password received.");
-                    successful = false;
+                    WritePrompt("Moderator password for bot control");
+
+                    string pass = Console.ReadLine()?.Trim();
+
+                    if (!string.IsNullOrEmpty(pass))
+                    {
+                        botConfig.AuthConfiguration.Privileged.PasswordHash = Cryptography.HashPassword(pass);
+                        botConfig.Serialize();
+                    }
+                    else
+                    {
+                        WriteError("Empty Moderator Password received.");
+                        successful = false;
+                    }
                 }
             }
 
-            if (string.IsNullOrEmpty(botConfig.AuthConfiguration.User.Password))
+            if (string.IsNullOrEmpty(botConfig.AuthConfiguration.User.PasswordHash))
             {
-                WritePrompt("User password for bot control");
-
-                string pass = Console.ReadLine()?.Trim();
-
-                if (!string.IsNullOrEmpty(pass))
+                //Check obsolete field
+                if (!string.IsNullOrEmpty(botConfig.AuthConfiguration.User.Password))
                 {
-                    botConfig.AuthConfiguration.User.Password = Cryptography.HashPassword(pass);
+                    //Convert the obsolete field
+                    botConfig.AuthConfiguration.User.PasswordHash = Cryptography.HashPassword(botConfig.AuthConfiguration.User.Password);
+                    botConfig.AuthConfiguration.User.Password = null;
                     botConfig.Serialize();
+
+                    WriteMessage("Converted Old User Password");
                 }
                 else
                 {
-                    WriteError("Empty User Password received.");
-                    successful = false;
+                    WritePrompt("User password for bot control");
+
+                    string pass = Console.ReadLine()?.Trim();
+
+                    if (!string.IsNullOrEmpty(pass))
+                    {
+                        botConfig.AuthConfiguration.User.PasswordHash = Cryptography.HashPassword(pass);
+                        botConfig.Serialize();
+                    }
+                    else
+                    {
+                        WriteError("Empty User Password received.");
+                        successful = false;
+                    }
                 }
             }
+
+#pragma warning restore CS0618 // Type or member is obsolete
 
             return successful;
         }

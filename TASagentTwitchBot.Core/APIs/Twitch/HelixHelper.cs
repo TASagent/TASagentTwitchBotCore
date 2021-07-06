@@ -20,10 +20,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Text.Json;
 using System.Net;
-using System.Web;
-using System.Collections.Specialized;
-using System.Security.Cryptography;
-
 using RestSharp;
 
 using TASagentTwitchBot.Core.Web.Extensions;
@@ -994,15 +990,6 @@ namespace TASagentTwitchBot.Core.API.Twitch
             IRestResponse response = await restClient.ExecuteAsync(request);
 
             return JsonSerializer.Deserialize<TwitchCustomRewardRedemption>(response.Content);
-        }
-
-        private static string GenerateRandomStringToken()
-        {
-            using RNGCryptoServiceProvider rngCsp = new RNGCryptoServiceProvider();
-
-            byte[] data = new byte[30];
-            rngCsp.GetBytes(data);
-            return Convert.ToBase64String(data);
         }
     }
 }

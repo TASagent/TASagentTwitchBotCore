@@ -1,4 +1,6 @@
-﻿namespace TASagentTwitchBot.Core.View
+﻿using System;
+
+namespace TASagentTwitchBot.Core.View
 {
     public interface IConsoleOutput
     {

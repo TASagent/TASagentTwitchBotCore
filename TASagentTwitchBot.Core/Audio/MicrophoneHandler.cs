@@ -5,8 +5,8 @@ using System.Linq;
 using System.Collections.Generic;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
-using BGC.Mathematics;
 using NAudio.MediaFoundation;
+using BGC.Mathematics;
 
 namespace TASagentTwitchBot.Core.Audio
 {

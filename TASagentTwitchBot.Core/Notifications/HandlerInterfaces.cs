@@ -1,4 +1,6 @@
-﻿namespace TASagentTwitchBot.Core.Notifications
+﻿using System;
+
+namespace TASagentTwitchBot.Core.Notifications
 {
     public interface ISubscriptionHandler
     {

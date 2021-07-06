@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text.Json;
 using System.IO;
-using TASagentTwitchBot.Core;
+
 using TASagentTwitchBot.Core.Web.Middleware;
 
 namespace TASagentTwitchBot.Core.Config
@@ -9,7 +9,7 @@ namespace TASagentTwitchBot.Core.Config
     public class BotConfiguration
     {
         private static string ConfigFilePath => BGC.IO.DataManagement.PathForDataFile("Config", "Config.json");
-        private static object _lock = new object();
+        private static readonly object _lock = new object();
 
         public string BotName { get; set; } = "";
         public string Broadcaster { get; set; } = "";
@@ -76,19 +76,30 @@ namespace TASagentTwitchBot.Core.Config
         public CredentialSet Privileged { get; set; } = new CredentialSet();
         public CredentialSet User { get; set; } = new CredentialSet();
 
+        /// <summary>
+        /// Checks the submitted password against the stored passwords to look for a match.
+        /// </summary>
+        /// <exception cref="FormatException"> Throws <see cref="FormatException"/> if the passwordHash or password is invalid </exception>
+        /// <exception cref="Exception"> Throws <see cref="Exception"/> if an exception is encountered in the password validation process </exception>
         public AuthDegree TryCredentials(string password, out string authString)
         {
-            if (Cryptography.ComparePassword(password, Admin.Password))
+            if (password is null)
+            {
+                //At least sanitize against null passwords
+                password = "";
+            }
+
+            if (Cryptography.ComparePassword(password, Admin.PasswordHash))
             {
                 authString = Admin.AuthString;
                 return AuthDegree.Admin;
             }
-            else if (Cryptography.ComparePassword(password, Privileged.Password))
+            else if (Cryptography.ComparePassword(password, Privileged.PasswordHash))
             {
                 authString = Privileged.AuthString;
                 return AuthDegree.Privileged;
             }
-            else if (Cryptography.ComparePassword(password, User.Password))
+            else if (Cryptography.ComparePassword(password, User.PasswordHash))
             {
                 authString = User.AuthString;
                 return AuthDegree.User;
@@ -135,8 +146,9 @@ namespace TASagentTwitchBot.Core.Config
 
     public class CredentialSet
     {
+        [Obsolete("The Password field is obsolete. We are hashing it now.")]
         public string Password { get; set; } = "";
+        public string PasswordHash { get; set; } = "";
         public string AuthString { get; set; } = "";
     }
-
 }

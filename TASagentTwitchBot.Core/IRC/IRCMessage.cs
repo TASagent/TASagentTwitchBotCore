@@ -140,43 +140,39 @@ namespace TASagentTwitchBot.Core.IRC
             this.tags = tags;
         }
 
-        private static IRCCommand ParseCommand(string cmd)
-        {
-            switch (cmd)
+        private static IRCCommand ParseCommand(string cmd) =>
+            cmd switch
             {
-                case "PRIVMSG": return IRCCommand.PrivMsg;
-                case "NOTICE": return IRCCommand.Notice;
-                case "PING": return IRCCommand.Ping;
-                case "PONG": return IRCCommand.Pong;
-                case "HOSTTARGET": return IRCCommand.HostTarget;
-                case "CLEARCHAT": return IRCCommand.ClearChat;
-                case "USERSTATE": return IRCCommand.UserState;
-                case "GLOBALUSERSTATE": return IRCCommand.GlobalUserState;
-                case "NICK": return IRCCommand.Nick;
-                case "JOIN": return IRCCommand.Join;
-                case "PART": return IRCCommand.Part;
-                case "PASS": return IRCCommand.Pass;
-                case "CAP": return IRCCommand.Cap;
-                case "001": return IRCCommand._001;
-                case "002": return IRCCommand._002;
-                case "003": return IRCCommand._003;
-                case "004": return IRCCommand._004;
-                case "353": return IRCCommand._353;
-                case "366": return IRCCommand._366;
-                case "372": return IRCCommand._372;
-                case "375": return IRCCommand._375;
-                case "376": return IRCCommand._376;
-                case "WHISPER": return IRCCommand.Whisper;
-                case "SERVERCHANGE": return IRCCommand.ServerChange;
-                case "RECONNECT": return IRCCommand.Reconnect;
-                case "ROOMSTATE": return IRCCommand.RoomState;
-                case "USERNOTICE": return IRCCommand.UserNotice;
-                case "MODE": return IRCCommand.Mode;
-
-                default:
-                    return IRCCommand.Unknown;
-            }
-        }
+                "PRIVMSG" => IRCCommand.PrivMsg,
+                "NOTICE" => IRCCommand.Notice,
+                "PING" => IRCCommand.Ping,
+                "PONG" => IRCCommand.Pong,
+                "HOSTTARGET" => IRCCommand.HostTarget,
+                "CLEARCHAT" => IRCCommand.ClearChat,
+                "USERSTATE" => IRCCommand.UserState,
+                "GLOBALUSERSTATE" => IRCCommand.GlobalUserState,
+                "NICK" => IRCCommand.Nick,
+                "JOIN" => IRCCommand.Join,
+                "PART" => IRCCommand.Part,
+                "PASS" => IRCCommand.Pass,
+                "CAP" => IRCCommand.Cap,
+                "001" => IRCCommand._001,
+                "002" => IRCCommand._002,
+                "003" => IRCCommand._003,
+                "004" => IRCCommand._004,
+                "353" => IRCCommand._353,
+                "366" => IRCCommand._366,
+                "372" => IRCCommand._372,
+                "375" => IRCCommand._375,
+                "376" => IRCCommand._376,
+                "WHISPER" => IRCCommand.Whisper,
+                "SERVERCHANGE" => IRCCommand.ServerChange,
+                "RECONNECT" => IRCCommand.Reconnect,
+                "ROOMSTATE" => IRCCommand.RoomState,
+                "USERNOTICE" => IRCCommand.UserNotice,
+                "MODE" => IRCCommand.Mode,
+                _ => IRCCommand.Unknown,
+            };
 
         private enum ParserState
         {

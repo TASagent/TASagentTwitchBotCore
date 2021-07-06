@@ -28,7 +28,7 @@ namespace TASagentTwitchBot.Core.Audio
     {
         private readonly ICommunication communication;
 
-        private SoundEffectData soundEffectData;
+        private readonly SoundEffectData soundEffectData;
         private readonly string dataFilePath;
 
 

@@ -1,5 +1,6 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using System;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.SignalR;
 
 namespace TASagentTwitchBot.Core.Web.Hubs
 {

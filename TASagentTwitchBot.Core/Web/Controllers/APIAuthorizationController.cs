@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Mvc;
+
 using TASagentTwitchBot.Core.Web.Middleware;
 
 namespace TASagentTwitchBot.Core.Web.Controllers
@@ -26,19 +27,37 @@ namespace TASagentTwitchBot.Core.Web.Controllers
         [HttpPost]
         public ActionResult<AuthorizationResult> Authorize(AuthorizationAttempt request)
         {
+            AuthDegree attemptedAuth;
+            string authString;
 
-            AuthDegree attemptedAuth = 
-                botConfig.AuthConfiguration.TryCredentials(request.Password, out string authString);
+            try
+            {
+                attemptedAuth = botConfig.AuthConfiguration.TryCredentials(request.Password, out authString);
+            }
+            catch (Exception e)
+            {
+                communication.SendErrorMessage($"Attempt to validate password encountered exception: {e}.");
+                return StatusCode(500);
+            }
 
             if (!botConfig.AuthConfiguration.PublicAuthAllowed && attemptedAuth <= AuthDegree.Privileged)
             {
-                communication.SendWarningMessage($"User tried to authenticate as {attemptedAuth} with password \"{request.Password}\" while locked down.");
+                if (attemptedAuth == AuthDegree.None)
+                {
+                    communication.SendWarningMessage($"User tried to authenticate with an invalid password while locked down.");
+                }
+                else
+                {
+                    //Rejected, valid authentication attempt
+                    communication.SendWarningMessage($"User tried to authenticate as {attemptedAuth} while locked down.");
+                }
+
                 return Forbid();
             }
 
             if (attemptedAuth == AuthDegree.None)
             {
-                communication.SendWarningMessage($"User failed to authenticate with password \"{request.Password}\".");
+                communication.SendWarningMessage($"A user has failed to authenticate.");
                 return Unauthorized();
             }
 

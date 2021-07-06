@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 using TASagentTwitchBot.Core.Database;
 using TASagentTwitchBot.Core.API.Twitch;
 using TASagentTwitchBot.Core.PubSub;
-using System.Threading;
 
 namespace TASagentTwitchBot.Plugin.TTTAS
 {

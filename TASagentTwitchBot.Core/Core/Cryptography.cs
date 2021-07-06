@@ -20,7 +20,7 @@ namespace TASagentTwitchBot.Core
                 salt = GenerateSalt();
             }
 
-            using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, 10000))
+            using (Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, salt, 10000))
             {
                 hash = pbkdf2.GetBytes(20);
             }
@@ -34,8 +34,10 @@ namespace TASagentTwitchBot.Core
 
         private static byte[] GenerateSalt()
         {
-            byte[] salt;
-            new RNGCryptoServiceProvider().GetBytes(salt = new byte[16]);
+            using RNGCryptoServiceProvider provider = new RNGCryptoServiceProvider();
+            byte[] salt = new byte[16];
+
+            provider.GetBytes(salt);
             return salt;
         }
 
@@ -43,28 +45,56 @@ namespace TASagentTwitchBot.Core
         /// Thank you stack overflow
         /// https://stackoverflow.com/questions/4181198/how-to-hash-a-password/10402129#10402129
         /// </summary>
+        /// <exception cref="FormatException"> Throws <see cref="FormatException"/> if the passwordHash or password is invalid </exception>
+        /// <exception cref="Exception"> Throws <see cref="Exception"/> if an exception is encountered in the password validation process </exception>
         public static bool ComparePassword(string password, string passwordHash)
         {
-            byte[] hashBytes = Convert.FromBase64String(passwordHash);
-            byte[] salt = new byte[16];
-            byte[] hash;
-
-            Array.Copy(hashBytes, 0, salt, 0, 16);
-            using (Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, salt, 10000))
+            if (passwordHash is null || passwordHash.Length != 48)
             {
-                hash = pbkdf2.GetBytes(20);
+                throw new FormatException("PasswordHash was invalid");
             }
 
-            for (int i = 0; i < 20; i++)
+            if (password is null)
             {
-                if (hashBytes[i + 16] != hash[i])
+                throw new FormatException("Password was null");
+            }
+
+            try
+            {
+                byte[] hashBytes = Convert.FromBase64String(passwordHash);
+
+                if (hashBytes.Length != 36)
                 {
-                    return false;
+                    throw new FormatException($"Received invalid passwordhash byte array of length {hashBytes.Length}");
                 }
+
+                byte[] salt = new byte[16];
+                byte[] hash;
+
+                Array.Copy(hashBytes, 0, salt, 0, 16);
+                using (Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, salt, 10000))
+                {
+                    hash = pbkdf2.GetBytes(20);
+                }
+
+                for (int i = 0; i < 20; i++)
+                {
+                    if (hashBytes[i + 16] != hash[i])
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
             }
-
-            return true;
+            catch (FormatException e)
+            {
+                throw new FormatException("Validation of password failed with exception", e);
+            }
+            catch (Exception e)
+            {
+                throw new Exception("Validation of password failed with exception", e);
+            }
         }
-
     }
 }
