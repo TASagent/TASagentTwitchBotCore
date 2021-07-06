@@ -12,6 +12,7 @@ namespace TASagentTwitchBot.Plugin.TTTAS
         private readonly ICommunication communication;
         private readonly ITTTASHandler tttasHandler;
         private readonly ITTTASProvider tttasProvider;
+        private readonly ITTTASRenderer tttasRenderer;
 
         private readonly TTTASConfiguration tttasConfig;
 
@@ -19,11 +20,13 @@ namespace TASagentTwitchBot.Plugin.TTTAS
             ICommunication communication,
             ITTTASHandler tttasHandler,
             ITTTASProvider tttasProvider,
+            ITTTASRenderer tttasRenderer,
             TTTASConfiguration tttasConfig)
         {
             this.communication = communication;
             this.tttasHandler = tttasHandler;
             this.tttasProvider = tttasProvider;
+            this.tttasRenderer = tttasRenderer;
             this.tttasConfig = tttasConfig;
         }
 

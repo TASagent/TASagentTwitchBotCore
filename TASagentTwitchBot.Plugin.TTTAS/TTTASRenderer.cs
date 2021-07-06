@@ -29,7 +29,7 @@ namespace TASagentTwitchBot.Plugin.TTTAS
         //  Words containing letters and apostrophes, and optionally ending in a period, questionmark, comma, or exclamation mark
         //  Numbers containing commas and periods and optionally ending with punctuation and optionally starting with a negative sign
         //  Slashes, quotation marks, dashes, question marks
-        private static readonly Regex wordRegex = new Regex(@"(?:\![a-zA-Z']+(?:\([0-9, ]+\))?|\/[a-zA-Z']+|[a-zA-Z']+[?.,!]?|\-?[0-9,.]+[?.,!]?|[\/\\\""\-\?])");
+        private static readonly Regex wordRegex = new Regex(@"(?:\![\p{L}']+(?:\([0-9, ]+\))?|\/[\p{L}']+|[\p{L}']+[?.,!]?|\-?[0-9,.]+[?.,!]?|[\/\\\""\-\?]|(?:\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]))");
         private static readonly Regex numberLikeSplitter = new Regex(@"(?:[0-9]+|.)");
 
 
@@ -54,9 +54,10 @@ namespace TASagentTwitchBot.Plugin.TTTAS
                 return Task.FromResult<AudioRequest>(new AudioDelay(500));
             }
 
-            //First, lowercase the text
+            //Trim, lowercase, and normalize the text
+            tttasText = NormalizeString(tttasText.Trim().ToLowerInvariant());
+            tttasText = tttasText.Normalize();
 
-            tttasText = tttasText.Trim().ToLowerInvariant();
             List<string> splitTTTASText = wordRegex.Matches(tttasText).Select(x => x.Value).ToList();
 
             if (splitTTTASText.Count == 0)
@@ -583,6 +584,162 @@ namespace TASagentTwitchBot.Plugin.TTTAS
                     HandleWord("vigintillion", audioFragments, pendingRequests);
                     return;
 
+                case 22:
+                    HandleWord("unvigintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 23:
+                    HandleWord("duovigintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 24:
+                    HandleWord("tresvigintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 25:
+                    HandleWord("quattuorvigintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 26:
+                    HandleWord("quinvigintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 27:
+                    HandleWord("sesvigintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 28:
+                    HandleWord("septemvigintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 29:
+                    HandleWord("octovigintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 30:
+                    HandleWord("novemvigintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 31:
+                    HandleWord("trigintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 32:
+                    HandleWord("untrigintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 33:
+                    HandleWord("duotrigintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 34:
+                    HandleWord("trestrigintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 35:
+                    HandleWord("quattuortrigintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 36:
+                    HandleWord("quintrigintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 37:
+                    HandleWord("sestrigintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 38:
+                    HandleWord("septentrigintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 39:
+                    HandleWord("octotrigintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 40:
+                    HandleWord("noventrigintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 41:
+                    HandleWord("quadragintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 42:
+                    HandleWord("unquadragintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 43:
+                    HandleWord("duoquadragintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 44:
+                    HandleWord("tresquadragintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 45:
+                    HandleWord("quattuorquadragintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 46:
+                    HandleWord("quinquadragintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 47:
+                    HandleWord("sesquadragintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 48:
+                    HandleWord("septenquadragintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 49:
+                    HandleWord("octoquadragintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 50:
+                    HandleWord("novenquadragintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 51:
+                    HandleWord("quinquagintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 52:
+                    HandleWord("unquinquagintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 53:
+                    HandleWord("duoquinquagintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 54:
+                    HandleWord("tresquinquagintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 55:
+                    HandleWord("quattuorquinquagintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 56:
+                    HandleWord("quinquinquagintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 57:
+                    HandleWord("sesquinquagintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 58:
+                    HandleWord("septenquinquagintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 59:
+                    HandleWord("octoquinquagintillion", audioFragments, pendingRequests);
+                    return;
+
+                case 60:
+                    HandleWord("novenquinquagintillion", audioFragments, pendingRequests);
+                    return;
+
 
                 default:
                     communication.SendWarningMessage($"Skipping unexpected NumberTriplet Word: {tripletNum}");
@@ -590,5 +747,97 @@ namespace TASagentTwitchBot.Plugin.TTTAS
             }
         }
 
+
+        private static string NormalizeString(string input)
+        {
+            char[] inputArray = input.ToCharArray();
+
+            for (int i = 0; i < inputArray.Length; i++)
+            {
+                switch (inputArray[i])
+                {
+                    // en dash
+                    case '\u2013':
+                        inputArray[i] = '-';
+                        break;
+
+                    // em dash
+                    case '\u2014':
+                        inputArray[i] = '-';
+                        break;
+
+                    // horizontal line
+                    case '\u2015':
+                        inputArray[i] = '-';
+                        break;
+
+
+                    // double low line
+                    case '\u2017':
+                        inputArray[i] = '_';
+                        break;
+
+
+                    //Single Quotes
+                    // left single quotation mark
+                    case '\u2018':
+                        inputArray[i] = '\'';
+                        break;
+
+                    // right single quotation mark
+                    case '\u2019':
+                        inputArray[i] = '\'';
+                        break;
+
+                    // single low-9 quotation mark
+                    case '\u201a':
+                        inputArray[i] = ',';
+                        break;
+
+                    // single high-reversed-9 quotation mark
+                    case '\u201b':
+                        inputArray[i] = '\'';
+                        break;
+
+                    // prime
+                    case '\u2032':
+                        inputArray[i] = '\'';
+                        break;
+
+                    // back-tick
+                    case '`':
+                        inputArray[i] = '\'';
+                        break;
+
+
+                    //Double Quotes
+                    // left double quotation mark
+                    case '\u201c':
+                        inputArray[i] = '\"';
+                        break;
+
+                    // right double quotation mark
+                    case '\u201d':
+                        inputArray[i] = '\"';
+                        break;
+
+                    // double low-9 quotation mark
+                    case '\u201e':
+                        inputArray[i] = '\"';
+                        break;
+
+                    // double prime
+                    case '\u2033':
+                        inputArray[i] = '\"';
+                        break;
+
+                    default:
+                        //Do nothing
+                        break;
+                }
+            }
+
+            return new string(inputArray);
+        }
     }
 }
