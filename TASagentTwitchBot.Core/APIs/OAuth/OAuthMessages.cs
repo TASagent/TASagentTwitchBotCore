@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace TASagentTwitchBot.Core.API.Twitch
+namespace TASagentTwitchBot.Core.API.OAuth
 {
     public record TokenRequest(
         [property: JsonPropertyName("access_token")] string AccessToken,

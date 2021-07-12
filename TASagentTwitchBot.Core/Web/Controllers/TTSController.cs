@@ -32,6 +32,7 @@ namespace TASagentTwitchBot.Core.Web.Controllers
         {
             if (string.IsNullOrEmpty(request.Voice) ||
                 string.IsNullOrEmpty(request.Pitch) ||
+                string.IsNullOrEmpty(request.Speed) ||
                 string.IsNullOrEmpty(request.Text))
             {
                 return BadRequest();
@@ -56,13 +57,14 @@ namespace TASagentTwitchBot.Core.Web.Controllers
 
             ttsHandler.HandleTTS(
                 user: new Database.User()
-                    {
-                        AuthorizationLevel = Commands.AuthorizationLevel.Elevated,
-                        TwitchUserName = user,
-                        TTSVoicePreference = request.Voice.TranslateTTSVoice(),
-                        TTSPitchPreference = request.Pitch.TranslateTTSPitch(),
-                        TTSEffectsChain = effect.GetEffectsChain()
-                    },
+                {
+                    AuthorizationLevel = Commands.AuthorizationLevel.Elevated,
+                    TwitchUserName = user,
+                    TTSVoicePreference = request.Voice.TranslateTTSVoice(),
+                    TTSPitchPreference = request.Pitch.TranslateTTSPitch(),
+                    TTSSpeedPreference = request.Speed.TranslateTTSSpeed(),
+                    TTSEffectsChain = effect.GetEffectsChain()
+                },
                 message: request.Text,
                 approved: true);
 
@@ -70,5 +72,11 @@ namespace TASagentTwitchBot.Core.Web.Controllers
         }
     }
 
-    public record TTSRequest(string Voice, string Pitch, string Effect, string Text, string User);
+    public record TTSRequest(
+        string Voice,
+        string Pitch,
+        string Speed,
+        string Effect,
+        string Text,
+        string User);
 }

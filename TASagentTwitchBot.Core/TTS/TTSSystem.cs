@@ -77,6 +77,10 @@ namespace TASagentTwitchBot.Core.TTS
             {
                 return "TTS Pitch - Set your personal TTS Voice pitch with !set tts pitch <Pitch>. Eg normal, x-low, low, high, x-high.  For more information, visit info.tas.wtf/twitchBotFeatures/tts.html#supported-tts-pitches";
             }
+            else if (remainingCommand[0].ToLower() == "speed")
+            {
+                return "TTS Speed - Set your personal TTS Voice speed with !set tts speed <Speed>. Eg normal, x-slow, slow, fast, x-fast.  For more information, visit info.tas.wtf/twitchBotFeatures/tts.html#supported-tts-speeds";
+            }
             else if (remainingCommand[0].ToLower() == "sounds")
             {
                 return "TTS Sounds - Add sounds to your TTS with commands like /bao, /midway, /jump, /kick, /pipe, /powerup.  For more information, visit info.tas.wtf/twitchBotFeatures/tts.html#tts-sound-effects-extension";
@@ -351,6 +355,40 @@ namespace TASagentTwitchBot.Core.TTS
                     }
                     break;
 
+                case "speed":
+                    if (remainingCommand.Length == 1)
+                    {
+                        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, no TTS speed specified.");
+                        return;
+                    }
+
+                    TTSSpeed speedPreference = remainingCommand[1].TranslateTTSSpeed();
+
+                    if (speedPreference == TTSSpeed.MAX)
+                    {
+                        //Invalid speed
+                        communication.SendPublicChatMessage(
+                            $"@{chatter.User.TwitchUserName}, " +
+                            $"TTS Speed not in approved list: info.tas.wtf/twitchBotFeatures/tts.html#supported-tts-speeds " +
+                            $"submitted: ({remainingCommand[1]})");
+                    }
+                    else
+                    {
+                        //Accepted speed
+                        using IServiceScope scope = scopeFactory.CreateScope();
+                        BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+                        User dbUser = await db.Users.FindAsync(chatter.User.UserId);
+                        dbUser.TTSSpeedPreference = speedPreference;
+                        await db.SaveChangesAsync();
+
+                        communication.SendPublicChatMessage(
+                            $"@{chatter.User.TwitchUserName}, your TTS Speed has been updated.");
+
+                        communication.SendDebugMessage($"Updated User TTS Speed preference: {chatter.User.TwitchUserName} to {speedPreference}");
+                        await db.SaveChangesAsync();
+                    }
+                    break;
+
                 case "effect":
                 case "effects":
                 case "effectchain":
@@ -407,7 +445,7 @@ namespace TASagentTwitchBot.Core.TTS
         }
 
         private static string GetUserTTSSettings(User user) =>
-            $"{DisplayTTSVoice(user.TTSVoicePreference)} with {DisplayTTSPitch(user.TTSPitchPreference)} pitch. Effects: {user.TTSEffectsChain}";
+            $"{DisplayTTSVoice(user.TTSVoicePreference)} with {DisplayTTSPitch(user.TTSPitchPreference)} pitch and {DisplayTTSSpeed(user.TTSSpeedPreference)} speed. Effects: {user.TTSEffectsChain}";
 
         private static string DisplayTTSVoice(TTSVoice voice)
         {
@@ -427,6 +465,17 @@ namespace TASagentTwitchBot.Core.TTS
                 TTSPitch.High => "High",
                 TTSPitch.X_High => "X-High",
                 TTSPitch.Unassigned or TTSPitch.Medium => "Normal",
+                _ => "Normal",
+            };
+
+        private static string DisplayTTSSpeed(TTSSpeed speed) =>
+            speed switch
+            {
+                TTSSpeed.X_Slow => "X-Slow",
+                TTSSpeed.Slow => "Slow",
+                TTSSpeed.Fast => "Fast",
+                TTSSpeed.X_Fast => "X-Fast",
+                TTSSpeed.Unassigned or TTSSpeed.Medium => "Normal",
                 _ => "Normal",
             };
 

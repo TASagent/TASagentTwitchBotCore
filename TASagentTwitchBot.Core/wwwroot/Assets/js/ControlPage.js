@@ -375,6 +375,7 @@
             data: JSON.stringify({
                 voice: $("#select-TTSVoice").val(),
                 pitch: $("#select-TTSPitch").val(),
+                speed: $("#select-TTSSpeed").val(),
                 effect: $("#input-TTSEffect").val(),
                 text: $("#input-TTSText").val(),
                 user: $("#input-TTSUser").val()

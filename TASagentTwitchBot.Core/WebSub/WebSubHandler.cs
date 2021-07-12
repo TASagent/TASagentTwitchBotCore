@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 
 using TASagentTwitchBot.Core.API.Twitch;
+using TASagentTwitchBot.Core.API.OAuth;
 
 namespace TASagentTwitchBot.Core.WebSub
 {

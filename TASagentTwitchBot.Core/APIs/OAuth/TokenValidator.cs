@@ -2,7 +2,7 @@
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 
-namespace TASagentTwitchBot.Core.API.Twitch
+namespace TASagentTwitchBot.Core.API.OAuth
 {
     public interface ITokenValidator
     {
@@ -14,7 +14,7 @@ namespace TASagentTwitchBot.Core.API.Twitch
     public abstract class TokenValidator : ITokenValidator
     {
         protected readonly ICommunication communication;
-        protected readonly HelixHelper helixHelper;
+        protected readonly IOAuthHandler oauthHandler;
 
         /// <summary>
         /// How frequently we check to see if it's time to rerun validation
@@ -37,10 +37,10 @@ namespace TASagentTwitchBot.Core.API.Twitch
 
         public TokenValidator(
             ICommunication communication,
-            HelixHelper helixHelper)
+            IOAuthHandler oauthHandler)
         {
             this.communication = communication;
-            this.helixHelper = helixHelper;
+            this.oauthHandler = oauthHandler;
         }
 
         public void SetCode(string code, string state)
@@ -75,7 +75,7 @@ namespace TASagentTwitchBot.Core.API.Twitch
                 }
 
                 //Try to get a new Token
-                TokenRequest request = await helixHelper.GetToken(authCode, RedirectURI);
+                TokenRequest request = await oauthHandler.GetToken(authCode, RedirectURI);
 
                 //Did we receive a new Access Token?
                 if (request == null)
@@ -131,7 +131,7 @@ namespace TASagentTwitchBot.Core.API.Twitch
             }
 
             //Try a refresh
-            TokenRefreshRequest request = await helixHelper.RefreshToken(RefreshToken);
+            TokenRefreshRequest request = await oauthHandler.RefreshToken(RefreshToken);
 
             //Did we receive an Access Token?
             if (request == null)
@@ -153,8 +153,8 @@ namespace TASagentTwitchBot.Core.API.Twitch
 
         private async Task<bool> TryValidateToken()
         {
-            //Request Twitch validate our access_token
-            TokenValidationRequest validationRequest = await helixHelper.ValidateToken(AccessToken);
+            //Request validation of our access_token
+            TokenValidationRequest validationRequest = await oauthHandler.ValidateToken(AccessToken);
 
             //Was our token validated?
             if (validationRequest != null)

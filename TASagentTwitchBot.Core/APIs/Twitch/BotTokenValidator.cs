@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Web;
 
+using TASagentTwitchBot.Core.API.OAuth;
+
 namespace TASagentTwitchBot.Core.API.Twitch
 {
     public interface IBotTokenValidator : ITokenValidator { }

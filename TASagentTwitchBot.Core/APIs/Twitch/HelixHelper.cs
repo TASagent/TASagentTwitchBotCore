@@ -22,11 +22,12 @@ using System.Text.Json;
 using System.Net;
 using RestSharp;
 
+using TASagentTwitchBot.Core.API.OAuth;
 using TASagentTwitchBot.Core.Web.Extensions;
 
 namespace TASagentTwitchBot.Core.API.Twitch
 {
-    public class HelixHelper
+    public class HelixHelper : IOAuthHandler
     {
         private readonly Config.BotConfiguration botConfig;
         private readonly ICommunication communication;
@@ -127,7 +128,7 @@ namespace TASagentTwitchBot.Core.API.Twitch
 
             if (response.StatusCode != HttpStatusCode.OK)
             {
-                communication.SendErrorMessage($"Failed OAuth Refresh response:");
+                communication.SendErrorMessage($"Failed Twitch OAuth Refresh response:");
                 communication.SendErrorMessage($"  {response.Content}");
                 return null;
             }
@@ -149,7 +150,7 @@ namespace TASagentTwitchBot.Core.API.Twitch
 
             if (response.StatusCode != HttpStatusCode.OK)
             {
-                communication.SendWarningMessage($"Failed OAuth AccessToken validation response:");
+                communication.SendWarningMessage($"Failed Twitch OAuth AccessToken validation response:");
                 communication.SendWarningMessage($"  {response.Content}");
                 return null;
             }

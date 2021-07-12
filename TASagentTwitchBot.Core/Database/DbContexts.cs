@@ -28,6 +28,7 @@ namespace TASagentTwitchBot.Core.Database
 
         public TTS.TTSVoice TTSVoicePreference { get; set; }
         public TTS.TTSPitch TTSPitchPreference { get; set; }
+        public TTS.TTSSpeed TTSSpeedPreference { get; set; }
         public string TTSEffectsChain { get; set; }
         public DateTime? LastSuccessfulTTS { get; set; }
 

@@ -21,8 +21,19 @@ namespace TASagentTwitchBot.Core.TTS
 {
     public interface ITTSRenderer
     {
-        Task<AudioRequest> TTSRequest(TTSVoice voicePreference, TTSPitch pitchPreference, Effect effectsChain, string ttsText);
-        Task<AudioRequest> TTSRequest(TTSVoice voicePreference, TTSPitch pitchPreference, Effect effectsChain, string[] splitTTSText);
+        Task<AudioRequest> TTSRequest(
+            TTSVoice voicePreference,
+            TTSPitch pitchPreference,
+            TTSSpeed speedPreference,
+            Effect effectsChain,
+            string ttsText);
+
+        Task<AudioRequest> TTSRequest(
+            TTSVoice voicePreference,
+            TTSPitch pitchPreference,
+            TTSSpeed speedPreference,
+            Effect effectsChain,
+            string[] splitTTSText);
     }
 
     /// <summary>
@@ -86,10 +97,20 @@ namespace TASagentTwitchBot.Core.TTS
             amazonClient = new AmazonPollyClient(awsCredentials, Amazon.RegionEndpoint.USWest1);
         }
 
-        public Task<AudioRequest> TTSRequest(TTSVoice voicePreference, TTSPitch pitchPreference, Effect effectsChain, string ttsText) =>
-            TTSRequest(voicePreference, pitchPreference, effectsChain, ttsText.Split(' ', options: StringSplitOptions.RemoveEmptyEntries));
+        public Task<AudioRequest> TTSRequest(
+            TTSVoice voicePreference,
+            TTSPitch pitchPreference,
+            TTSSpeed speedPreference,
+            Effect effectsChain,
+            string ttsText) =>
+            TTSRequest(voicePreference, pitchPreference, speedPreference, effectsChain, ttsText.Split(' ', options: StringSplitOptions.RemoveEmptyEntries));
 
-        public async Task<AudioRequest> TTSRequest(TTSVoice voicePreference, TTSPitch pitchPreference, Effect effectsChain, string[] splitTTSText)
+        public async Task<AudioRequest> TTSRequest(
+            TTSVoice voicePreference,
+            TTSPitch pitchPreference,
+            TTSSpeed speedPreference,
+            Effect effectsChain,
+            string[] splitTTSText)
         {
             if (splitTTSText.Any(x => x.Contains('/') || x.Contains('!')))
             {
@@ -119,7 +140,12 @@ namespace TASagentTwitchBot.Core.TTS
                                     //Output current
                                     if (stringbuilder.Length > 0)
                                     {
-                                        string filename = await GetSynthSpeech(stringbuilder.ToString(), voicePreference, pitchPreference);
+                                        string filename = await GetSynthSpeech(
+                                            stringbuilder.ToString(),
+                                            voicePreference,
+                                            pitchPreference,
+                                            speedPreference);
+
                                         audioRequestSegments.Add(new AudioFileRequest(filename, effectsChain));
                                         stringbuilder.Clear();
                                     }
@@ -142,7 +168,11 @@ namespace TASagentTwitchBot.Core.TTS
                                     //Output current
                                     if (stringbuilder.Length > 0)
                                     {
-                                        string filename = await GetSynthSpeech(stringbuilder.ToString(), voicePreference, pitchPreference);
+                                        string filename = await GetSynthSpeech(
+                                            stringbuilder.ToString(),
+                                            voicePreference,
+                                            pitchPreference,
+                                            speedPreference);
                                         audioRequestSegments.Add(new AudioFileRequest(filename, effectsChain));
                                         stringbuilder.Clear();
                                     }
@@ -170,7 +200,11 @@ namespace TASagentTwitchBot.Core.TTS
 
                 if (stringbuilder.Length > 0)
                 {
-                    string filename = await GetSynthSpeech(stringbuilder.ToString(), voicePreference, pitchPreference);
+                    string filename = await GetSynthSpeech(
+                        stringbuilder.ToString(),
+                        voicePreference,
+                        pitchPreference,
+                        speedPreference);
                     audioRequestSegments.Add(new AudioFileRequest(filename, effectsChain));
 
                     stringbuilder.Clear();
@@ -183,21 +217,29 @@ namespace TASagentTwitchBot.Core.TTS
                 //Simple parsing
 
                 string ttsSpeech = string.Join(' ', splitTTSText);
-                string filename = await GetSynthSpeech(ttsSpeech, voicePreference, pitchPreference);
+                string filename = await GetSynthSpeech(
+                    ttsSpeech,
+                    voicePreference,
+                    pitchPreference,
+                    speedPreference);
 
                 return new AudioFileRequest(filename, effectsChain);
             }
         }
 
-        protected async Task<string> GetSynthSpeech(string text, TTSVoice voicePreference, TTSPitch pitchPreference)
+        protected async Task<string> GetSynthSpeech(
+            string text,
+            TTSVoice voicePreference,
+            TTSPitch pitchPreference,
+            TTSSpeed speedPreference)
         {
             switch (voicePreference.GetTTSService())
             {
                 case TTSService.Amazon:
-                    return await GetAmazonSynthSpeech(text, voicePreference, pitchPreference);
+                    return await GetAmazonSynthSpeech(text, voicePreference, pitchPreference, speedPreference);
 
                 case TTSService.Google:
-                    return await GetGoogleSynthSpeech(text, voicePreference, pitchPreference);
+                    return await GetGoogleSynthSpeech(text, voicePreference, pitchPreference, speedPreference);
 
                 default:
                     communication.SendErrorMessage($"Unsupported TTSVoice for TTSService {voicePreference}");
@@ -205,11 +247,16 @@ namespace TASagentTwitchBot.Core.TTS
             }
         }
 
-        protected async Task<string> GetAmazonSynthSpeech(string text, TTSVoice voicePreference, TTSPitch pitchPreference, string filename = null)
+        protected async Task<string> GetAmazonSynthSpeech(
+            string text,
+            TTSVoice voicePreference,
+            TTSPitch pitchPreference,
+            TTSSpeed speedPreference,
+            string filename = null)
         {
             AmazonSynthesizeSpeechRequest synthesisRequest = voicePreference.GetAmazonTTSSpeechRequest();
             synthesisRequest.TextType = TextType.Ssml;
-            synthesisRequest.Text = PrepareAmazonSSML(text, pitchPreference);
+            synthesisRequest.Text = PrepareAmazonSSML(text, pitchPreference, speedPreference, voicePreference.GetRequiresLangTag());
 
             // Perform the Text-to-Speech request, passing the text input
             // with the selected voice parameters and audio file type
@@ -226,7 +273,6 @@ namespace TASagentTwitchBot.Core.TTS
                 filepath = Path.Combine(TTSFilesPath, $"{filename}.mp3");
             }
 
-
             using (Stream file = new FileStream(filepath, FileMode.Create))
             {
                 await synthesisResponse.AudioStream.CopyToAsync(file);
@@ -237,14 +283,20 @@ namespace TASagentTwitchBot.Core.TTS
             return filepath;
         }
 
-        protected async Task<string> GetGoogleSynthSpeech(string text, TTSVoice voicePreference, TTSPitch pitchPreference, string filename = null)
+        protected async Task<string> GetGoogleSynthSpeech(
+            string text,
+            TTSVoice voicePreference,
+            TTSPitch pitchPreference,
+            TTSSpeed speedPreference,
+            string filename = null)
         {
             VoiceSelectionParams voice = voicePreference.GetGoogleVoiceSelectionParams();
 
             AudioConfig config = new AudioConfig
             {
                 AudioEncoding = AudioEncoding.Mp3,
-                Pitch = pitchPreference.GetSemitoneShift()
+                Pitch = pitchPreference.GetSemitoneShift(),
+                SpeakingRate = speedPreference.GetGoogleSpeed()
             };
 
             //TTS
@@ -332,7 +384,7 @@ namespace TASagentTwitchBot.Core.TTS
             return $"<speak>{text}</speak>";
         }
 
-        private static string PrepareAmazonSSML(string text, TTSPitch pitch)
+        private static string PrepareAmazonSSML(string text, TTSPitch pitch, TTSSpeed speed, bool useLangTag)
         {
             //Sanitize inputs
             text = SanitizeInputText(text);
@@ -344,7 +396,12 @@ namespace TASagentTwitchBot.Core.TTS
             text = emphasisRegex.Replace(text, @"<emphasis level=""strong"">$2</emphasis>");
 
             //Handle pitch
-            text = pitch.WrapAmazonPitchParam(text);
+            text = text.WrapAmazonProsody(pitch, speed);
+
+            if (useLangTag)
+            {
+                text = $"<lang xml:lang=\"en-US\">{text}</lang>";
+            }
 
             return $"<speak>{text}</speak>";
         }
