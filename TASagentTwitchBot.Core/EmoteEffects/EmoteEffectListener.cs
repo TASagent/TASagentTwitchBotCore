@@ -12,8 +12,9 @@ namespace TASagentTwitchBot.Core.EmoteEffects
     public interface IEmoteEffectListener
     {
         void RefreshEmotes();
+        void IgnoreEmote(string emote);
+        void UnignoreEmote(string emote);
     }
-
 
     public class EmoteEffectListener : IEmoteEffectListener, IDisposable
     {
@@ -22,7 +23,6 @@ namespace TASagentTwitchBot.Core.EmoteEffects
         private readonly BTTVHelper bttvHelper;
         private readonly EmoteEffectConfiguration emoteEffectConfig;
 
-        private static readonly object fetchingLock = new object();
         private readonly Dictionary<string, string> externalEmoteLookup = new Dictionary<string, string>();
 
         private readonly SemaphoreSlim initSemaphore = new SemaphoreSlim(1);
@@ -45,13 +45,11 @@ namespace TASagentTwitchBot.Core.EmoteEffects
             communication.ReceiveMessageHandlers += ReceiveMessageHandler;
         }
 
-        public void RefreshEmotes()
-        {
-            lock (fetchingLock)
-            {
-                initialized = false;
-            }
-        }
+        public void RefreshEmotes() => initialized = false;
+
+        public void IgnoreEmote(string emote) => emoteEffectConfig.IgnoreEmote(emote);
+
+        public void UnignoreEmote(string emote) => emoteEffectConfig.UnignoreEmote(emote);
 
         private async Task InitializeAsync()
         {
@@ -118,6 +116,12 @@ namespace TASagentTwitchBot.Core.EmoteEffects
 
         private async void ReceiveMessageHandler(IRC.TwitchChatter chatter)
         {
+            //Automatically ignore the emotes of restricted users
+            if (chatter.User.AuthorizationLevel <= Commands.AuthorizationLevel.Restricted)
+            {
+                return;
+            }
+
             if (emoteEffectConfig.EnableBTTVEmotes)
             {
                 if (!initialized)
@@ -129,7 +133,7 @@ namespace TASagentTwitchBot.Core.EmoteEffects
 
                 if (chatter.Emotes.Count > 0)
                 {
-                    emotes = new List<string>(chatter.Emotes.Select(x => x.URL));
+                    emotes = new List<string>(chatter.Emotes.Where(ShouldRender).Select(x => x.URL));
                 }
                 else
                 {
@@ -166,11 +170,17 @@ namespace TASagentTwitchBot.Core.EmoteEffects
                 //No BTTV Emotes, use old method
                 if (chatter.Emotes.Count > 0)
                 {
-                    await emoteHubContext.Clients.All.SendAsync("ReceiveEmotes", chatter.Emotes.Select(x => x.URL).ToList());
+                    await emoteHubContext.Clients.All.SendAsync(
+                        "ReceiveEmotes",
+                        chatter.Emotes.Where(ShouldRender).Select(x => x.URL).ToList());
                 }
             }
         }
 
+        private bool ShouldRender(IRC.TwitchChatter.Emote emote) => !emoteEffectConfig.IgnoredEmotes.Contains(emote.Code);
+        private bool ShouldRender(string emote) => !emoteEffectConfig.IgnoredEmotes.Contains(emote);
+
+        //Searches a string segment for a BTTV emote
         private void SearchSegment(string searchSegment, List<string> emotes)
         {
             if (searchSegment.Length <= 1)
@@ -184,7 +194,7 @@ namespace TASagentTwitchBot.Core.EmoteEffects
             //Check each word against External Emotes
             foreach (string word in splitSearchSegment)
             {
-                if (externalEmoteLookup.ContainsKey(word))
+                if (externalEmoteLookup.ContainsKey(word) && ShouldRender(word))
                 {
                     emotes.Add(externalEmoteLookup[word]);
                 }

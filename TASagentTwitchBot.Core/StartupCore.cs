@@ -113,7 +113,7 @@ namespace TASagentTwitchBot.Core
             services
                 .AddSingleton<API.BTTV.BTTVHelper>()
                 .AddSingleton<EmoteEffects.EmoteEffectConfiguration>(EmoteEffects.EmoteEffectConfiguration.GetConfig())
-                .AddSingleton<EmoteEffects.EmoteEffectListener>();
+                .AddSingleton<EmoteEffects.IEmoteEffectListener, EmoteEffects.EmoteEffectListener>();
 
             services
                 .AddSingleton<API.Twitch.IBotTokenValidator, API.Twitch.BotTokenValidator>()
@@ -131,7 +131,7 @@ namespace TASagentTwitchBot.Core
                 .AddSingleton<View.IConsoleOutput, View.BasicView>()
                 .AddSingleton<IRC.INoticeHandler, IRC.NoticeHandler>()
                 .AddSingleton<IRC.IIRCLogger, IRC.IRCLogger>()
-                .AddSingleton<TTS.ITTSRenderer, TTS.TTSRenderer>()
+                .AddSingleton<TTS.ITTSRenderer, TTS.NewTTSRenderer>()
                 .AddSingleton<Timer.ITimerManager, Timer.TimerManager>()
                 .AddSingleton<PubSub.IRedemptionSystem, PubSub.RedemptionSystem>()
                 .AddSingleton<Database.IUserHelper, Database.UserHelper>();
@@ -186,6 +186,7 @@ namespace TASagentTwitchBot.Core
                 .AddSingleton<Commands.ICommandContainer, Commands.NotificationSystem>()
                 .AddSingleton<Commands.ICommandContainer, Quotes.QuoteSystem>()
                 .AddSingleton<Commands.ICommandContainer, TTS.TTSSystem>()
+                .AddSingleton<Commands.ICommandContainer, EmoteEffects.EmoteEffectSystem>()
                 .AddSingleton<Commands.ICommandContainer, Commands.TestCommandSystem>();
         }
 
@@ -282,7 +283,6 @@ namespace TASagentTwitchBot.Core
             serviceProvider.GetRequiredService<View.IConsoleOutput>();
             serviceProvider.GetRequiredService<Chat.ChatLogger>();
             serviceProvider.GetRequiredService<Commands.CommandSystem>();
-            serviceProvider.GetRequiredService<EmoteEffects.EmoteEffectListener>();
         }
 
         protected virtual void ConfigureCoreLibraryContent(

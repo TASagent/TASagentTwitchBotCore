@@ -27,13 +27,6 @@ namespace TASagentTwitchBot.Core.TTS
             TTSSpeed speedPreference,
             Effect effectsChain,
             string ttsText);
-
-        Task<AudioRequest> TTSRequest(
-            TTSVoice voicePreference,
-            TTSPitch pitchPreference,
-            TTSSpeed speedPreference,
-            Effect effectsChain,
-            string[] splitTTSText);
     }
 
     /// <summary>
@@ -49,12 +42,121 @@ namespace TASagentTwitchBot.Core.TTS
         protected readonly ICommunication communication;
         protected readonly ISoundEffectSystem soundEffectSystem;
 
-        private static readonly Regex commandRegex = new Regex(@"(\/\w+|\!\w+\(.*?\))");
-        private static readonly Regex whisperRegex = new Regex(@"\((.*?)\)");
-        private static readonly Regex emphasisRegex = new Regex(@"(\*|_)(.*?)\1");
+        //REGEX Note:
+        //  (?<!\\)
+        //    A negative-lookbehind group that asserts there is not a single backslash (\) preceeding the text
+        //  (?:\\\\)*
+        //    An anonymous capture group that greedily matches sets of escaped backslash (\\)
+        //  (?<!\\)(?:\\\\)*\!
+        //    Combining the above, this only matches non-escaped bangs
+        //    Match !
+        //    Match \\!
+        //    No Match \!
+        //  (?<![^\\](?:\\\\)*\\)
+        //    Negative lookbehind that starts with a non-backslash character, has any number of escaped backslashes, and ends with a backslash
 
-        private static readonly Regex tasRegex = new Regex(@"\b[Tt][Aa][Ss]\b");
-        private static readonly Regex tasAgentRegex = new Regex(@"\b[Tt][Aa][Ss][Aa][Gg][Ee][Nn][Tt]\b");
+        //Command Regex:
+        //  \/\w+
+        //    Matches words preceeded by forward slashes
+        //    Match /text
+        //  \!\w+(?:\(.*?\))?)
+        //    Matches words preceeded by a bang and optionally followed by parentheses enclosing arguments
+        //    Match !text
+        //    Match !text1(text2)
+        //  (\/\w+|\!\w+(?:\(.*?\))?)
+        //    Matches and captures either of the above two conditions
+        //    Match /text -> Captures "/text"
+        //    Match !text -> Captures "!text"
+        //    Match !text1(text2) -> Captures "!text1(text2)"
+        //  (?<![^\\](?:\\\\)*\\)(\/\w+|\!\w+(?:(?<!\\)(?:\\\\)*\(.*?(?<!\\)(?:\\\\)*\))?)
+        //    Matches and captures all unescaped commands and sound effects
+        //    Match /text -> Captures "/text"
+        //    Match !text -> Captures "!text"
+        //    Match !text1(text2) -> Captures "!text1(text2)"
+        //    Match \\!text1(text2) -> Captures "!text1(text2)"
+        //    No Match \/text
+        //    No Match \!text1(text2)
+        private static readonly Regex commandRegex = new Regex(@"(?<![^\\](?:\\\\)*\\)(\/\w+|\!\w+(?:(?<!\\)(?:\\\\)*\(.*?(?<!\\)(?:\\\\)*\))?)");
+
+        //Whisper Regex:
+        //  \(([^<>]*?)\)
+        //    Matches and captures text that doesn't contain a < or > enclosed in parentheses
+        //    Match (text) -> Captures "text"
+        //  (?<![^\\](?:\\\\)*\\)\(([^<>]*?(?<!\\)(?:\\\\)*)\)
+        //    Matches and captures text that doesn't contain a < or > enclosed in unescaped parentheses
+        //    Match (text) -> Captures "text"
+        //    Match \\(text) -> Captures "text"
+        //    Match (text\\) -> Captures "text\"
+        //    No Match \(text)
+        //    No Match (text\)
+        //  Replace with <whisperMarkup>$1</whisperMarkup>
+        private static readonly Regex whisperRegex = new Regex(@"(?<![^\\](?:\\\\)*\\)\(([^<>]*?(?<!\\)(?:\\\\)*)\)");
+
+        //Emphasis Regex:
+        //  (\*|_)([^<>]*?)\1
+        //    Matches all text that doesn't contain a < or > surrounded on either side by * or _
+        //    Match *text1 text2*
+        //    Match _text_
+        //    No Match *text_
+        //  (?<![^\\](?:\\\\)*\\)(\*|_)([^<>]*?(?<!\\)(?:\\\\)*)\1
+        //    Matches and captures all text that doesn't contain a < or > surrounded on either side by unescaped * or _
+        //    Match *text1 text2* -> Captures "text1 text2"
+        //    Match _text_ -> Captures "text"
+        //    Match \\*text* -> Captures "text"
+        //    Match _text\\_ -> Captures "text\\"
+        //    No Match *text_
+        //    No Match \*text*
+        //    No Match \\\*text*
+        //    No Match *text\*
+        //  Replace with <emphasis level="strong">$2</emphasis>
+        private static readonly Regex emphasisRegex = new Regex(@"(?<![^\\](?:\\\\)*\\)(\*|_)([^<>]*?(?<!\\)(?:\\\\)*)\1");
+
+        //Censored Regex:
+        //  \~([^<>]*?)\~
+        //    Matches all text that doesn't contain a < or > surrounded by a ~
+        //    Match ~text1 text2~
+        //  (?<![^\\](?:\\\\)*\\)\~([^<>]*?(?<!\\)(?:\\\\)*)\~
+        //    Matches and captures all text that doesn't contain a < or > surrounded by unescaped ~
+        //    Match ~text1 text2~ -> Captures "text1 text2"
+        //    Match \\~text~ -> Captures "text"
+        //    Match ~text\\~ -> Captures "text\\"
+        //    No Match \~text~
+        //    No Match ~text\~
+        //    No Match \\\~text~
+        //  Replace with <say-as interpret-as="expletive">$1</say-as>
+        private static readonly Regex censoredRegex = new Regex(@"(?<![^\\](?:\\\\)*\\)\~([^<>]*?(?<!\\)(?:\\\\)*)\~");
+
+        //Unescape Regex:
+        //  \\([\\\(\)\~\*\,_])
+        //    Match all instances of a backslash \ followed by any one of: \ ( ) ~ * , _
+        //    Matches \\ -> Captures "\"
+        //    Matches \( -> Captures "("
+        //    Matches \) -> Captures ")"
+        //    Matches \~ -> Captures "~"
+        //    Matches \* -> Captures "*"
+        //    Matches \, -> Captures ","
+        //    Matches \_ -> Captures "_"
+        //    No Match \
+        //  Replace with $1
+        private static readonly Regex unescapeRegex = new Regex(@"\\([\\\(\)\~\*\,_])");
+
+        //TAS Regex:
+        //  \bTAS\b
+        //    Matches the word TAS when wrapped in word boundaries
+        //    Match TAS
+        //    Match TAS,
+        //    No Match aTAS
+        //    No Match TASa
+        private static readonly Regex tasRegex = new Regex(@"\bTAS\b", RegexOptions.IgnoreCase);
+
+        //TASagent Regex:
+        //  \bTASagent\b
+        //    Matches the word TASagent when wrapped in word boundaries
+        //    Match TASagent
+        //    Match TASagent,
+        //    No Match aTASagent
+        //    No Match TASagenta
+        private static readonly Regex tasAgentRegex = new Regex(@"\bTASagent\b", RegexOptions.IgnoreCase);
 
         public TTSRenderer(
             ICommunication communication,
@@ -146,7 +248,16 @@ namespace TASagentTwitchBot.Core.TTS
                                             pitchPreference,
                                             speedPreference);
 
-                                        audioRequestSegments.Add(new AudioFileRequest(filename, effectsChain));
+                                        if (!string.IsNullOrEmpty(filename))
+                                        {
+                                            audioRequestSegments.Add(new AudioFileRequest(filename, effectsChain));
+                                        }
+                                        else
+                                        {
+                                            //Add audio delay for consistency
+                                            audioRequestSegments.Add(new AudioDelay(200));
+                                        }
+
                                         stringbuilder.Clear();
                                     }
 
@@ -173,7 +284,17 @@ namespace TASagentTwitchBot.Core.TTS
                                             voicePreference,
                                             pitchPreference,
                                             speedPreference);
-                                        audioRequestSegments.Add(new AudioFileRequest(filename, effectsChain));
+
+                                        if (!string.IsNullOrEmpty(filename))
+                                        {
+                                            audioRequestSegments.Add(new AudioFileRequest(filename, effectsChain));
+                                        }
+                                        else
+                                        {
+                                            //Add audio delay for consistency
+                                            audioRequestSegments.Add(new AudioDelay(200));
+                                        }
+
                                         stringbuilder.Clear();
                                     }
 
@@ -205,7 +326,17 @@ namespace TASagentTwitchBot.Core.TTS
                         voicePreference,
                         pitchPreference,
                         speedPreference);
-                    audioRequestSegments.Add(new AudioFileRequest(filename, effectsChain));
+
+                    if (!string.IsNullOrEmpty(filename))
+                    {
+                        audioRequestSegments.Add(new AudioFileRequest(filename, effectsChain));
+                    }
+                    else
+                    {
+                        //Add audio delay for consistency
+                        audioRequestSegments.Add(new AudioDelay(200));
+                    }
+
 
                     stringbuilder.Clear();
                 }
@@ -223,7 +354,15 @@ namespace TASagentTwitchBot.Core.TTS
                     pitchPreference,
                     speedPreference);
 
-                return new AudioFileRequest(filename, effectsChain);
+                if (!string.IsNullOrEmpty(filename))
+                {
+                    return new AudioFileRequest(filename, effectsChain);
+                }
+                else
+                {
+                    //Return audio delay for consistency
+                    return new AudioDelay(200);
+                }
             }
         }
 
@@ -254,33 +393,41 @@ namespace TASagentTwitchBot.Core.TTS
             TTSSpeed speedPreference,
             string filename = null)
         {
-            AmazonSynthesizeSpeechRequest synthesisRequest = voicePreference.GetAmazonTTSSpeechRequest();
-            synthesisRequest.TextType = TextType.Ssml;
-            synthesisRequest.Text = PrepareAmazonSSML(text, pitchPreference, speedPreference, voicePreference.GetRequiresLangTag());
-
-            // Perform the Text-to-Speech request, passing the text input
-            // with the selected voice parameters and audio file type
-            AmazonSynthesizeSpeechResponse synthesisResponse = await amazonClient.SynthesizeSpeechAsync(synthesisRequest);
-
-            // Write the binary AudioContent of the response to file.
-            string filepath;
-            if (string.IsNullOrWhiteSpace(filename))
+            try
             {
-                filepath = Path.Combine(TTSFilesPath, $"{Guid.NewGuid()}.mp3");
-            }
-            else
-            {
-                filepath = Path.Combine(TTSFilesPath, $"{filename}.mp3");
-            }
+                AmazonSynthesizeSpeechRequest synthesisRequest = voicePreference.GetAmazonTTSSpeechRequest();
+                synthesisRequest.TextType = TextType.Ssml;
+                synthesisRequest.Text = PrepareAmazonSSML(text, pitchPreference, speedPreference, voicePreference.GetRequiresLangTag());
 
-            using (Stream file = new FileStream(filepath, FileMode.Create))
-            {
-                await synthesisResponse.AudioStream.CopyToAsync(file);
-                await file.FlushAsync();
-                file.Close();
-            }
+                // Perform the Text-to-Speech request, passing the text input
+                // with the selected voice parameters and audio file type
+                AmazonSynthesizeSpeechResponse synthesisResponse = await amazonClient.SynthesizeSpeechAsync(synthesisRequest);
 
-            return filepath;
+                // Write the binary AudioContent of the response to file.
+                string filepath;
+                if (string.IsNullOrWhiteSpace(filename))
+                {
+                    filepath = Path.Combine(TTSFilesPath, $"{Guid.NewGuid()}.mp3");
+                }
+                else
+                {
+                    filepath = Path.Combine(TTSFilesPath, $"{filename}.mp3");
+                }
+
+                using (Stream file = new FileStream(filepath, FileMode.Create))
+                {
+                    await synthesisResponse.AudioStream.CopyToAsync(file);
+                    await file.FlushAsync();
+                    file.Close();
+                }
+
+                return filepath;
+            }
+            catch (Exception e)
+            {
+                communication.SendErrorMessage($"Exception caught when rendering Amazon TTS {e}");
+                return null;
+            }
         }
 
         protected async Task<string> GetGoogleSynthSpeech(
@@ -290,42 +437,50 @@ namespace TASagentTwitchBot.Core.TTS
             TTSSpeed speedPreference,
             string filename = null)
         {
-            VoiceSelectionParams voice = voicePreference.GetGoogleVoiceSelectionParams();
-
-            AudioConfig config = new AudioConfig
+            try
             {
-                AudioEncoding = AudioEncoding.Mp3,
-                Pitch = pitchPreference.GetSemitoneShift(),
-                SpeakingRate = speedPreference.GetGoogleSpeed()
-            };
+                VoiceSelectionParams voice = voicePreference.GetGoogleVoiceSelectionParams();
 
-            //TTS
-            SynthesisInput input = new SynthesisInput
-            {
-                Ssml = PrepareGoogleSSML(text)
-            };
+                AudioConfig config = new AudioConfig
+                {
+                    AudioEncoding = AudioEncoding.Mp3,
+                    Pitch = pitchPreference.GetSemitoneShift(),
+                    SpeakingRate = speedPreference.GetGoogleSpeed()
+                };
 
-            // Perform the Text-to-Speech request, passing the text input
-            // with the selected voice parameters and audio file type
-            GoogleSynthesizeSpeechResponse response = await googleClient.SynthesizeSpeechAsync(input, voice, config);
+                //TTS
+                SynthesisInput input = new SynthesisInput
+                {
+                    Ssml = PrepareGoogleSSML(text)
+                };
 
-            // Write the binary AudioContent of the response to file.
-            string filepath;
-            if (string.IsNullOrWhiteSpace(filename))
-            {
-                filepath = Path.Combine(TTSFilesPath, $"{Guid.NewGuid()}.mp3");
+                // Perform the Text-to-Speech request, passing the text input
+                // with the selected voice parameters and audio file type
+                GoogleSynthesizeSpeechResponse response = await googleClient.SynthesizeSpeechAsync(input, voice, config);
+
+                // Write the binary AudioContent of the response to file.
+                string filepath;
+                if (string.IsNullOrWhiteSpace(filename))
+                {
+                    filepath = Path.Combine(TTSFilesPath, $"{Guid.NewGuid()}.mp3");
+                }
+                else
+                {
+                    filepath = Path.Combine(TTSFilesPath, $"{filename}.mp3");
+                }
+
+                using (Stream file = new FileStream(filepath, FileMode.Create))
+                {
+                    response.AudioContent.WriteTo(file);
+                }
+
+                return filepath;
             }
-            else
+            catch (Exception e)
             {
-                filepath = Path.Combine(TTSFilesPath, $"{filename}.mp3");
+                communication.SendErrorMessage($"Exception caught when rendering Google TTS {e}");
+                return null;
             }
-
-            using (Stream file = new FileStream(filepath, FileMode.Create))
-            {
-                response.AudioContent.WriteTo(file);
-            }
-
-            return filepath;
         }
 
         private static IEnumerable<string> SplitStringByCommandRegex(string inputText)
@@ -377,6 +532,12 @@ namespace TASagentTwitchBot.Core.TTS
             //Handle emphasis
             text = emphasisRegex.Replace(text, @"<emphasis level=""strong"">$2</emphasis>");
 
+            //Handle censoring
+            text = censoredRegex.Replace(text, @"<say-as interpret-as=""expletive"">$1</say-as>");
+
+            //Handle escaped characters
+            text = unescapeRegex.Replace(text, @"$1");
+
             //Fix my name
             text = tasRegex.Replace(text, "tass");
             text = tasAgentRegex.Replace(text, "tass agent");
@@ -394,6 +555,12 @@ namespace TASagentTwitchBot.Core.TTS
 
             //Handle emphasis
             text = emphasisRegex.Replace(text, @"<emphasis level=""strong"">$2</emphasis>");
+
+            //Handle censoring
+            text = censoredRegex.Replace(text, @"<say-as interpret-as=""expletive"">$1</say-as>");
+
+            //Handle escaped characters
+            text = unescapeRegex.Replace(text, @"$1");
 
             //Handle pitch
             text = text.WrapAmazonProsody(pitch, speed);

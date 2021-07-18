@@ -111,19 +111,30 @@ namespace TASagentTwitchBot.Core.IRC
 
             if (message.tags.ContainsKey("emotes") && !string.IsNullOrEmpty(message.tags["emotes"]))
             {
+                //Tags includes emotes
+
                 string emoteString = message.tags["emotes"];
                 foreach (string emoteSubString in emoteString.Split('/'))
                 {
+                    //ForEach unique emote
+                    string code = null;
                     int splitIndex = emoteSubString.IndexOf(':');
                     string id = emoteSubString[0..splitIndex];
                     string url = $"http://static-cdn.jtvnw.net/emoticons/v1/{id}/2.0";
                     foreach (string indexSet in emoteSubString[(splitIndex + 1)..].Split(','))
                     {
+                        //ForEach instance of each emote
                         int rangeSplit = indexSet.IndexOf('-');
                         int startIndex = int.Parse(indexSet[0..rangeSplit]);
                         int endIndex = int.Parse(indexSet[(rangeSplit+1)..]);
 
-                        emotes.Add(new Emote(url, startIndex, endIndex));
+                        if (code is null)
+                        {
+                            //Extract the emote code from the message
+                            code = message.message[startIndex..(endIndex+1)];
+                        }
+
+                        emotes.Add(new Emote(code, url, startIndex, endIndex));
                     }
                 }
             }
@@ -163,7 +174,7 @@ namespace TASagentTwitchBot.Core.IRC
 
         public string ToLogString() => Whisper ? $"[{CreatedAt:G}] {User.TwitchUserName} WHISPER: {Message}" : $"[{CreatedAt:G}] {User.TwitchUserName}: {Message}";
 
-        public record Emote(string URL, int StartIndex, int EndIndex);
+        public record Emote(string Code, string URL, int StartIndex, int EndIndex);
 
         private static int OrderEmotes(Emote lhs, Emote rhs) => lhs.StartIndex.CompareTo(rhs.StartIndex);
     }
