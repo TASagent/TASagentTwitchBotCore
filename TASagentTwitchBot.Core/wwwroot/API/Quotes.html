@@ -27,18 +27,22 @@
 
       quotes.forEach(function (quote) {
         var row = $("<div class='col-12 col-md-6 col-lg-3 mb-4'>");
-        var card = quote.fakeNews ? $("<div class='card p-3 text-white bg-warning'>") :
-          Math.random() < 0.5 ? $("<div class='card p-3 text-white bg-secondary'>") : $("<div class='card p-3 text-white bg-light'>");
 
-        var cardHeader = $("<div class='card-header text-start pt-0'>").text(quote.id);
+        var lightColor = Math.random() < 0.5;
+        var textColor = quote.fakeNews ? 'text-white' : lightColor ? 'text-dark' : 'text-light';
+
+        var card = quote.fakeNews ? $("<div class='card p-3 text-white bg-warning'>") :
+          lightColor ? $("<div class='card p-3 text-white bg-light'>") : $("<div class='card p-3 text-white bg-secondary'>");
+
+        var cardHeader = $("<div class='card-header text-start " + textColor + " pt-0'>").text(quote.id);
 
         var cardBody = $("<div class='card-body'>");
 
         var cardQuote = $("<blockquote class='blockquote text-center m-0'>").text('"' + quote.quoteText + '"');
-        var cardQuotee = $("<p class='text-muted text-end m-0'>").text('- ' + quote.speaker);
+        var cardQuotee = $("<p class='" + textColor +" text-end m-0'>").text('- ' + quote.speaker);
 
         var d = new Date(quote.createTime);
-        var cardFooter = $("<div class='card-footer text-start pb-0'>").text(d.toDateString());
+        var cardFooter = $("<div class='card-footer text-start " + textColor + " pb-0'>").text(d.toDateString());
 
         cardBody.append(cardQuote);
         cardBody.append(cardQuotee);

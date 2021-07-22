@@ -92,7 +92,7 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
                         wordBuilder.Clear();
 
                         while (CanRead &&
-                            (!IsSpecialCharacter(next = Peek()) || next == '_') &&
+                            (!IsSpecialCharacter(next = Peek()) || (next == '_' && wordBuilder.Length > 0)) &&
                             !char.IsWhiteSpace(next))
                         {
                             Read();
@@ -114,7 +114,7 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
                         wordBuilder.Clear();
 
                         while (CanRead &&
-                            (!IsSpecialCharacter(next = Peek()) || next == '_') &&
+                            (!IsSpecialCharacter(next = Peek()) || (next == '_' && wordBuilder.Length > 0)) &&
                             !char.IsWhiteSpace(next))
                         {
                             Read();
