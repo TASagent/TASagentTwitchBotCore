@@ -134,35 +134,42 @@
 
                     if (result.role === "Admin") {
                         FetchAudioDevices();
+                        FetchMidiDevices();
                         RefreshSerialDevices();
                     }
                 }
 
-                RefreshDisplay();
+                RefreshMiscSettings();
+                RefreshMicEffect();
+                RefreshMicSettings();
             },
             error: function (result) { SetAuthStatus("None"); }
         });
     }
 
-    function RefreshDisplay() {
-        $.getJSON({
-            url: "/TASagentBotAPI/Mic/Enabled",
-            success: function (result) {
-                $("#input-Mic-Enabled").prop('checked', result.enabled);
-            }
-        });
-
+    function RefreshMiscSettings() {
         $.getJSON({
             url: "/TASagentBotAPI/Settings/ErrorHEnabled",
             success: function (result) {
                 $("#input-ErrorH-Enabled").prop('checked', result.enabled);
             }
         });
+    }
 
+    function RefreshMicEffect() {
         $.getJSON({
             url: "/TASagentBotAPI/Mic/Effect",
             success: function (result) {
                 $("#text-Status").val(result.effect);
+            }
+        });
+    }
+
+    function RefreshMicSettings() {
+        $.getJSON({
+            url: "/TASagentBotAPI/Mic/Enabled",
+            success: function (result) {
+                $("#input-Mic-Enabled").prop('checked', result.enabled);
             }
         });
 
@@ -226,7 +233,8 @@
                     SetAuthStatus("None");
                 } else if (response.status && response.status === 404) {
                     //No input capture module exists - Delete
-                    $("#inputCaptureCard").remove();
+                    $("#nav-settings-inputcapture-tab").remove();
+                    $("#nav-settings-inputcapture").remove();
                 }
             }
         });
@@ -255,7 +263,7 @@
         });
     }
 
-    function UpdateTimerLayoutDisplayModes() {
+    function RequestTimerLayoutDisplayModes() {
         $.getJSON({
             url: "/TASagentBotAPI/Timer/DisplayModes",
             success: function (result) {
@@ -270,9 +278,14 @@
                     timerSecondaryValueSelect.append($(`<option value="${timerLayoutValue.value}">${timerLayoutValue.display}</option>`));
                 });
             },
-            error: function (error) {
-                //Timer probably not enabled - just delete it.
-                $("#timerCard").remove();
+            error: function HandleErrorResponse(response) {
+                if (response.status && response.status === 404) {
+                    //Timer probably not enabled - just delete it.
+                    $("#nav-settings-timer-tab").remove();
+                    $("#nav-settings-timer").remove();
+                    $("#nav-tools-timer-tab").remove();
+                    $("#nav-tools-timer").remove();
+                }
             }
         });
     }
@@ -286,7 +299,7 @@
             beforeSend: ApplyAuth,
             error: HandleErrorResponse
         });
-        setTimeout(RefreshDisplay, 200);
+        setTimeout(RefreshMicSettings, 200);
     }
 
     function SubmitErrorHEnabled(enabled) {
@@ -298,7 +311,7 @@
             beforeSend: ApplyAuth,
             error: HandleErrorResponse
         });
-        setTimeout(RefreshDisplay, 200);
+        setTimeout(RefreshMiscSettings, 200);
     }
 
     function SubmitEffect(effect) {
@@ -310,7 +323,7 @@
             beforeSend: ApplyAuth,
             error: HandleErrorResponse
         });
-        setTimeout(RefreshDisplay, 200);
+        setTimeout(RefreshMicEffect, 200);
     }
 
     function SubmitNoiseGate() {
@@ -384,7 +397,10 @@
             error: HandleErrorResponse
         });
 
-        $("#input-TTSText").val("");
+        //Clear TTS input contingent on checkbox
+        if ($("#input-ClearTTSOnSend").prop('checked')) {
+            $("#input-TTSText").val("");
+        }
     }
 
     function MoveSlider() {
@@ -617,7 +633,9 @@
             beforeSend: ApplyAuth,
             error: HandleErrorResponse
         });
+    }
 
+    function FetchMidiDevices() {
         $.get({
             url: "/TASagentBotAPI/Midi/MidiDevices",
             headers: { "Authorization": "PASS NONE" },
@@ -898,7 +916,6 @@
             .withAutomaticReconnect()
             .build();
 
-
         connection.on('ReceiveNewChats', ReceiveNewChats);
         connection.on('ReceiveNewDebugs', ReceiveNewDebugs);
         connection.on('ReceiveNewEvents', ReceiveNewEvents);
@@ -980,9 +997,6 @@
             slide: MoveSlider
         })
 
-
-        $("#button-Refresh").click(RefreshDisplay);
-
         $("#button-Submit").click(Authorize);
         $("#button-SubmitTTS").click(SubmitTTS);
 
@@ -1009,8 +1023,6 @@
             $("#input-Speak").val("");
         });
 
-        $("#button-RefreshAudioDevices").click(FetchAudioDevices);
-
         var effectOutputDevice = $("#select-EffectOutputDevice");
         effectOutputDevice.change(function () { SubmitEffectOutputDevice(effectOutputDevice.val()); });
 
@@ -1034,9 +1046,6 @@
         $("#button-MidiBindInstrument").click(function () {
             SubmitMidiInstrument($("#select-MidiInstrument").val());
         });
-
-        $("#button-TimerRefresh").click(FetchTimerValues);
-        $("#button-TimerRefresh2").click(FetchTimerValues);
 
         $("#button-TimerSetTime").click(function () {
             SubmitTimerTime($("#input-TimerSetTime").val());
@@ -1077,11 +1086,26 @@
         $("#button-TimerFetchSaved").click(FetchSavedTimerValues);
         $("#button-TimerApplyLayout").click(SubmitTimerLayout);
 
-        RefreshDisplay();
-        UpdateTimerLayoutDisplayModes();
+        $("#button-RefreshMicEffect").click(RefreshMicEffect);
 
         var serialDeviceSelect = $("#select-SerialDevice");
         serialDeviceSelect.change(function () { SubmitSerialDeviceChanged(serialDeviceSelect.val()); });
-        $("#button-RefreshSerialDevices").click(RefreshSerialDevices);
+
+        //Trigger refresh on tab change
+        //Tools tabs
+        $("#nav-tools-miceffect-tab").click(RefreshMicEffect);
+        $("#nav-tools-timer-tab").click(FetchTimerValues).click(FetchSavedTimerValues);
+        //Settings tabs
+        $("#nav-settings-misc-tab").click(RefreshMiscSettings);
+        $("#nav-settings-mic-tab").click(RefreshMicSettings);
+        $("#nav-settings-inputcapture-tab").click(RefreshSerialDevices);
+        $("#nav-settings-audio-tab").click(FetchAudioDevices);
+        $("#nav-settings-midi-tab").click(FetchMidiDevices);
+        $("#nav-settings-timer-tab").click(FetchTimerValues);
+
+        RefreshMiscSettings();
+        RefreshMicEffect();
+        RefreshMicSettings();
+        RequestTimerLayoutDisplayModes();
     });
 })();

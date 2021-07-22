@@ -27,7 +27,7 @@
 <body>
   <main>
     <!--Header-->
-    <div class="container">
+    <div class="container mb-3">
       <div class="px-4 py-4 my-2 text-center">
         <h1 class="display-4 fw-bold">TASagent Bot Control Page</h1>
         <div class="col-lg-6 mx-auto">
@@ -40,7 +40,7 @@
           <button class="btn btn-primary" id="button-Submit">Log In</button>
         </div>
 
-        <div class="input-group mb-3">
+        <div class="input-group mb-2">
           <label class="input-group-text" for="text-role">Current Role</label>
           <input type="text" id="text-role" class="form-control" name="role" value="None" readonly>
         </div>
@@ -64,10 +64,13 @@
           </nav>
 
           <div class="tab-content p-2" id="nav-generalContent">
+
+            <!--General Tools Tab-->
             <div class="tab-pane fade show active" id="nav-tools-general" role="tabpanel" aria-labelledby="nav-tools-general-tab">
+
               <div class="d-flex flex-wrap mb-2">
-                <button class="btn btn-primary requirePrivAuth p-2 m-2" id="button-Skip">Skip</button>
-                <button class="btn btn-primary requireAdminAuth p-2 m-2" id="button-Quit">Quit</button>
+                <button class="btn btn-warning requirePrivAuth px-3 py-2 me-2" id="button-Skip">Skip Notification</button>
+                <button class="btn btn-danger requireAdminAuth px-3 py-2" id="button-Quit">Quit</button>
               </div>
 
               <div class="input-group mb-2">
@@ -82,19 +85,23 @@
                 <button class="btn btn-primary" id="button-SendMessage">Send</button>
               </div>
 
-              <div class="input-group mb-2 adminAuthGroup">
+              <div class="input-group adminAuthGroup">
                 <label class="input-group-text" for="input-Speak">Speak</label>
                 <input type="text" id="input-Speak" class="form-control" name="speak">
                 <button class="btn btn-primary" id="button-Speak">Send</button>
               </div>
+
             </div>
+
+            <!--TTS Tools Tab-->
             <div class="tab-pane fade" id="nav-tools-tts" role="tabpanel" aria-labelledby="nav-tools-tts-tab">
 
+              <!--TTS Voice-->
               <div class="row mb-2 g-1">
                 <div class="col">
                   <div class="form-group">
                     <label for="select-TTSVoice">Voice</label>
-                    <select id="select-TTSVoice" class="form-control">
+                    <select class="form-select form-control id=" select-TTSVoice"">
                       <option>Ivy</option>
                       <option selected>Joanna</option>
                       <option>Kendra</option>
@@ -167,7 +174,7 @@
                 <div class="col">
                   <div class="form-group">
                     <label for="select-TTSPitch">Pitch</label>
-                    <select id="select-TTSPitch" class="form-control">
+                    <select class="form-select form-control" id="select-TTSPitch">
                       <option>X-Low</option>
                       <option>Low</option>
                       <option selected>Normal</option>
@@ -180,7 +187,7 @@
                 <div class="col">
                   <div class="form-group">
                     <label for="select-TTSSpeed">Speed</label>
-                    <select id="select-TTSSpeed" class="form-control">
+                    <select class="form-select form-control" id="select-TTSSpeed">
                       <option>X-Slow</option>
                       <option>Slow</option>
                       <option selected>Normal</option>
@@ -191,39 +198,49 @@
                 </div>
               </div>
 
+              <!--TTS User-->
               <div class="form-group mb-2">
                 <label for="input-TTSUser">User</label>
                 <input type="text" class="form-control" id="input-TTSUser">
               </div>
 
+              <!--TTS Effect-->
               <div class="form-group mb-2">
                 <label for="input-TTSEffect">Effect</label>
                 <input type="text" class="form-control" id="input-TTSEffect">
               </div>
 
-
+              <!--TTS Input-->
               <div class="form-group mb-2">
                 <label for="input-TTSText">TTS Text</label>
                 <textarea class="form-control" id="input-TTSText" rows="3"></textarea>
               </div>
 
-              <button class="btn btn-primary mb-2" id="button-SubmitTTS">Submit</button>
+              <!--Clear TTS On Send-->
+              <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" id="input-ClearTTSOnSend" name="enabled" checked>
+                <label class="form-check-label" for="input-ClearTTSOnSend">Clear TTS On Send</label>
+              </div>
+
+              <button class="btn btn-primary mt-1 px-3 py-2" id="button-SubmitTTS">Send</button>
             </div>
+
+            <!--Timer Tools Tab-->
             <div class="tab-pane fade" id="nav-tools-timer" role="tabpanel" aria-labelledby="nav-tools-timer-tab">
 
-              <div class="btn-toolbar mb-4" role="toolbar" aria-label="Timer Button Toolbar">
+              <!--Timer Toolbar-->
+              <div class="btn-toolbar mb-3" role="toolbar" aria-label="Timer Button Toolbar">
                 <div class="container btn-group" role="group" aria-label="Timer Button Toolbar Group">
-                  <button class="btn btn-primary" id="button-TimerStart">Start</button>
-                  <button class="btn btn-primary" id="button-TimerStop">Stop</button>
-                  <button class="btn btn-primary" id="button-TimerReset">Reset</button>
-                  <button class="btn btn-primary" id="button-TimerLap">Lap</button>
-                  <button class="btn btn-primary" id="button-TimerUnlap">Unlap</button>
-                  <button class="btn btn-primary" id="button-TimerResetLap">Reset Lap</button>
+                  <button class="btn btn-primary px-3 py-2" id="button-TimerStart">Start</button>
+                  <button class="btn btn-primary px-3 py-2" id="button-TimerStop">Stop</button>
+                  <button class="btn btn-primary px-3 py-2" id="button-TimerReset">Reset</button>
+                  <button class="btn btn-primary px-3 py-2" id="button-TimerLap">Lap</button>
+                  <button class="btn btn-primary px-3 py-2" id="button-TimerUnlap">Unlap</button>
+                  <button class="btn btn-primary px-3 py-2" id="button-TimerResetLap">Reset Lap</button>
                 </div>
               </div>
 
-              <button class="btn btn-primary mb-4" id="button-TimerRefresh">Refresh</button>
-
+              <!--Timer Values-->
               <div class="row g-1 mb-2">
                 <div class="col-md-3">
                   <label class="form-label" for="input-TimerCumulative">Cumulative</label>
@@ -246,61 +263,67 @@
                 </div>
               </div>
 
-              <div class="input-group mb-3">
-                <span class="input-group-text" id="inputGroup-sizing-sm">Set Time</span>
+              <!--Set Timer-->
+              <div class="input-group mb-2">
+                <label class="input-group-text" for="input-TimerSetTime">Set Time</label>
                 <input type="text" id="input-TimerSetTime" aria-label="SetTime" class="form-control">
                 <button id="button-TimerSetTime" class="btn btn-primary">Set</button>
               </div>
 
-              <div class="input-group mb-3">
-                <span class="input-group-text" id="inputGroup-sizing-sm">Save Timer</span>
+              <!--Save Timer-->
+              <div class="input-group mb-2">
+                <label class="input-group-text" for="input-TimerSaveName">Save</label>
                 <input type="text" id="input-TimerSaveName" class="form-control">
                 <button id="button-TimerSave" class="btn btn-primary">Save</button>
               </div>
 
-              <div class="input-group mb-3">
-                <button id="button-TimerFetchSaved" class="btn btn-primary">Fetch</button>
-                <select type="text" id="select-TimerLoad" class="form-control"> </select>
+              <!--Load Timer-->
+              <div class="input-group">
+                <label class="input-group-text" for="select-TimerLoad">Load</label>
+                <select class="form-select form-control" type="text" id="select-TimerLoad"> </select>
                 <button id="button-TimerLoad" class="btn btn-primary" disabled>Load</button>
               </div>
             </div>
+
+            <!--Mic Effect Tools Tab-->
             <div class="tab-pane fade" id="nav-tools-miceffect" role="tabpanel" aria-labelledby="nav-tools-miceffect-tab">
 
               <!--Mic Current Effect-->
-              <div class="input-group mb-3">
+              <h5>Effect</h5>
+              <div class="input-group mb-2">
                 <label class="input-group-text" for="text-Status">Current Effect</label>
-                <input type="text" id="text-Status" class="form-control" name="release" readonly>
-                <button id="button-Refresh" class="btn btn-primary">Refresh</button>
+                <input class="form-control" id="text-Status" type="text" name="release" readonly>
+                <button class="btn btn-primary" id="button-RefreshMicEffect">Refresh</button>
               </div>
-
 
               <!--Mic Custom Effect-->
-              <div class="input-group mb-3 userAuthGroup">
-                <label class="input-group-text" for="input-CustomEffect">Custom Effect</label>
-                <input type="text" id="input-CustomEffect" class="form-control" name="customEffect">
-                <button id="button-SubmitCustomEffect" class="btn btn-primary requireAuth">Submit</button>
+              <div class="input-group mb-2">
+                <label class="input-group-text" for="input-CustomEffect">Set Effect</label>
+                <input class="form-control" type="text" id="input-CustomEffect" name="customEffect">
+                <button class="btn btn-primary requireAuth" id="button-SubmitCustomEffect">Submit</button>
               </div>
 
-              <h4 class="userAuthGroup">Presets</h4>
-              <div class="d-flex flex-wrap mb-3">
-                <button class="btn btn-primary requireAuth p-2 m-2" id="button-Normal">Normal</button>
-                <button class="btn btn-primary requireAuth p-2 m-2" id="button-HighPitch">High Pitch</button>
-                <button class="btn btn-primary requireAuth p-2 m-2" id="button-LowPitch">Low Pitch</button>
-                <button class="btn btn-primary requireAuth p-2 m-2" id="button-Modulation">Modulation</button>
-                <button class="btn btn-primary requireAuth p-2 m-2" id="button-Vocoding">Vocoding</button>
-                <button class="btn btn-primary requireAuth p-2 m-2" id="button-VocodingPitch">Vocoding And Pitch</button>
-                <button class="btn btn-primary requireAuth p-2 m-2" id="button-ReverbVeryWarm">Reverb: Very Warm</button>
-                <button class="btn btn-primary requireAuth p-2 m-2" id="button-ReverbInsideEar">Reverb: Inside Ear</button>
-                <button class="btn btn-primary requireAuth p-2 m-2" id="button-ReverbInsideBox">Reverb: Inside Box</button>
-                <button class="btn btn-primary requireAuth p-2 m-2" id="button-Chorus">Chorus</button>
-                <button class="btn btn-primary requireAuth p-2 m-2" id="button-WorkingRobot">Working Robot</button>
-                <button class="btn btn-primary requireAuth p-2 m-2" id="button-BrokenRobot">Broken Robot</button>
-                <button class="btn btn-primary requireAuth p-2 m-2" id="button-Strange">Strange</button>
+              <!--Mic Effect Presets-->
+              <h5>Presets</h5>
+              <div class="d-flex flex-wrap mb-2">
+                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-Normal">Normal</button>
+                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-HighPitch">High Pitch</button>
+                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-LowPitch">Low Pitch</button>
+                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-Modulation">Modulation</button>
+                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-Vocoding">Vocoding</button>
+                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-VocodingPitch">Vocoding And Pitch</button>
+                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-ReverbVeryWarm">Reverb: Very Warm</button>
+                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-ReverbInsideEar">Reverb: Inside Ear</button>
+                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-ReverbInsideBox">Reverb: Inside Box</button>
+                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-Chorus">Chorus</button>
+                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-WorkingRobot">Working Robot</button>
+                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-BrokenRobot">Broken Robot</button>
+                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-Strange">Strange</button>
               </div>
 
-              <h4 class="userAuthGroup">Controls</h4>
-
-              <div class="form-group mb-2 userAuthGroup">
+              <!--Mic Effect Controls-->
+              <h5>Controls</h5>
+              <div class="form-group">
                 <label for="slider-PitchSlider">Pitch</label>
                 <div class="requireAuth" id="slider-PitchSlider"></div>
               </div>
@@ -323,228 +346,219 @@
             </div>
           </nav>
 
-          <div class="tab-content p-4" id="nav-settingsContent">
+          <div class="tab-content p-2" id="nav-settingsContent">
+
+            <!--Input Capture Settings Tab-->
             <div class="tab-pane fade" id="nav-settings-inputcapture" role="tabpanel" aria-labelledby="nav-settings-inputcapture-tab">
-              <div class="form-group">
-                <label for="select-SerialDevice">Serial Devices</label>
-                <select class="form-control" id="select-SerialDevice">
+
+              <div class="input-group">
+                <label class="input-group-text" for="select-SerialDevice">Serial Devices</label>
+                <select class="form-select form-control" id="select-SerialDevice">
                   <option selected>None</option>
                 </select>
               </div>
-
-              <p></p>
-
-              <div class="form-group">
-                <button class="btn btn-primary mb-2" id="button-RefreshSerialDevices">Refresh</button>
-              </div>
             </div>
+
+            <!--Microphone Settings Tab-->
             <div class="tab-pane fade" id="nav-settings-mic" role="tabpanel" aria-labelledby="nav-settings-mic-tab">
 
               <!--Mic Enabled-->
-              <div class="form-check form-switch mb-2">
+              <div class="form-check form-switch mb-3">
                 <input class="form-check-input" type="checkbox" id="input-Mic-Enabled" name="enabled">
                 <label class="form-check-label" for="input-Mic-Enabled">Mic Handling</label>
               </div>
 
-              <button class="btn btn-primary requireAdminAuth mb-4" id="button-Submit-Mic-Enabled">Submit</button>
+              <button class="btn btn-primary requireAdminAuth mb-3 px-3 py-2" id="button-Submit-Mic-Enabled">Submit</button>
 
               <!--Mic Filters-->
-              <h5 class="adminAuthGroup">Mic Filters</h5>
+              <h5 class="adminAuthGroup">Filters</h5>
               <nav class="adminAuthGroup">
-                <div class="nav nav-tabs mb-2" id="nav-filters" role="tablist">
+                <div class="nav nav-tabs" id="nav-filters" role="tablist">
                   <button class="nav-link active" id="nav-filters-gate-tab" data-bs-toggle="tab" data-bs-target="#nav-filters-gate" type="button" role="tab" aria-controls="nav-filters-gate" aria-selected="true">Noise Gate</button>
                   <button class="nav-link" id="nav-filters-expander-tab" data-bs-toggle="tab" data-bs-target="#nav-filters-expander" type="button" role="tab" aria-controls="nav-filters-expander" aria-selected="false">Expander</button>
                   <button class="nav-link" id="nav-filters-compressor-tab" data-bs-toggle="tab" data-bs-target="#nav-filters-compressor" type="button" role="tab" aria-controls="nav-filters-compressor" aria-selected="false">Compressor</button>
                 </div>
               </nav>
 
-              <div class="tab-content my-2 adminAuthGroup" id="nav-filtersContent">
-                <div class="tab-pane container fade show active" id="nav-filters-gate" role="tabpanel" aria-labelledby="nav-filters-gate-tab">
+              <div class="tab-content my-2 p-2 adminAuthGroup" id="nav-filtersContent">
 
-                  <div class="form-check form-switch">
+                <!--Microphone - Noise Gate Settings Tab-->
+                <div class="tab-pane fade show active" id="nav-filters-gate" role="tabpanel" aria-labelledby="nav-filters-gate-tab">
+
+                  <div class="form-check form-switch mb-3">
                     <input class="form-check-input" type="checkbox" id="input-NoiseGate-Enabled" name="enabled">
                     <label class="form-check-label" for="input-NoiseGate-Enabled">Enabled</label>
                   </div>
 
-                  <p></p>
-
-                  <div class="input-group mb-3">
+                  <div class="input-group mb-2">
                     <label class="input-group-text" for="input-NoiseGate-OpenThreshold">Open Threshold (dB)</label>
                     <input type="number" id="input-NoiseGate-OpenThreshold" class="form-control" name="openThreshold" min="-60.0" max="0.0" step="1">
                   </div>
 
-                  <div class="input-group mb-3">
+                  <div class="input-group mb-2">
                     <label class="input-group-text" for="input-NoiseGate-CloseThreshold">Close Threshold (dB)</label>
                     <input type="number" id="input-NoiseGate-CloseThreshold" class="form-control" name="closeThreshold" min="-60.0" max="0.0" step="1">
                   </div>
 
-                  <div class="input-group mb-3">
+                  <div class="input-group mb-2">
                     <label class="input-group-text" for="input-NoiseGate-Attack">Attack Duration (s)</label>
                     <input type="number" id="input-NoiseGate-Attack" class="form-control" name="attack" min="0.0" max="1.0" step="0.001">
                   </div>
 
-                  <div class="input-group mb-3">
+                  <div class="input-group mb-2">
                     <label class="input-group-text" for="input-NoiseGate-Hold">Hold Duration (s)</label>
                     <input type="number" id="input-NoiseGate-Hold" class="form-control" name="hold" min="0.0" max="1.0" step="0.001">
                   </div>
 
-                  <div class="input-group mb-3">
+                  <div class="input-group mb-2">
                     <label class="input-group-text" for="input-NoiseGate-Release">Release Duration (s)</label>
                     <input type="number" id="input-NoiseGate-Release" class="form-control" name="release" min="0.0" max="1.0" step="0.001">
                   </div>
 
-                  <button class="btn btn-primary requirePrivAuth" id="button-SubmitNoiseGateSettings">Submit</button>
+                  <button class="btn btn-primary requirePrivAuth mt-1 px-3 py-2" id="button-SubmitNoiseGateSettings">Submit</button>
                 </div>
 
-                <div class="tab-pane container fade" id="nav-filters-expander" role="tabpanel" aria-labelledby="nav-filters-expander-tab">
+                <!--Microphone - Expander Settings Tab-->
+                <div class="tab-pane fade" id="nav-filters-expander" role="tabpanel" aria-labelledby="nav-filters-expander-tab">
 
-                  <div class="form-check form-switch">
+                  <div class="form-check form-switch mb-3">
                     <input class="form-check-input" type="checkbox" id="input-Expander-Enabled" name="enabled">
                     <label class="form-check-label" for="input-Expander-Enabled">Enabled</label>
                   </div>
 
-                  <p></p>
-
-                  <div class="input-group mb-3">
+                  <div class="input-group mb-2">
                     <label class="input-group-text" for="input-Expander-Ratio">Ratio</label>
                     <input type="number" id="input-Expander-Ratio" class="form-control" name="ratio" min="1" max="40" step="0.1">
                   </div>
 
-                  <div class="input-group mb-3">
+                  <div class="input-group mb-2">
                     <label class="input-group-text" for="input-Expander-Threshold">Threshold (dB)</label>
                     <input type="number" id="input-Expander-Threshold" class="form-control" name="threshold" min="-60.0" max="0.0" step="1">
                   </div>
 
-                  <div class="input-group mb-3">
+                  <div class="input-group mb-2">
                     <label class="input-group-text" for="input-Expander-Attack">Attack Duration (s)</label>
                     <input type="number" id="input-Expander-Attack" class="form-control" name="attack" min="0.0" max="1.0" step="0.001">
                   </div>
 
-                  <div class="input-group mb-3">
+                  <div class="input-group mb-2">
                     <label class="input-group-text" for="input-Expander-Release">Release Duration (s)</label>
                     <input type="number" id="input-Expander-Release" class="form-control" name="release" min="0.0" max="1.0" step="0.001">
                   </div>
 
-                  <div class="input-group mb-3" for="input-Expander-Gain">
+                  <div class="input-group mb-2" for="input-Expander-Gain">
                     <label class="input-group-text">Gain (dB)</label>
                     <input type="number" id="input-Expander-Gain" class="form-control" name="gain" min="0.0" max="60.0" step="1">
                   </div>
 
-                  <button class="btn btn-primary requirePrivAuth" id="button-SubmitExpanderSettings">Submit</button>
+                  <button class="btn btn-primary requirePrivAuth mt-1 px-3 py-2" id="button-SubmitExpanderSettings">Submit</button>
                 </div>
 
-                <div class="tab-pane container fade" id="nav-filters-compressor" role="tabpanel" aria-labelledby="nav-filters-compressor-tab">
+                <!--Microphone - Compressor Settings Tab-->
+                <div class="tab-pane fade" id="nav-filters-compressor" role="tabpanel" aria-labelledby="nav-filters-compressor-tab">
 
-                  <div class="form-check form-switch">
+                  <div class="form-check form-switch mb-3">
                     <input class="form-check-input" type="checkbox" id="input-Compressor-Enabled" name="enabled">
                     <label class="form-check-label" for="input-Compressor-Enabled">Enabled</label>
                   </div>
 
-                  <p></p>
-
-                  <div class="input-group mb-3">
+                  <div class="input-group mb-2">
                     <label class="input-group-text" for="input-Compressor-Ratio">Ratio</label>
                     <input type="number" id="input-Compressor-Ratio" class="form-control" name="ratio" min="1" max="40" step="0.1">
                   </div>
 
-                  <div class="input-group mb-3">
+                  <div class="input-group mb-2">
                     <label class="input-group-text" for="input-Compressor-Threshold">Threshold (dB)</label>
                     <input type="number" id="input-Compressor-Threshold" class="form-control" name="threshold" min="-60.0" max="0.0" step="1">
                   </div>
 
-                  <div class="input-group mb-3">
+                  <div class="input-group mb-2">
                     <label class="input-group-text" for="input-Compressor-Attack">Attack Duration (s)</label>
                     <input type="number" id="input-Compressor-Attack" class="form-control" name="attack" min="0.0" max="1.0" step="0.001">
                   </div>
 
-                  <div class="input-group mb-3">
+                  <div class="input-group mb-2">
                     <label class="input-group-text" for="input-Compressor-Release">Release Duration (s)</label>
                     <input type="number" id="input-Compressor-Release" class="form-control" name="release" min="0.0" max="1.0" step="0.001">
                   </div>
 
-                  <div class="input-group mb-3">
+                  <div class="input-group mb-2">
                     <label class="input-group-text" for="input-Compressor-Gain">Gain (dB)</label>
                     <input type="number" id="input-Compressor-Gain" class="form-control" name="gain" min="0.0" max="60.0" step="1">
                   </div>
 
-                  <button class="btn btn-primary requirePrivAuth" id="button-SubmitCompressorSettings">Submit</button>
+                  <button class="btn btn-primary requirePrivAuth mt-1 px-3 py-2" id="button-SubmitCompressorSettings">Submit</button>
 
                 </div>
               </div>
 
             </div>
+
+            <!--Audio Settings Tab-->
             <div class="tab-pane fade" id="nav-settings-audio" role="tabpanel" aria-labelledby="nav-settings-audio-tab">
 
-              <div class="row mb-2">
-                <div class="form-group">
-                  <label for="select-EffectOutputDevice">Effect Output Device</label>
-                  <select class="form-control" id="select-EffectOutputDevice">
-                    <option selected>None</option>
-                  </select>
-                </div>
+              <!--Effect Output-->
+              <div class="input-group mb-2">
+                <label class="input-group-text" for="select-EffectOutputDevice">Effect Output</label>
+                <select class="form-select form-control" id="select-EffectOutputDevice">
+                  <option selected>None</option>
+                </select>
               </div>
 
-              <div class="row mb-2">
-                <div class="form-group">
-                  <label for="select-VoiceOutputDevice">Voice Output Device</label>
-                  <select class="form-control" id="select-VoiceOutputDevice">
-                    <option selected>None</option>
-                  </select>
-                </div>
+              <!--Voice Output-->
+              <div class="input-group mb-2">
+                <label class="input-group-text" for="select-VoiceOutputDevice">Voice Output</label>
+                <select class="form-select form-control" id="select-VoiceOutputDevice">
+                  <option selected>None</option>
+                </select>
               </div>
 
-              <div class="row mb-2">
-                <div class="form-group">
-                  <label for="select-VoiceInputDevice">Voice Input Device</label>
-                  <select class="form-control" id="select-VoiceInputDevice">
-                    <option selected>None</option>
-                  </select>
-                </div>
+              <!--Voice Input-->
+              <div class="input-group mb-2">
+                <label class="input-group-text" for="select-VoiceInputDevice">Voice Input</label>
+                <select class="form-select form-control" id="select-VoiceInputDevice">
+                  <option selected>None</option>
+                </select>
               </div>
 
-              <div class="row mb-2">
-                <div class="form-group">
-                  <label for="select-MidiOutputDevice">Midi Output Device</label>
-                  <select class="form-control" id="select-MidiOutputDevice">
-                    <option selected>None</option>
-                  </select>
-                </div>
+              <!--Midi Output-->
+              <div class="input-group">
+                <label class="input-group-text" for="select-MidiOutputDevice">Midi Output</label>
+                <select class="form-select form-control" id="select-MidiOutputDevice">
+                  <option selected>None</option>
+                </select>
               </div>
-
-              <p></p>
-
-              <button class="btn btn-primary requireAdminAuth" id="button-RefreshAudioDevices">Refresh</button>
 
             </div>
+
+            <!--Midi Settings Tab-->
             <div class="tab-pane fade" id="nav-settings-midi" role="tabpanel" aria-labelledby="nav-settings-midi-tab">
 
-              <div class="row mb-2">
-                <div class="form-group">
-                  <label for="select-MidiDevice">Midi Device</label>
-                  <select class="form-control" id="select-MidiDevice">
-                    <option selected>None</option>
-                  </select>
-                </div>
+              <div class="input-group mb-2">
+                <label class="input-group-text" for="select-MidiDevice">Midi Device</label>
+                <select class="form-select form-control" id="select-MidiDevice">
+                  <option selected>None</option>
+                </select>
               </div>
 
               <div class="input-group mb-2">
                 <label class="input-group-text" for="select-MidiInstrument">Bind To Instrument</label>
-                <select class="form-control" id="select-MidiInstrument">
+                <select class="form-select form-control" id="select-MidiInstrument">
                   <option selected>None</option>
                 </select>
                 <button class="btn btn-primary" id="button-MidiBindInstrument">Bind</button>
               </div>
 
-              <div class="input-group mb-2">
+              <div class="input-group">
                 <label class="input-group-text" for="input-MidiBindSFX">Bind To Sound Effect</label>
                 <input type="text" id="input-MidiBindSFX" class="form-control" name="midiSFX">
                 <button class="btn btn-primary" id="button-MidiBindSFX">Bind</button>
               </div>
 
             </div>
-            <div class="tab-pane fade g-4" id="nav-settings-timer" role="tabpanel" aria-labelledby="nav-settings-timer-tab">
 
-              <button class="btn btn-primary mb-4" id="button-TimerRefresh2">Refresh</button>
+            <!--Timer Settings Tab-->
+            <div class="tab-pane fade g-4" id="nav-settings-timer" role="tabpanel" aria-labelledby="nav-settings-timer-tab">
 
               <div class="row py-2">
                 <div class="col">Timer</div>
@@ -555,29 +569,29 @@
               <div class="row py-2">
                 <div class="col">Main</div>
                 <div class="col"> <input type="text" id="input-TimerMainLabel" class="form-control"> </div>
-                <div class="col"> <select id="select-TimerMainValue" class="form-control"></select> </div>
+                <div class="col"> <select class="form-select form-control" id="select-TimerMainValue"></select> </div>
               </div>
 
               <div class="row py-2">
                 <div class="col">Secondary</div>
                 <div class="col"> <input type="text" id="input-TimerSecondaryLabel" class="form-control"> </div>
-                <div class="col"> <select id="select-TimerSecondaryValue" class="form-control"></select> </div>
+                <div class="col"> <select class="form-select form-control" id="select-TimerSecondaryValue"></select> </div>
               </div>
 
-              <div class="row py-2">
-                <div class="col">
-                  <button id="button-TimerApplyLayout" class="btn btn-primary">Apply Layout</button>
-                </div>
-              </div>
+              <button id="button-TimerApplyLayout" class="btn btn-primary px-3 py-2">Apply Layout</button>
 
             </div>
+
+            <!--Misc Settings Tab-->
             <div class="tab-pane fade show active" id="nav-settings-misc" role="tabpanel" aria-labelledby="nav-settings-misc-tab">
+
               <!--Error Handling-->
-              <div class="form-check form-switch mb-2">
+              <div class="form-check form-switch mb-3">
                 <input class="form-check-input" type="checkbox" id="input-ErrorH-Enabled" name="enabled">
                 <label class="form-check-label" for="input-ErrorH-Enabled">Error Handling ('u wot mate')</label>
               </div>
-              <button id="button-Submit-errorh-Enabled" class="btn btn-primary requireAdminAuth">Submit</button>
+
+              <button id="button-Submit-errorh-Enabled" class="btn btn-primary requireAdminAuth px-3 py-2">Submit</button>
 
             </div>
           </div>
@@ -586,6 +600,7 @@
     </div>
 
     <div class="container-fluid mb-4 row row-cols-1 row-cols-md-2 row-cols-lg-3 g-0">
+      <!--Chat Panel-->
       <div class="col userAuthGroup">
         <div class="card h-100">
           <div class="card-header">
@@ -598,6 +613,7 @@
         </div>
       </div>
 
+      <!--Event Panel-->
       <div class="col userAuthGroup">
         <div class="card h-100">
           <div class="card-header">
@@ -610,6 +626,7 @@
         </div>
       </div>
 
+      <!--Debug Panel-->
       <div class="col userAuthGroup">
         <div class="card h-100">
           <div class="card-header">
@@ -622,6 +639,7 @@
         </div>
       </div>
 
+      <!--Notification Panel-->
       <div class="col privAuthGroup">
         <div class="card h-100">
           <div class="card-header">
@@ -634,6 +652,7 @@
         </div>
       </div>
 
+      <!--Pending Notification Panel-->
       <div class="col privAuthGroup">
         <div class="card h-100">
           <div class="card-header">
