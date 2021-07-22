@@ -51,8 +51,8 @@ namespace TASagentTwitchBot.Core.Web.Controllers
             audioPlayer.GetCurrentEffectOutputDevice();
 
         [HttpGet]
-        public ActionResult<string> ErrorHEnabled() =>
-            botConfig.CommandConfiguration.EnableErrorHandling.ToString();
+        public ActionResult<ErrHEnabled> ErrorHEnabled() =>
+            new ErrHEnabled(botConfig.CommandConfiguration.EnableErrorHandling);
 
         [HttpPost]
         [AuthRequired(AuthDegree.Admin)]

@@ -3,16 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TASagent Bot Control Panel</title>
+
+  <title>TASagentBot Quotes</title>
+
   <link rel="icon" href="data:,">
 
   <link href="/Assets/libs/jquery-ui/1.12.1/jquery-ui.css" rel="stylesheet">
   <script src="/Assets/libs/jquery/3.6.0/jquery.min.js"></script>
   <script src="/Assets/libs/jquery-ui/1.12.1/jquery-ui.min.js"></script>
 
-  <link href="/Assets/libs/bootstrap/4/darkly/bootstrap.min.css" rel="stylesheet">
-  <script src="/Assets/libs/popper.js/1.14.3/umd/popper.min.js"></script>
-  <script src="/Assets/libs/bootstrap/4.1.3/js/bootstrap.min.js"></script>
+  <link href="/Assets/libs/bootstrap/5/cyborg/bootstrap.min.css" rel="stylesheet">
+  <script src="/Assets/libs/bootstrap/5.0.2/js/bootstrap.bundle.min.js"></script>
 
   <style>
     th, td {
@@ -22,28 +23,38 @@
 
   <script>
     function UpdateQuotes(quotes) {
-      var quoteTable = $("#quoteTable");
+      var quoteContainer = $("#quoteContainer");
 
       quotes.forEach(function (quote) {
-        var row = $("<tr>")
+        var row = $("<div class='col-12 col-md-6 col-lg-3 mb-4'>");
+        var card = quote.fakeNews ? $("<div class='card p-3 text-white bg-warning'>") :
+          Math.random() < 0.5 ? $("<div class='card p-3 text-white bg-secondary'>") : $("<div class='card p-3 text-white bg-light'>");
 
-        var idField = $("<td>").text(quote.id);
-        var quoteField = $("<td>").text('"' + quote.quoteText + '"');
-        var speakerField = $("<td>").text(quote.speaker);
-        var creatorField = $("<td>").text(quote.creator);
+        var cardHeader = $("<div class='card-header text-start pt-0'>").text(quote.id);
+
+        var cardBody = $("<div class='card-body'>");
+
+        var cardQuote = $("<blockquote class='blockquote text-center m-0'>").text('"' + quote.quoteText + '"');
+        var cardQuotee = $("<p class='text-muted text-end m-0'>").text('- ' + quote.speaker);
 
         var d = new Date(quote.createTime);
-        var dateField = $("<td>").text(d.toDateString());
+        var cardFooter = $("<div class='card-footer text-start pb-0'>").text(d.toDateString());
 
-        row.append(idField);
-        row.append(quoteField);
-        row.append(speakerField);
-        row.append(creatorField);
-        row.append(dateField);
+        cardBody.append(cardQuote);
+        cardBody.append(cardQuotee);
 
-        quoteTable.append(row);
+        if (quote.fakeNews) {
+          cardBody.append($("<p class='text-center m-0'>").text('This quote has been marked "Fake News". Believe with caution.'));
+        }
+
+        card.append(cardHeader);
+        card.append(cardBody);
+        card.append(cardFooter);
+
+        row.append(card);
+
+        quoteContainer.masonry().append(row).masonry('appended', row).masonry();
       });
-
     }
 
     function RefreshDisplay() {
@@ -58,13 +69,22 @@
   </script>
 </head>
 <body>
-  <div class="widget">
-    <h1>TASagent Bot Quotes</h1>
-    <div class="container-fluid">
-      <table id="quoteTable">
-        <tr><th>Id</th><th>Quote</th><th>Speaker</th><th>Quotht By</th><th>Creation Time</th></tr>
-      </table>
+  <main>
+    <div class="container">
+      <div class="px-4 py-4 my-2 text-center">
+        <h1 class="display-4 fw-bold">TASagentBot Quotes</h1>
+        <div class="col-lg-6 mx-auto">
+          <p class="lead mb-4">Oh, the things I've said.</p>
+        </div>
+      </div>
     </div>
-  </div>
+
+    <div class="container-fluid">
+      <div class="row" id="quoteContainer" data-masonry='{"percentPosition": true }'>
+      </div>
+    </div>
+  </main>
+
+  <script async src="/Assets/libs/masonry/4.2.2/js/masonry.pkgd.min.js"></script>
 </body>
 </html>

@@ -48,8 +48,9 @@ namespace TASagentTwitchBot.Core.Web.Controllers
                 quote.QuoteText,
                 quote.Speaker,
                 quote.Creator.TwitchUserName,
-                quote.CreateTime);
+                quote.CreateTime,
+                quote.IsFakeNews);
     }
 
-    public record QuoteDTO(int Id, string QuoteText, string Speaker, string Creator, DateTime CreateTime);
+    public record QuoteDTO(int Id, string QuoteText, string Speaker, string Creator, DateTime CreateTime, bool FakeNews);
 }

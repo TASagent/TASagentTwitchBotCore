@@ -226,6 +226,7 @@ namespace TASagentTwitchBot.Core
             endpoints.MapHub<Web.Hubs.TTSMarqueeHub>("/Hubs/TTSMarquee");
             endpoints.MapHub<Web.Hubs.TimerHub>("/Hubs/Timer");
             endpoints.MapHub<Web.Hubs.EmoteHub>("/Hubs/Emote");
+            endpoints.MapHub<Web.Hubs.DonationHub>("/Hubs/Donation");
         }
 
         protected virtual void ConfigureCoreInitial(IApplicationBuilder app, IWebHostEnvironment env)

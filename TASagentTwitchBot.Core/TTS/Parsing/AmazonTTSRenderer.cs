@@ -59,7 +59,7 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
                 synthesisRequest.TextType = TextType.Ssml;
                 synthesisRequest.Text = WrapSSML(interiorSSML);
 
-                communication.SendDebugMessage(synthesisRequest.Text);
+                //communication.SendDebugMessage(synthesisRequest.Text);
 
                 // Perform the Text-to-Speech request, passing the text input
                 // with the selected voice parameters and audio file type

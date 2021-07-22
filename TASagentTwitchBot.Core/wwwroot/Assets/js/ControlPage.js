@@ -155,7 +155,7 @@
         $.getJSON({
             url: "/TASagentBotAPI/Settings/ErrorHEnabled",
             success: function (result) {
-                $("#input-errorH-Enabled").prop('checked', result.enabled);
+                $("#input-ErrorH-Enabled").prop('checked', result.enabled);
             }
         });
 
@@ -913,7 +913,7 @@
         });
 
         $("#button-Submit-errorh-Enabled").click(function () {
-            SubmitErrorHEnabled($("#input-errorh-Enabled").prop('checked'));
+            SubmitErrorHEnabled($("#input-ErrorH-Enabled").prop('checked'));
         });
 
         $("#button-Normal").click(function () {
@@ -1036,6 +1036,7 @@
         });
 
         $("#button-TimerRefresh").click(FetchTimerValues);
+        $("#button-TimerRefresh2").click(FetchTimerValues);
 
         $("#button-TimerSetTime").click(function () {
             SubmitTimerTime($("#input-TimerSetTime").val());
