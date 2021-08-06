@@ -134,7 +134,7 @@ namespace TASagentTwitchBot.Core.API.Tiltify
             [JsonIgnore]
             private static readonly object _lock = new object();
 
-            public List<CampaignDonation> campaignDonations = new List<CampaignDonation>();
+            public List<CampaignDonation> CampaignDonations { get; set; } = new List<CampaignDonation>();
 
             [JsonIgnore]
             public HashSet<int> donations = new HashSet<int>();
@@ -147,7 +147,7 @@ namespace TASagentTwitchBot.Core.API.Tiltify
                 {
                     data = JsonSerializer.Deserialize<HandledDonationData>(File.ReadAllText(FilePath));
 
-                    foreach (CampaignDonation donation in data.campaignDonations)
+                    foreach (CampaignDonation donation in data.CampaignDonations)
                     {
                         data.donations.Add(donation.Id);
                     }
@@ -166,7 +166,7 @@ namespace TASagentTwitchBot.Core.API.Tiltify
                 if (donations.Add(donation.Id))
                 {
                     //Successfully added new donation
-                    campaignDonations.Add(donation);
+                    CampaignDonations.Add(donation);
 
                     lock (_lock)
                     {

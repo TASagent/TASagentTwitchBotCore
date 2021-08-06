@@ -128,9 +128,6 @@ namespace TASagentTwitchBot.Core.API.Tiltify
 
             IRestResponse response = await restClient.ExecuteAsync(request);
 
-            communication.SendDebugMessage(response.Content);
-
-
             return JsonSerializer.Deserialize<CampaignDonationRequest>(response.Content);
         }
 

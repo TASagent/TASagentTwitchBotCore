@@ -266,7 +266,6 @@ namespace TASagentTwitchBot.Core.Quotes
 
             //Look Up Quote
             Quote matchingQuote = await db.Quotes.FindAsync(quoteId);
-            await db.Entry(matchingQuote).Reference(x => x.Creator).LoadAsync();
 
             if (matchingQuote is null)
             {
@@ -278,6 +277,8 @@ namespace TASagentTwitchBot.Core.Quotes
 
                 return;
             }
+
+            await db.Entry(matchingQuote).Reference(x => x.Creator).LoadAsync();
 
             //Recent quotes were created in the last 15 minutes
             bool recentQuote = DateTime.Now - matchingQuote.CreateTime < new TimeSpan(hours: 0, minutes: 15, seconds: 0);

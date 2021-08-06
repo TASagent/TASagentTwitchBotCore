@@ -17,6 +17,8 @@ namespace TASagentTwitchBot.Core.Audio
 
         List<string> GetSoundEffects();
 
+        IReadOnlyList<SoundEffect> GetAllSoundEffects();
+
         ReverbIRF GetReverbEffectByAlias(string alias);
         ReverbIRF GetReverbEffectByName(string name);
 
@@ -54,6 +56,8 @@ namespace TASagentTwitchBot.Core.Audio
         public bool HasSoundEffects() => soundEffectData.SoundEffects.Count != 0;
 
         public List<string> GetSoundEffects() => new List<string>(soundEffectData.SoundEffects.Select(x => x.Name));
+
+        public IReadOnlyList<SoundEffect> GetAllSoundEffects() => soundEffectData.SoundEffects;
 
         public SoundEffect GetSoundEffectByAlias(string alias)
         {
