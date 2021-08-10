@@ -985,6 +985,18 @@
             SubmitEffect("PitchShift 0.75, FreqShift 400, Reverb Crappyspeaker");
         });
 
+        $("#button-Orb").click(function () {
+            SubmitEffect("Echo 200 0.3, PitchShift 0.75");
+        });
+
+        $("#button-OrbHigh").click(function () {
+            SubmitEffect("Echo 200 0.3, PitchShift 1.75");
+        });
+
+        $("#button-Echo").click(function () {
+            SubmitEffect("Echo 300 0.4");
+        });
+
         $("#button-SubmitCustomEffect").click(function () {
             SubmitEffect($("#input-CustomEffect").val());
         });
