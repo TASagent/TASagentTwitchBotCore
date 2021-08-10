@@ -148,7 +148,7 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
             }
         }
 
-        public char Read()
+        private char Read()
         {
             int next = textReader.Read();
 
@@ -162,7 +162,7 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
             return (char)next;
         }
 
-        public char Peek()
+        private char Peek()
         {
             int next = textReader.Peek();
 
@@ -182,7 +182,7 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
                 ',' or '.' or '!' or '?' or
                 '#' or '$' or '%' or '&' or
                 '\'' or '"' or
-                '<' or '<' or
+                '<' or '>' or
                 '(' or ')' or
                 '[' or ']' or
                 '{' or '}' => true,

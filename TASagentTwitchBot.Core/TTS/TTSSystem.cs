@@ -67,23 +67,23 @@ namespace TASagentTwitchBot.Core.TTS
 
             if (remainingCommand == null || remainingCommand.Length == 0)
             {
-                return "TTS Command - Send text as spoken audio to the stream with: !tts <text>  For more information, visit info.tas.wtf/twitchBotFeatures/tts.html";
+                return "TTS Command - Send text as spoken audio to the stream with: !tts <text>  For more information, visit https://tas.wtf/info/tts";
             }
             else if (remainingCommand[0].ToLower() == "voice")
             {
-                return "TTS Voice - Set your personal TTS Voice with !set tts voice <Voice>. Eg justin, joanna, brian, or en-US-Standard-B.  For more information, visit info.tas.wtf/twitchBotFeatures/tts.html#tts-voice-personalization";
+                return "TTS Voice - Set your personal TTS Voice with !set tts voice <Voice>. Eg justin, joanna, brian, or en-US-Standard-B.  For more information, visit https://tas.wtf/info/tts#setting-voice";
             }
             else if (remainingCommand[0].ToLower() == "pitch")
             {
-                return "TTS Pitch - Set your personal TTS Voice pitch with !set tts pitch <Pitch>. Eg normal, x-low, low, high, x-high.  For more information, visit info.tas.wtf/twitchBotFeatures/tts.html#supported-tts-pitches";
+                return "TTS Pitch - Set your personal TTS Voice pitch with !set tts pitch <Pitch>. Eg normal, x-low, low, high, x-high.  For more information, visit https://tas.wtf/info/tts#setting-pitch";
             }
             else if (remainingCommand[0].ToLower() == "speed")
             {
-                return "TTS Speed - Set your personal TTS Voice speed with !set tts speed <Speed>. Eg normal, x-slow, slow, fast, x-fast.  For more information, visit info.tas.wtf/twitchBotFeatures/tts.html#supported-tts-speeds";
+                return "TTS Speed - Set your personal TTS Voice speed with !set tts speed <Speed>. Eg normal, x-slow, slow, fast, x-fast.  For more information, visit https://tas.wtf/info/tts#setting-speed";
             }
             else if (remainingCommand[0].ToLower() == "sounds")
             {
-                return "TTS Sounds - Add sounds to your TTS with commands like /bao, /midway, /jump, /kick, /pipe, /powerup.  For more information, visit info.tas.wtf/twitchBotFeatures/tts.html#tts-sound-effects-extension";
+                return "TTS Sounds - Add sounds to your TTS with commands like /bao, /midway, /jump, /kick, /pipe, /powerup.  For more information, visit https://tas.wtf/info/tts#integrated-sound-effects";
             }
             else
             {
@@ -301,7 +301,7 @@ namespace TASagentTwitchBot.Core.TTS
                     {
                         //Invalid voice
                         communication.SendPublicChatMessage(
-                            $"TTS Voice not in approved list: info.tas.wtf/twitchBotFeatures/tts.html#supported-tts-voices " +
+                            $"TTS Voice not in approved list: https://tas.wtf/info/tts#setting-voice " +
                             $"submitted: ({remainingCommand[1]})");
                     }
                     else
@@ -335,7 +335,7 @@ namespace TASagentTwitchBot.Core.TTS
                         //Invalid pitch
                         communication.SendPublicChatMessage(
                             $"@{chatter.User.TwitchUserName}, " +
-                            $"TTS Pitch not in approved list: info.tas.wtf/twitchBotFeatures/tts.html#supported-tts-pitches " +
+                            $"TTS Pitch not in approved list: https://tas.wtf/info/tts#setting-pitch " +
                             $"submitted: ({remainingCommand[1]})");
                     }
                     else
@@ -369,7 +369,7 @@ namespace TASagentTwitchBot.Core.TTS
                         //Invalid speed
                         communication.SendPublicChatMessage(
                             $"@{chatter.User.TwitchUserName}, " +
-                            $"TTS Speed not in approved list: info.tas.wtf/twitchBotFeatures/tts.html#supported-tts-speeds " +
+                            $"TTS Speed not in approved list: https://tas.wtf/info/tts#setting-speed " +
                             $"submitted: ({remainingCommand[1]})");
                     }
                     else

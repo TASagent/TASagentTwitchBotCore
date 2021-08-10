@@ -274,6 +274,32 @@ namespace TASagentTwitchBot.Core.Audio.Effects
         public override Effect GetClone() => new ChorusEffect(minDelay, maxDelay, rate, delayType, prior?.GetClone());
     }
 
+    public class EchoEffect : Effect
+    {
+        protected override int RequestedLatency => Math.Min(20, delay);
+
+        private readonly int delay;
+        private readonly double residual;
+
+        public EchoEffect(Effect prior)
+            : this(200, 0.3, prior)
+        {
+        }
+
+        public EchoEffect(int delay, double residual, Effect prior)
+            : base(prior)
+        {
+            this.delay = delay;
+            this.residual = residual;
+        }
+
+        protected override string GetEffectString() => $"Echo {delay} {residual:N5}";
+
+        protected override IBGCStream ApplyEffect(IBGCStream input) => input.EchoEffector(0.001 * delay, residual);
+
+        public override Effect GetClone() => new EchoEffect(delay, residual, prior?.GetClone());
+    }
+
     public class ReverbEffect : Effect
     {
         protected override int RequestedLatency => 20;

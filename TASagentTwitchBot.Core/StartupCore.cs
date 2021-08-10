@@ -153,6 +153,7 @@ namespace TASagentTwitchBot.Core
 
             services
                 .AddSingleton<Audio.Effects.IAudioEffectProvider, Audio.Effects.ChorusEffectProvider>()
+                .AddSingleton<Audio.Effects.IAudioEffectProvider, Audio.Effects.EchoEffectProvider>()
                 .AddSingleton<Audio.Effects.IAudioEffectProvider, Audio.Effects.FrequencyModulationEffectProvider>()
                 .AddSingleton<Audio.Effects.IAudioEffectProvider, Audio.Effects.FrequencyShiftEffectProvider>()
                 .AddSingleton<Audio.Effects.IAudioEffectProvider, Audio.Effects.NoiseVocoderEffectProvider>()

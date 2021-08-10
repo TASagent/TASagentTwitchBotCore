@@ -171,7 +171,7 @@ namespace TASagentTwitchBot.Core.Config
         public bool SetEnabled { get; set; } = true;
 
         public bool EnableErrorHandling { get; set; } = true;
-        public string GenericHelpMessage { get; set; } = "For more information, visit https://info.tas.wtf";
+        public string GenericHelpMessage { get; set; } = "For more information, visit https://tas.wtf/info";
         public string UnknownCommandResponse { get; set; } = "You wot m8‽";
     }
 }

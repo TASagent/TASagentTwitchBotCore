@@ -506,17 +506,15 @@ namespace BGC.Audio
 
         public static IBGCStream EchoEffector(
             this IBGCStream stream,
-            double delay = 0.100,
-            double decay = 0.200,
+            double delay = 0.200,
+            double residual = 0.300,
             TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
         {
-
-            throw new NotImplementedException();
-            //return new EchoEffector(
-            //    stream: stream,
-            //    delay: delay,
-            //    decay: decay,
-            //    rmsBehavior: rmsBehavior);
+            return new EchoEffector(
+                stream: stream,
+                delay: delay,
+                residual: residual,
+                rmsBehavior: rmsBehavior);
         }
 
         public static IBGCStream AllPass(
