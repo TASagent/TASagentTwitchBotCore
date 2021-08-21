@@ -1,10 +1,10 @@
-﻿using BGC.Collections.Generic;
-using Microsoft.Extensions.DependencyInjection;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using BGC.Collections.Generic;
+using Microsoft.Extensions.DependencyInjection;
 using TASagentTwitchBot.Core.Database;
 using TASagentTwitchBot.Core.IRC;
 
