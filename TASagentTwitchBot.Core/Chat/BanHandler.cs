@@ -171,48 +171,42 @@ namespace TASagentTwitchBot.Core.Chat
                     break;
                 }
             }
+            if (!ban) return;
 
-            if (ban)
+            using IServiceScope scope = scopeFactory.CreateScope();
+
+            var db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+            var user = new BannedUser
             {
-                using IServiceScope scope = scopeFactory.CreateScope();
+                // normalize to lowercase for easier querying
+                Username = chatter.User.TwitchUserName.ToLower(),
+                RuleId = rule.BanRuleId,
+                BannedOn = DateTime.UtcNow
+            };
 
-                var db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
-                var user = new BannedUser
+            await db.AddAsync(user);
+
+            await db.SaveChangesAsync();
+            if (rule.UseTimeout)
+            {
+                var last = GetLastTimeoutOfUser(rule.BanRuleId, chatter.User.TwitchUserName);
+                double secondsDiff = rule.TimeoutCooldown + 1;
+                if (last != null)
                 {
-                    // normalize to lowercase for easier querying
-                    Username = chatter.User.TwitchUserName.ToLower(),
-                    RuleId = rule.BanRuleId,
-                    BannedOn = DateTime.UtcNow
-                };
-
-                await db.AddAsync(user);
-
-                await db.SaveChangesAsync();
-                if (rule.UseTimeout)
-                {
-                    var last = GetLastTimeoutOfUser(rule.BanRuleId, chatter.User.TwitchUserName);
-                    double secondsDiff = rule.TimeoutCooldown + 1;
-                    if (last != null)
-                    {
-                        var now = DateTime.UtcNow;
-                        secondsDiff = (now - (DateTime)last).TotalSeconds;
-                    }
-                    if (secondsDiff > rule.TimeoutCooldown || rule.TimeoutCooldown == -1)
-                    {
-                        communication.SendPublicChatMessage(string.Format("/timeout {0} {1}", chatter.User.TwitchUserName, rule.TimeoutSeconds));
-                        if (rule.ShowMessage)
-                            communication.SendPublicChatMessage($"{banMessages.PopNext()}");
-                    }
+                    var now = DateTime.UtcNow;
+                    secondsDiff = (now - (DateTime)last).TotalSeconds;
                 }
-
-                else
-                {
-                    communication.SendPublicChatMessage(string.Format("/ban {0}", chatter.User.TwitchUserName));
-                    if (rule.ShowMessage)
-                        communication.SendPublicChatMessage($"{banMessages.PopNext()}");
-                }
+                if (secondsDiff <= rule.TimeoutCooldown && rule.TimeoutCooldown != -1) return;
+                communication.SendPublicChatMessage(string.Format("/timeout {0} {1}", chatter.User.TwitchUserName, rule.TimeoutSeconds));
 
             }
+
+            else
+                communication.SendPublicChatMessage(string.Format("/ban {0}", chatter.User.TwitchUserName));
+
+            if (rule.ShowMessage)
+                communication.SendPublicChatMessage($"{banMessages.PopNext()}");
+
         }
 
     }
