@@ -11,16 +11,19 @@ namespace TASagentTwitchBot.Core.Chat
     public class ChatMessageHandler : IChatMessageHandler
     {
         private readonly Config.BotConfiguration botConfig;
-        
+
         private readonly ICommunication communication;
         private readonly Notifications.ICheerHandler cheerHandler;
         private readonly IServiceScopeFactory scopeFactory;
+        private readonly IBanHandler banHandler;
 
         public ChatMessageHandler(
             Config.BotConfiguration botConfig,
             ICommunication communication,
             Notifications.ICheerHandler cheerHandler,
-            IServiceScopeFactory scopeFactory)
+            IServiceScopeFactory scopeFactory,
+             IBanHandler banHandler
+)
         {
             this.botConfig = botConfig;
 
@@ -28,6 +31,8 @@ namespace TASagentTwitchBot.Core.Chat
             this.cheerHandler = cheerHandler;
 
             this.scopeFactory = scopeFactory;
+            this.banHandler = banHandler;
+
         }
 
         public virtual async void HandleChatMessage(IRC.IRCMessage message)
@@ -51,6 +56,10 @@ namespace TASagentTwitchBot.Core.Chat
             if (chatter.Bits != 0 && chatter.Bits >= botConfig.BitTTSThreshold)
             {
                 cheerHandler.HandleCheer(chatter.User, chatter.Message, chatter.Bits, true);
+            }
+            if (banHandler.CheckOrUpdateBanRulesExist())
+            {
+                await banHandler.HandlePossibleUserBan(chatter);
             }
         }
     }

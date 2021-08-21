@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using Microsoft.EntityFrameworkCore;
+using TASagentTwitchBot.Core.Chat;
 
 namespace TASagentTwitchBot.Core.Database
 {
@@ -11,6 +11,8 @@ namespace TASagentTwitchBot.Core.Database
         public DbSet<User> Users { get; set; }
         public DbSet<Quote> Quotes { get; set; }
         public DbSet<CustomTextCommand> CustomTextCommands { get; set; }
+        public DbSet<BanRule> BanRules { get; set; }
+        public DbSet<BannedUser> BannedUsers { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options) =>
             options.UseSqlite($"Data Source={BGC.IO.DataManagement.PathForDataFile("Config", "data.sqlite")}");
@@ -46,6 +48,30 @@ namespace TASagentTwitchBot.Core.Database
         public string Text { get; set; }
         public bool Enabled { get; set; }
     }
+
+    public class BanRule
+    {
+        public int BanRuleId { get; set; }
+
+        public string RegexRule { get; set; }
+
+        public int TimeoutSeconds { get; set; }
+        public TextContentType TextContentType { get; set; }
+        public bool ShowMessage { get; set; }
+
+        public bool UseTimeout { get; set; }
+    }
+
+    public class BannedUser
+    {
+        public int BannedUserId { get; set; }
+
+        public int RuleId { get; set; }
+        public BanRule Rule { get; set; }
+        public DateTime? Banned { get; set; }
+        public string Username { get; set; }
+    }
+
 
     public class Quote
     {

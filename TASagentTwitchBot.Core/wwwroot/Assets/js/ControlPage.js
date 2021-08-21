@@ -1,5 +1,4 @@
 ﻿(function () {
-    var authString = "";
     var connection = {};
 
     function ReceiveNewChats(messageBlock) {
@@ -94,57 +93,39 @@
         }
     }
 
-    function ApplyAuth(xhr) {
-        xhr.setRequestHeader("Authorization", authString);
-    }
+    async function AuthCallback(result) {
+        if (auth.authString && auth.authString.length > 0 &&
+            result.role === "Admin" || result.role === "Privileged") {
+            if (connection.invoke("Authenticate", auth.authString)) {
+                //Clear Logs
+                $("#chatBox").empty();
+                $("#eventBox").empty();
+                $("#debugBox").empty();
+                $("#notificationBox").empty();
+                $("#pendingNotificationBox").empty();
 
-    function HandleErrorResponse(response) {
-        if (response.status && response.status === 401) {
-            SetAuthStatus("None");
+                //Request All Data
+                ReceiveNewChats(await connection.invoke("RequestAllChats"));
+                ReceiveNewEvents(await connection.invoke("RequestAllEvents"));
+                ReceiveNewDebugs(await connection.invoke("RequestAllDebugs"));
+                ReceiveNewNotifications(await connection.invoke("RequestAllNotifications"));
+                ReceiveNewPendingNotifications(await connection.invoke("RequestAllPendingNotifications"));
+            }
+
+            if (result.role === "Admin") {
+                FetchAudioDevices();
+                FetchMidiDevices();
+                RefreshSerialDevices();
+            }
         }
+
+        RefreshMiscSettings();
+        RefreshMicEffect();
+        RefreshMicSettings();
     }
 
     function Authorize() {
-        $.post({
-            url: "/TASagentBotAPI/Auth/Authorize",
-            contentType: "application/json;charset=utf-8",
-            data: JSON.stringify({ Password: $("#input-password").val() }),
-            success: async function (result) {
-                authString = result.authString;
-
-                SetAuthStatus(result.role);
-
-                if (authString && authString.length > 0 &&
-                    result.role === "Admin" || result.role === "Privileged") {
-                    if (connection.invoke("Authenticate", authString)) {
-                        //Clear Logs
-                        $("#chatBox").empty();
-                        $("#eventBox").empty();
-                        $("#debugBox").empty();
-                        $("#notificationBox").empty();
-                        $("#pendingNotificationBox").empty();
-
-                        //Request All Data
-                        ReceiveNewChats(await connection.invoke("RequestAllChats"));
-                        ReceiveNewEvents(await connection.invoke("RequestAllEvents"));
-                        ReceiveNewDebugs(await connection.invoke("RequestAllDebugs"));
-                        ReceiveNewNotifications(await connection.invoke("RequestAllNotifications"));
-                        ReceiveNewPendingNotifications(await connection.invoke("RequestAllPendingNotifications"));
-                    }
-
-                    if (result.role === "Admin") {
-                        FetchAudioDevices();
-                        FetchMidiDevices();
-                        RefreshSerialDevices();
-                    }
-                }
-
-                RefreshMiscSettings();
-                RefreshMicEffect();
-                RefreshMicSettings();
-            },
-            error: function (result) { SetAuthStatus("None"); }
-        });
+        auth.Authorize(AuthCallback);
     }
 
     function RefreshMiscSettings() {
@@ -227,10 +208,10 @@
 
                 UpdateCurrentSerialDevice();
             },
-            beforeSend: ApplyAuth,
-            error: function HandleErrorResponse(response) {
+            beforeSend: auth.ApplyAuth,
+            error: (response) => {
                 if (response.status && response.status === 401) {
-                    SetAuthStatus("None");
+                    auth.SetAuthStatus("None");
                 } else if (response.status && response.status === 404) {
                     //No input capture module exists - Delete
                     $("#nav-settings-inputcapture-tab").remove();
@@ -246,8 +227,8 @@
             url: "/TASagentBotAPI/ControllerSpy/CurrentPort",
             headers: { "Authorization": "PASS NONE" },
             success: function (device) { $("#select-SerialDevice").val(device); },
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -258,8 +239,8 @@
             headers: { "Authorization": "PASS NONE" },
             contentType: "application/json;charset=utf-8",
             data: JSON.stringify({ Port: port }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -296,8 +277,8 @@
             headers: { "Authorization": "PASS NONE" },
             contentType: "application/json;charset=utf-8",
             data: JSON.stringify({ Enabled: enabled }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
         setTimeout(RefreshMicSettings, 200);
     }
@@ -308,8 +289,8 @@
             headers: { "Authorization": "PASS NONE" },
             contentType: "application/json;charset=utf-8",
             data: JSON.stringify({ Enabled: enabled }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
         setTimeout(RefreshMiscSettings, 200);
     }
@@ -320,8 +301,8 @@
             headers: { "Authorization": "PASS NONE" },
             contentType: "application/json;charset=utf-8",
             data: JSON.stringify({ Effect: effect }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
         setTimeout(RefreshMicEffect, 200);
     }
@@ -339,8 +320,8 @@
                 HoldDuration: $("#input-NoiseGate-Hold").val(),
                 ReleaseDuration: $("#input-NoiseGate-Release").val()
             }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -357,8 +338,8 @@
                 ReleaseDuration: $("#input-Compressor-Release").val(),
                 OutputGain: $("#input-Compressor-Gain").val()
             }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -375,8 +356,8 @@
                 ReleaseDuration: $("#input-Expander-Release").val(),
                 OutputGain: $("#input-Expander-Gain").val()
             }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -393,8 +374,8 @@
                 text: $("#input-TTSText").val(),
                 user: $("#input-TTSUser").val()
             }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
 
         //Clear TTS input contingent on checkbox
@@ -412,8 +393,8 @@
             headers: { "Authorization": "PASS NONE" },
             contentType: "application/json;charset=utf-8",
             data: JSON.stringify({ Factor: pitchValue }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -422,8 +403,8 @@
             url: "/TASagentBotAPI/Notifications/SkipNotification",
             headers: { "Authorization": "PASS NONE" },
             contentType: "application/json;charset=utf-8",
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -432,8 +413,8 @@
             url: "/TASagentBotAPI/Event/Quit",
             headers: { "Authorization": "PASS NONE" },
             contentType: "application/json;charset=utf-8",
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -443,8 +424,8 @@
             headers: { "Authorization": "PASS NONE" },
             contentType: "application/json;charset=utf-8",
             data: JSON.stringify({ Message: message }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -454,8 +435,8 @@
             headers: { "Authorization": "PASS NONE" },
             contentType: "application/json;charset=utf-8",
             data: JSON.stringify({ Message: message }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -465,8 +446,8 @@
             headers: { "Authorization": "PASS NONE" },
             contentType: "application/json;charset=utf-8",
             data: JSON.stringify({ Effect: sound }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -479,8 +460,8 @@
                 Index: index,
                 Approved: approved
             }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -490,8 +471,8 @@
             headers: { "Authorization": "PASS NONE" },
             contentType: "application/json;charset=utf-8",
             data: JSON.stringify({ Index: index }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -502,8 +483,8 @@
             headers: { "Authorization": "PASS NONE" },
             contentType: "application/json;charset=utf-8",
             data: JSON.stringify({ Device: device }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -514,8 +495,8 @@
             headers: { "Authorization": "PASS NONE" },
             contentType: "application/json;charset=utf-8",
             data: JSON.stringify({ Device: device }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -526,8 +507,8 @@
             headers: { "Authorization": "PASS NONE" },
             contentType: "application/json;charset=utf-8",
             data: JSON.stringify({ Device: device }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -538,8 +519,8 @@
             headers: { "Authorization": "PASS NONE" },
             contentType: "application/json;charset=utf-8",
             data: JSON.stringify({ Device: device }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -550,8 +531,8 @@
             headers: { "Authorization": "PASS NONE" },
             contentType: "application/json;charset=utf-8",
             data: JSON.stringify({ Device: device }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -565,8 +546,8 @@
                 Effect: value,
                 Channel: 1
             }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -580,8 +561,8 @@
                 Effect: value,
                 Channel: 1
             }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -611,8 +592,8 @@
 
                 UpdateCurrentOutputDevices();
             },
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
 
         $.get({
@@ -630,8 +611,8 @@
 
                 UpdateCurrentInputDevice();
             },
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -653,8 +634,8 @@
 
                 UpdateCurrentMidiDevice();
             },
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
 
         $.get({
@@ -670,8 +651,8 @@
                     midiInstrumentSelect.append(optionElement);
                 });
             },
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -680,24 +661,24 @@
             url: "/TASagentBotAPI/Settings/CurrentEffectOutputDevice",
             headers: { "Authorization": "PASS NONE" },
             success: function (device) { $("#select-EffectOutputDevice").val(device); },
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
 
         $.get({
             url: "/TASagentBotAPI/Settings/CurrentVoiceOutputDevice",
             headers: { "Authorization": "PASS NONE" },
             success: function (device) { $("#select-VoiceOutputDevice").val(device); },
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
 
         $.get({
             url: "/TASagentBotAPI/Midi/CurrentMidiOutputDevice",
             headers: { "Authorization": "PASS NONE" },
             success: function (device) { $("#select-MidiOutputDevice").val(device); },
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -706,8 +687,8 @@
             url: "/TASagentBotAPI/Settings/CurrentVoiceInputDevice",
             headers: { "Authorization": "PASS NONE" },
             success: function (device) { $("#select-VoiceInputDevice").val(device); },
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -716,8 +697,8 @@
             url: "/TASagentBotAPI/Midi/CurrentMidiDevice",
             headers: { "Authorization": "PASS NONE" },
             success: function (device) { $("#select-MidiDevice").val(device); },
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -730,8 +711,8 @@
             data: JSON.stringify({
                 Time: parseFloat(value)
             }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -740,8 +721,8 @@
             url: `/TASagentBotAPI/Timer/${action}`,
             headers: { "Authorization": "PASS NONE" },
             contentType: "application/json;charset=utf-8",
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -763,8 +744,8 @@
                 $("#input-TimerSecondaryLabel").val(timerState.layout.secondaryLabel);
                 $("#select-TimerSecondaryValue").val("" + timerState.layout.secondaryDisplay);
             },
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -787,8 +768,8 @@
 
                 $("#button-TimerLoad").prop("disabled", false);
             },
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -803,8 +784,8 @@
                 SecondaryLabel: $("#input-TimerSecondaryLabel").val(),
                 SecondaryDisplay: parseInt($("#select-TimerSecondaryValue").val())
             }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -817,8 +798,8 @@
             data: JSON.stringify({
                 TimerName: timer
             }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
@@ -831,85 +812,14 @@
             data: JSON.stringify({
                 TimerName: timer
             }),
-            beforeSend: ApplyAuth,
-            error: HandleErrorResponse
-        });
-    }
-
-    function SetAuthStatus(role) {
-        var isUserAuth = false;
-        var isPrivAuth = false;
-        var isAdminAuth = false;
-
-        switch (role) {
-            case "None":
-                break;
-
-            case "User":
-                isUserAuth = true;
-                break;
-
-            case "Privileged":
-                isUserAuth = true;
-                isPrivAuth = true;
-                break;
-
-            case "Admin":
-                isUserAuth = true;
-                isPrivAuth = true;
-                isAdminAuth = true;
-                break;
-
-            default:
-                console.log("Unexpected role: " + role);
-                break;
-        }
-
-        $(".requireAuth").each(function () {
-            $(this).prop('disabled', !isUserAuth);
-        });
-
-        $(".requirePrivAuth").each(function () {
-            $(this).prop('disabled', !isPrivAuth);
-        });
-
-        $(".requireAdminAuth").each(function () {
-            $(this).prop('disabled', !isAdminAuth);
-        });
-
-        $("#text-role").val(role);
-
-        $(".userAuthGroup").each(function () {
-            if (isUserAuth) {
-                $(this).show();
-            }
-            else {
-                $(this).hide();
-            }
-        });
-
-        $(".privAuthGroup").each(function () {
-            if (isPrivAuth) {
-                $(this).show();
-            }
-            else {
-                $(this).hide();
-            }
-        });
-
-        $(".adminAuthGroup").each(function () {
-            if (isAdminAuth) {
-                $(this).show();
-            }
-            else {
-                $(this).hide();
-            }
+            beforeSend: auth.ApplyAuth,
+            error: auth.HandleErrorResponse
         });
     }
 
     $(document).ready(function () {
 
-        SetAuthStatus("None");
+        auth.SetAuthStatus("None");
 
         connection = new signalR.HubConnectionBuilder()
             .withUrl("/Hubs/Monitor")
@@ -983,18 +893,6 @@
 
         $("#button-Strange").click(function () {
             SubmitEffect("PitchShift 0.75, FreqShift 400, Reverb Crappyspeaker");
-        });
-
-        $("#button-Orb").click(function () {
-            SubmitEffect("Echo 200 0.3, PitchShift 0.75");
-        });
-
-        $("#button-OrbHigh").click(function () {
-            SubmitEffect("Echo 200 0.3, PitchShift 1.75");
-        });
-
-        $("#button-Echo").click(function () {
-            SubmitEffect("Echo 300 0.4");
         });
 
         $("#button-SubmitCustomEffect").click(function () {

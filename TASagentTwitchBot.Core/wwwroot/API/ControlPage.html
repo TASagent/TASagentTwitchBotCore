@@ -1,674 +1,716 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" href="data:,">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="data:,">
 
-  <title>TASagentBot Control Panel</title>
+    <title>TASagentBot Control Panel</title>
 
-  <link href="/Assets/libs/jquery-ui/1.12.1/jquery-ui.css" rel="stylesheet">
-  <script src="/Assets/libs/jquery/3.6.0/jquery.min.js"></script>
-  <script src="/Assets/libs/jquery-ui/1.12.1/jquery-ui.min.js"></script>
-  <script src="/Assets/libs/signalr/5.0.5/signalr.min.js"></script>
+    <link href="/Assets/libs/jquery-ui/1.12.1/jquery-ui.css" rel="stylesheet">
+    <script src="/Assets/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="/Assets/libs/jquery-ui/1.12.1/jquery-ui.min.js"></script>
+    <script src="/Assets/libs/signalr/5.0.5/signalr.min.js"></script>
 
-  <link href="/Assets/libs/bootstrap/5/cyborg/bootstrap.min.css" rel="stylesheet">
-  <script src="/Assets/libs/bootstrap/5.0.2/js/bootstrap.bundle.min.js"></script>
-  <script src="/Assets/js/timerUtil.js"></script>
-  <script src="/Assets/js/ControlPage.js"></script>
+    <link href="/Assets/libs/bootstrap/5/cyborg/bootstrap.min.css" rel="stylesheet">
+    <script src="/Assets/libs/bootstrap/5.0.2/js/bootstrap.bundle.min.js"></script>
+    <script src="/Assets/js/auth.js"></script>
 
-  <style>
-    .list-group {
-      max-height: 300px;
-      overflow-y: auto;
-    }
-  </style>
+    <script src="/Assets/js/timerUtil.js"></script>
+    <script src="/Assets/js/banrules.js"></script>
+    <script src="/Assets/js/ControlPage.js"></script>
+
+    <style>
+        .list-group {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
 </head>
 <body>
-  <main>
-    <!--Header-->
-    <div class="container mb-3">
-      <div class="px-4 py-4 my-2 text-center">
-        <h1 class="display-4 fw-bold">TASagent Bot Control Page</h1>
-        <div class="col-lg-6 mx-auto">
-          <p class="lead mb-4">Manipulate features of TASagent's stream.</p>
+    <main>
+        <!--Header-->
+        <div class="container mb-3">
+            <div class="px-4 py-4 my-2 text-center">
+                <h1 class="display-4 fw-bold">TASagent Bot Control Page</h1>
+                <div class="col-lg-6 mx-auto">
+                    <p class="lead mb-4">Manipulate features of TASagent's stream.</p>
+                </div>
+
+                <div class="input-group mb-3">
+                    <label class="input-group-text" for="input-password">Password</label>
+                    <input type="password" id="input-password" class="form-control" name="password">
+                    <button class="btn btn-primary" id="button-Submit">Log In</button>
+                </div>
+
+                <div class="input-group mb-2">
+                    <label class="input-group-text" for="text-role">Current Role</label>
+                    <input type="text" id="text-role" class="form-control" name="role" value="None" readonly>
+                </div>
+            </div>
         </div>
 
-        <div class="input-group mb-3">
-          <label class="input-group-text" for="input-password">Password</label>
-          <input type="password" id="input-password" class="form-control" name="password">
-          <button class="btn btn-primary" id="button-Submit">Log In</button>
+        <!--Controls-->
+        <div class="container-fluid mb-4">
+            <div class="row row-cols-1 row-cols-md-2">
+
+                <!--Tools-->
+                <div class="col userAuthGroup">
+                    <h3>Tools</h3>
+                    <nav>
+                        <div class="nav nav-tabs" id="nav-tools" role="tablist">
+                            <button class="nav-link active" id="nav-tools-general-tab" data-bs-toggle="tab" data-bs-target="#nav-tools-general" type="button" role="tab" aria-controls="nav-tools-general" aria-selected="true">General</button>
+                            <button class="nav-link" id="nav-tools-tts-tab" data-bs-toggle="tab" data-bs-target="#nav-tools-tts" type="button" role="tab" aria-controls="nav-tools-tts" aria-selected="false">TTS</button>
+                            <button class="nav-link" id="nav-tools-miceffect-tab" data-bs-toggle="tab" data-bs-target="#nav-tools-miceffect" type="button" role="tab" aria-controls="nav-tools-miceffect" aria-selected="false">Mic Effects</button>
+                            <button class="nav-link adminAuthGroup" id="nav-tools-timer-tab" data-bs-toggle="tab" data-bs-target="#nav-tools-timer" type="button" role="tab" aria-controls="nav-tools-timer" aria-selected="false">Timer</button>
+                        </div>
+                    </nav>
+
+                    <div class="tab-content p-2" id="nav-generalContent">
+
+                        <!--General Tools Tab-->
+                        <div class="tab-pane fade show active" id="nav-tools-general" role="tabpanel" aria-labelledby="nav-tools-general-tab">
+
+                            <div class="d-flex flex-wrap mb-2">
+                                <button class="btn btn-warning requirePrivAuth px-3 py-2 me-2" id="button-Skip">Skip Notification</button>
+                                <button class="btn btn-danger requireAdminAuth px-3 py-2" id="button-Quit">Quit</button>
+                            </div>
+
+                            <div class="input-group mb-2">
+                                <label class="input-group-text" for="input-PlaySound">Play Sound</label>
+                                <input type="text" id="input-PlaySound" class="form-control" name="playSound">
+                                <button class="btn btn-primary requirePrivAuth" id="button-PlaySound">Play</button>
+                            </div>
+
+                            <div class="input-group mb-2">
+                                <label class="input-group-text" for="input-SendMessage">Debug Message</label>
+                                <input type="text" id="input-SendMessage" class="form-control" name="sendMessage">
+                                <button class="btn btn-primary" id="button-SendMessage">Send</button>
+                            </div>
+
+                            <div class="input-group adminAuthGroup">
+                                <label class="input-group-text" for="input-Speak">Speak</label>
+                                <input type="text" id="input-Speak" class="form-control" name="speak">
+                                <button class="btn btn-primary" id="button-Speak">Send</button>
+                            </div>
+
+                        </div>
+
+                        <!--TTS Tools Tab-->
+                        <div class="tab-pane fade" id="nav-tools-tts" role="tabpanel" aria-labelledby="nav-tools-tts-tab">
+
+                            <!--TTS Voice-->
+                            <div class="row mb-2 g-1">
+                                <div class="col">
+                                    <div class="form-group">
+                                        <label for="select-TTSVoice">Voice</label>
+                                        <select class="form-select form-control id=" select-TTSVoice"">
+                                            <option>Ivy</option>
+                                            <option selected>Joanna</option>
+                                            <option>Kendra</option>
+                                            <option>Kimberly</option>
+                                            <option>Salli</option>
+                                            <option>Joey</option>
+                                            <option>Justin</option>
+                                            <option>Matthew</option>
+                                            <option>Amy</option>
+                                            <option>Emma</option>
+                                            <option>Brian</option>
+                                            <option>Geraint</option>
+                                            <option>Nicole</option>
+                                            <option>Russell</option>
+                                            <option>Aditi</option>
+                                            <option>Raveena</option>
+                                            <option>Celine</option>
+                                            <option>Lea</option>
+                                            <option>Mathieu</option>
+                                            <option>Chantal</option>
+                                            <option>Marlene</option>
+                                            <option>Vicki</option>
+                                            <option>Hans</option>
+                                            <option>Bianca</option>
+                                            <option>Carla</option>
+                                            <option>Giorgio</option>
+                                            <option>Ewa</option>
+                                            <option>Maja</option>
+                                            <option>Jacek</option>
+                                            <option>Jan</option>
+                                            <option>Vitoria</option>
+                                            <option>Camila</option>
+                                            <option>Ricardo</option>
+                                            <option>Tatyana</option>
+                                            <option>Maxim</option>
+                                            <option>Lucia</option>
+                                            <option>Conchita</option>
+                                            <option>Enrique</option>
+                                            <option>Mia</option>
+                                            <option>Penelope</option>
+                                            <option>Lupe</option>
+                                            <option>Miguel</option>
+                                            <option>Filiz</option>
+                                            <option>Gwyneth</option>
+                                            <option>en-US-Standard-B</option>
+                                            <option>en-US-Standard-C</option>
+                                            <option>en-US-Standard-D</option>
+                                            <option>en-US-Standard-E</option>
+                                            <option>en-US-Standard-G</option>
+                                            <option>en-US-Standard-H</option>
+                                            <option>en-US-Standard-I</option>
+                                            <option>en-US-Standard-J</option>
+                                            <option>en-GB-Standard-A</option>
+                                            <option>en-GB-Standard-B</option>
+                                            <option>en-GB-Standard-C</option>
+                                            <option>en-GB-Standard-D</option>
+                                            <option>en-GB-Standard-F</option>
+                                            <option>en-AU-Standard-A</option>
+                                            <option>en-AU-Standard-B</option>
+                                            <option>en-AU-Standard-C</option>
+                                            <option>en-AU-Standard-D</option>
+                                            <option>en-IN-Standard-A</option>
+                                            <option>en-IN-Standard-B</option>
+                                            <option>en-IN-Standard-C</option>
+                                            <option>en-IN-Standard-D</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="col">
+                                    <div class="form-group">
+                                        <label for="select-TTSPitch">Pitch</label>
+                                        <select class="form-select form-control" id="select-TTSPitch">
+                                            <option>X-Low</option>
+                                            <option>Low</option>
+                                            <option selected>Normal</option>
+                                            <option>High</option>
+                                            <option>X-High</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="col">
+                                    <div class="form-group">
+                                        <label for="select-TTSSpeed">Speed</label>
+                                        <select class="form-select form-control" id="select-TTSSpeed">
+                                            <option>X-Slow</option>
+                                            <option>Slow</option>
+                                            <option selected>Normal</option>
+                                            <option>Fast</option>
+                                            <option>X-Fast</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!--TTS User-->
+                            <div class="form-group mb-2">
+                                <label for="input-TTSUser">User</label>
+                                <input type="text" class="form-control" id="input-TTSUser">
+                            </div>
+
+                            <!--TTS Effect-->
+                            <div class="form-group mb-2">
+                                <label for="input-TTSEffect">Effect</label>
+                                <input type="text" class="form-control" id="input-TTSEffect">
+                            </div>
+
+                            <!--TTS Input-->
+                            <div class="form-group mb-2">
+                                <label for="input-TTSText">TTS Text</label>
+                                <textarea class="form-control" id="input-TTSText" rows="3"></textarea>
+                            </div>
+
+                            <!--Clear TTS On Send-->
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="input-ClearTTSOnSend" name="enabled" checked>
+                                <label class="form-check-label" for="input-ClearTTSOnSend">Clear TTS On Send</label>
+                            </div>
+
+                            <button class="btn btn-primary mt-1 px-3 py-2" id="button-SubmitTTS">Send</button>
+                        </div>
+
+                        <!--Timer Tools Tab-->
+                        <div class="tab-pane fade" id="nav-tools-timer" role="tabpanel" aria-labelledby="nav-tools-timer-tab">
+
+                            <!--Timer Toolbar-->
+                            <div class="btn-toolbar mb-3" role="toolbar" aria-label="Timer Button Toolbar">
+                                <div class="container btn-group" role="group" aria-label="Timer Button Toolbar Group">
+                                    <button class="btn btn-primary px-3 py-2" id="button-TimerStart">Start</button>
+                                    <button class="btn btn-primary px-3 py-2" id="button-TimerStop">Stop</button>
+                                    <button class="btn btn-primary px-3 py-2" id="button-TimerReset">Reset</button>
+                                    <button class="btn btn-primary px-3 py-2" id="button-TimerLap">Lap</button>
+                                    <button class="btn btn-primary px-3 py-2" id="button-TimerUnlap">Unlap</button>
+                                    <button class="btn btn-primary px-3 py-2" id="button-TimerResetLap">Reset Lap</button>
+                                </div>
+                            </div>
+
+                            <!--Timer Values-->
+                            <div class="row g-1 mb-2">
+                                <div class="col-md-3">
+                                    <label class="form-label" for="input-TimerCumulative">Cumulative</label>
+                                    <input type="text" id="input-TimerCumulative" class="form-control" readonly>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label" for="input-TimerCurrent">Current</label>
+                                    <input type="text" id="input-TimerCurrent" class="form-control" readonly>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label" for="input-TimerLap">Lap Start</label>
+                                    <input type="text" id="input-TimerLap" class="form-control" readonly>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label" for="input-TimerLapCount">Lap Count</label>
+                                    <input type="text" id="input-TimerLapCount" class="form-control" readonly>
+                                </div>
+                            </div>
+
+                            <!--Set Timer-->
+                            <div class="input-group mb-2">
+                                <label class="input-group-text" for="input-TimerSetTime">Set Time</label>
+                                <input type="text" id="input-TimerSetTime" aria-label="SetTime" class="form-control">
+                                <button id="button-TimerSetTime" class="btn btn-primary">Set</button>
+                            </div>
+
+                            <!--Save Timer-->
+                            <div class="input-group mb-2">
+                                <label class="input-group-text" for="input-TimerSaveName">Save</label>
+                                <input type="text" id="input-TimerSaveName" class="form-control">
+                                <button id="button-TimerSave" class="btn btn-primary">Save</button>
+                            </div>
+
+                            <!--Load Timer-->
+                            <div class="input-group">
+                                <label class="input-group-text" for="select-TimerLoad">Load</label>
+                                <select class="form-select form-control" type="text" id="select-TimerLoad"> </select>
+                                <button id="button-TimerLoad" class="btn btn-primary" disabled>Load</button>
+                            </div>
+                        </div>
+
+                        <!--Mic Effect Tools Tab-->
+                        <div class="tab-pane fade" id="nav-tools-miceffect" role="tabpanel" aria-labelledby="nav-tools-miceffect-tab">
+
+                            <!--Mic Current Effect-->
+                            <h5>Effect</h5>
+                            <div class="input-group mb-2">
+                                <label class="input-group-text" for="text-Status">Current Effect</label>
+                                <input class="form-control" id="text-Status" type="text" name="release" readonly>
+                                <button class="btn btn-primary" id="button-RefreshMicEffect">Refresh</button>
+                            </div>
+
+                            <!--Mic Custom Effect-->
+                            <div class="input-group mb-2">
+                                <label class="input-group-text" for="input-CustomEffect">Set Effect</label>
+                                <input class="form-control" type="text" id="input-CustomEffect" name="customEffect">
+                                <button class="btn btn-primary requireAuth" id="button-SubmitCustomEffect">Submit</button>
+                            </div>
+
+                            <!--Mic Effect Presets-->
+                            <h5>Presets</h5>
+                            <div class="d-flex flex-wrap mb-2">
+                                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-Normal">Normal</button>
+                                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-HighPitch">High Pitch</button>
+                                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-LowPitch">Low Pitch</button>
+                                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-Modulation">Modulation</button>
+                                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-Vocoding">Vocoding</button>
+                                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-VocodingPitch">Vocoding And Pitch</button>
+                                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-ReverbVeryWarm">Reverb: Very Warm</button>
+                                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-ReverbInsideEar">Reverb: Inside Ear</button>
+                                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-ReverbInsideBox">Reverb: Inside Box</button>
+                                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-Chorus">Chorus</button>
+                                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-WorkingRobot">Working Robot</button>
+                                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-BrokenRobot">Broken Robot</button>
+                                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-Strange">Strange</button>
+                                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-Orb">Orb</button>
+                                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-OrbHigh">Orb (High)</button>
+                                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-Echo">Echo</button>
+                            </div>
+
+                            <!--Mic Effect Controls-->
+                            <h5>Controls</h5>
+                            <div class="form-group">
+                                <label for="slider-PitchSlider">Pitch</label>
+                                <div class="requireAuth" id="slider-PitchSlider"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!--Settings-->
+                <div class="col userAuthGroup">
+                    <h3>Settings</h3>
+                    <nav>
+                        <div class="nav nav-tabs" id="nav-settings" role="tablist">
+                            <button class="nav-link active" id="nav-settings-misc-tab" data-bs-toggle="tab" data-bs-target="#nav-settings-misc" type="button" role="tab" aria-controls="nav-settings-misc" aria-selected="true">Misc</button>
+                            <button class="nav-link" id="nav-settings-mic-tab" data-bs-toggle="tab" data-bs-target="#nav-settings-mic" type="button" role="tab" aria-controls="nav-settings-mic" aria-selected="false">Microphone</button>
+                            <button class="nav-link adminAuthGroup" id="nav-settings-inputcapture-tab" data-bs-toggle="tab" data-bs-target="#nav-settings-inputcapture" type="button" role="tab" aria-controls="nav-settings-inputcapture">Input Capture</button>
+                            <button class="nav-link adminAuthGroup" id="nav-settings-audio-tab" data-bs-toggle="tab" data-bs-target="#nav-settings-audio" type="button" role="tab" aria-controls="nav-settings-audio" aria-selected="false">Audio Devices</button>
+                            <button class="nav-link adminAuthGroup" id="nav-settings-midi-tab" data-bs-toggle="tab" data-bs-target="#nav-settings-midi" type="button" role="tab" aria-controls="nav-settings-midi" aria-selected="false">Midi</button>
+                            <button class="nav-link adminAuthGroup" id="nav-settings-timer-tab" data-bs-toggle="tab" data-bs-target="#nav-settings-timer" type="button" role="tab" aria-controls="nav-settings-timer" aria-selected="false">Timer</button>
+                            <button class="nav-link adminAuthGroup" id="nav-settings-banrules-tab" data-bs-toggle="tab" data-bs-target="#nav-settings-banrules" type="button" role="tab" aria-controls="nav-settings-banrules" aria-selected="false">Ban Rules</button>
+
+                        </div>
+                    </nav>
+
+                    <div class="tab-content p-2" id="nav-settingsContent">
+
+                        <!--Input Capture Settings Tab-->
+                        <div class="tab-pane fade" id="nav-settings-inputcapture" role="tabpanel" aria-labelledby="nav-settings-inputcapture-tab">
+
+                            <div class="input-group">
+                                <label class="input-group-text" for="select-SerialDevice">Serial Devices</label>
+                                <select class="form-select form-control" id="select-SerialDevice">
+                                    <option selected>None</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!--Microphone Settings Tab-->
+                        <div class="tab-pane fade" id="nav-settings-mic" role="tabpanel" aria-labelledby="nav-settings-mic-tab">
+
+                            <!--Mic Enabled-->
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="input-Mic-Enabled" name="enabled">
+                                <label class="form-check-label" for="input-Mic-Enabled">Mic Handling</label>
+                            </div>
+
+                            <button class="btn btn-primary requireAdminAuth mb-3 px-3 py-2" id="button-Submit-Mic-Enabled">Submit</button>
+
+                            <!--Mic Filters-->
+                            <h5 class="adminAuthGroup">Filters</h5>
+                            <nav class="adminAuthGroup">
+                                <div class="nav nav-tabs" id="nav-filters" role="tablist">
+                                    <button class="nav-link active" id="nav-filters-gate-tab" data-bs-toggle="tab" data-bs-target="#nav-filters-gate" type="button" role="tab" aria-controls="nav-filters-gate" aria-selected="true">Noise Gate</button>
+                                    <button class="nav-link" id="nav-filters-expander-tab" data-bs-toggle="tab" data-bs-target="#nav-filters-expander" type="button" role="tab" aria-controls="nav-filters-expander" aria-selected="false">Expander</button>
+                                    <button class="nav-link" id="nav-filters-compressor-tab" data-bs-toggle="tab" data-bs-target="#nav-filters-compressor" type="button" role="tab" aria-controls="nav-filters-compressor" aria-selected="false">Compressor</button>
+                                </div>
+                            </nav>
+
+                            <div class="tab-content my-2 p-2 adminAuthGroup" id="nav-filtersContent">
+
+                                <!--Microphone - Noise Gate Settings Tab-->
+                                <div class="tab-pane fade show active" id="nav-filters-gate" role="tabpanel" aria-labelledby="nav-filters-gate-tab">
+
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="input-NoiseGate-Enabled" name="enabled">
+                                        <label class="form-check-label" for="input-NoiseGate-Enabled">Enabled</label>
+                                    </div>
+
+                                    <div class="input-group mb-2">
+                                        <label class="input-group-text" for="input-NoiseGate-OpenThreshold">Open Threshold (dB)</label>
+                                        <input type="number" id="input-NoiseGate-OpenThreshold" class="form-control" name="openThreshold" min="-60.0" max="0.0" step="1">
+                                    </div>
+
+                                    <div class="input-group mb-2">
+                                        <label class="input-group-text" for="input-NoiseGate-CloseThreshold">Close Threshold (dB)</label>
+                                        <input type="number" id="input-NoiseGate-CloseThreshold" class="form-control" name="closeThreshold" min="-60.0" max="0.0" step="1">
+                                    </div>
+
+                                    <div class="input-group mb-2">
+                                        <label class="input-group-text" for="input-NoiseGate-Attack">Attack Duration (s)</label>
+                                        <input type="number" id="input-NoiseGate-Attack" class="form-control" name="attack" min="0.0" max="1.0" step="0.001">
+                                    </div>
+
+                                    <div class="input-group mb-2">
+                                        <label class="input-group-text" for="input-NoiseGate-Hold">Hold Duration (s)</label>
+                                        <input type="number" id="input-NoiseGate-Hold" class="form-control" name="hold" min="0.0" max="1.0" step="0.001">
+                                    </div>
+
+                                    <div class="input-group mb-2">
+                                        <label class="input-group-text" for="input-NoiseGate-Release">Release Duration (s)</label>
+                                        <input type="number" id="input-NoiseGate-Release" class="form-control" name="release" min="0.0" max="1.0" step="0.001">
+                                    </div>
+
+                                    <button class="btn btn-primary requirePrivAuth mt-1 px-3 py-2" id="button-SubmitNoiseGateSettings">Submit</button>
+                                </div>
+
+                                <!--Microphone - Expander Settings Tab-->
+                                <div class="tab-pane fade" id="nav-filters-expander" role="tabpanel" aria-labelledby="nav-filters-expander-tab">
+
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="input-Expander-Enabled" name="enabled">
+                                        <label class="form-check-label" for="input-Expander-Enabled">Enabled</label>
+                                    </div>
+
+                                    <div class="input-group mb-2">
+                                        <label class="input-group-text" for="input-Expander-Ratio">Ratio</label>
+                                        <input type="number" id="input-Expander-Ratio" class="form-control" name="ratio" min="1" max="40" step="0.1">
+                                    </div>
+
+                                    <div class="input-group mb-2">
+                                        <label class="input-group-text" for="input-Expander-Threshold">Threshold (dB)</label>
+                                        <input type="number" id="input-Expander-Threshold" class="form-control" name="threshold" min="-60.0" max="0.0" step="1">
+                                    </div>
+
+                                    <div class="input-group mb-2">
+                                        <label class="input-group-text" for="input-Expander-Attack">Attack Duration (s)</label>
+                                        <input type="number" id="input-Expander-Attack" class="form-control" name="attack" min="0.0" max="1.0" step="0.001">
+                                    </div>
+
+                                    <div class="input-group mb-2">
+                                        <label class="input-group-text" for="input-Expander-Release">Release Duration (s)</label>
+                                        <input type="number" id="input-Expander-Release" class="form-control" name="release" min="0.0" max="1.0" step="0.001">
+                                    </div>
+
+                                    <div class="input-group mb-2" for="input-Expander-Gain">
+                                        <label class="input-group-text">Gain (dB)</label>
+                                        <input type="number" id="input-Expander-Gain" class="form-control" name="gain" min="0.0" max="60.0" step="1">
+                                    </div>
+
+                                    <button class="btn btn-primary requirePrivAuth mt-1 px-3 py-2" id="button-SubmitExpanderSettings">Submit</button>
+                                </div>
+
+                                <!--Microphone - Compressor Settings Tab-->
+                                <div class="tab-pane fade" id="nav-filters-compressor" role="tabpanel" aria-labelledby="nav-filters-compressor-tab">
+
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="input-Compressor-Enabled" name="enabled">
+                                        <label class="form-check-label" for="input-Compressor-Enabled">Enabled</label>
+                                    </div>
+
+                                    <div class="input-group mb-2">
+                                        <label class="input-group-text" for="input-Compressor-Ratio">Ratio</label>
+                                        <input type="number" id="input-Compressor-Ratio" class="form-control" name="ratio" min="1" max="40" step="0.1">
+                                    </div>
+
+                                    <div class="input-group mb-2">
+                                        <label class="input-group-text" for="input-Compressor-Threshold">Threshold (dB)</label>
+                                        <input type="number" id="input-Compressor-Threshold" class="form-control" name="threshold" min="-60.0" max="0.0" step="1">
+                                    </div>
+
+                                    <div class="input-group mb-2">
+                                        <label class="input-group-text" for="input-Compressor-Attack">Attack Duration (s)</label>
+                                        <input type="number" id="input-Compressor-Attack" class="form-control" name="attack" min="0.0" max="1.0" step="0.001">
+                                    </div>
+
+                                    <div class="input-group mb-2">
+                                        <label class="input-group-text" for="input-Compressor-Release">Release Duration (s)</label>
+                                        <input type="number" id="input-Compressor-Release" class="form-control" name="release" min="0.0" max="1.0" step="0.001">
+                                    </div>
+
+                                    <div class="input-group mb-2">
+                                        <label class="input-group-text" for="input-Compressor-Gain">Gain (dB)</label>
+                                        <input type="number" id="input-Compressor-Gain" class="form-control" name="gain" min="0.0" max="60.0" step="1">
+                                    </div>
+
+                                    <button class="btn btn-primary requirePrivAuth mt-1 px-3 py-2" id="button-SubmitCompressorSettings">Submit</button>
+
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!--Audio Settings Tab-->
+                        <div class="tab-pane fade" id="nav-settings-audio" role="tabpanel" aria-labelledby="nav-settings-audio-tab">
+
+                            <!--Effect Output-->
+                            <div class="input-group mb-2">
+                                <label class="input-group-text" for="select-EffectOutputDevice">Effect Output</label>
+                                <select class="form-select form-control" id="select-EffectOutputDevice">
+                                    <option selected>None</option>
+                                </select>
+                            </div>
+
+                            <!--Voice Output-->
+                            <div class="input-group mb-2">
+                                <label class="input-group-text" for="select-VoiceOutputDevice">Voice Output</label>
+                                <select class="form-select form-control" id="select-VoiceOutputDevice">
+                                    <option selected>None</option>
+                                </select>
+                            </div>
+
+                            <!--Voice Input-->
+                            <div class="input-group mb-2">
+                                <label class="input-group-text" for="select-VoiceInputDevice">Voice Input</label>
+                                <select class="form-select form-control" id="select-VoiceInputDevice">
+                                    <option selected>None</option>
+                                </select>
+                            </div>
+
+                            <!--Midi Output-->
+                            <div class="input-group">
+                                <label class="input-group-text" for="select-MidiOutputDevice">Midi Output</label>
+                                <select class="form-select form-control" id="select-MidiOutputDevice">
+                                    <option selected>None</option>
+                                </select>
+                            </div>
+
+                        </div>
+
+                        <!--Midi Settings Tab-->
+                        <div class="tab-pane fade" id="nav-settings-midi" role="tabpanel" aria-labelledby="nav-settings-midi-tab">
+
+                            <div class="input-group mb-2">
+                                <label class="input-group-text" for="select-MidiDevice">Midi Device</label>
+                                <select class="form-select form-control" id="select-MidiDevice">
+                                    <option selected>None</option>
+                                </select>
+                            </div>
+
+                            <div class="input-group mb-2">
+                                <label class="input-group-text" for="select-MidiInstrument">Bind To Instrument</label>
+                                <select class="form-select form-control" id="select-MidiInstrument">
+                                    <option selected>None</option>
+                                </select>
+                                <button class="btn btn-primary" id="button-MidiBindInstrument">Bind</button>
+                            </div>
+
+                            <div class="input-group">
+                                <label class="input-group-text" for="input-MidiBindSFX">Bind To Sound Effect</label>
+                                <input type="text" id="input-MidiBindSFX" class="form-control" name="midiSFX">
+                                <button class="btn btn-primary" id="button-MidiBindSFX">Bind</button>
+                            </div>
+
+                        </div>
+
+                        <!--Timer Settings Tab-->
+                        <div class="tab-pane fade g-4" id="nav-settings-timer" role="tabpanel" aria-labelledby="nav-settings-timer-tab">
+
+                            <div class="row py-2">
+                                <div class="col">Timer</div>
+                                <div class="col">Label</div>
+                                <div class="col">Value</div>
+                            </div>
+
+                            <div class="row py-2">
+                                <div class="col">Main</div>
+                                <div class="col"> <input type="text" id="input-TimerMainLabel" class="form-control"> </div>
+                                <div class="col"> <select class="form-select form-control" id="select-TimerMainValue"></select> </div>
+                            </div>
+
+                            <div class="row py-2">
+                                <div class="col">Secondary</div>
+                                <div class="col"> <input type="text" id="input-TimerSecondaryLabel" class="form-control"> </div>
+                                <div class="col"> <select class="form-select form-control" id="select-TimerSecondaryValue"></select> </div>
+                            </div>
+
+                            <button id="button-TimerApplyLayout" class="btn btn-primary px-3 py-2">Apply Layout</button>
+
+                        </div>
+
+
+                        <div class="tab-pane fade g-4" id="nav-settings-banrules" role="tabpanel" aria-labelledby="nav-settings-banrules-tab">
+
+                            <div id="banrule-container">
+                                <!--<div class="input-group mb-2">
+                                    <label class="input-group-text">^\D{2,6}of(steel|steal)\d{3,}$</label>
+                                    <button class="btn btn-primary" id="button-rmrule-0">Remove</button>
+                                </div>-->
+                            </div>
+
+                            <div class="input-group mb-2">
+                                <label class="input-group-text" for="input-banrule">rule regex</label>
+                                <input class="form-input form-control" id="input-banrule" />
+                            </div>
+                            <div class="input-group mb-2">
+                                <label class="input-group-text" for="select-messageType">Text type</label>
+                                <select class="form-select form-control" id="select-messageType">
+                                    <option value="0" selected>Username</option>
+                                    <option value="1">Chat Message</option>
+                                    <option value="2">Private Message</option>
+                                </select>
+                            </div>
+                            <div class="input-group mb-2">
+                                <label class="input-group-text" for="input-timeoutseconds">Timeout duration (seconds)</label>
+                                <input type="number" id="input-timeoutseconds" class="form-control" name="timeoutSeconds" min="1" max=" 1209600" step="1">
+                            </div>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="input-timeout" name="enabled">
+                                <label class="form-check-label" for="input-timeout">Use timeout</label>
+                            </div>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="input-showmsg" name="enabled">
+                                <label class="form-check-label" for="input-showmsg">Show Confirmation Message</label>
+                            </div>
+                            <button class="btn btn-primary" id="button-addbanrule">Add</button>
+                        </div>
+
+                        <!--Misc Settings Tab-->
+                        <div class="tab-pane fade show active" id="nav-settings-misc" role="tabpanel" aria-labelledby="nav-settings-misc-tab">
+
+                            <!--Error Handling-->
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="input-ErrorH-Enabled" name="enabled">
+                                <label class="form-check-label" for="input-ErrorH-Enabled">Error Handling ('u wot mate')</label>
+                            </div>
+
+                            <button id="button-Submit-errorh-Enabled" class="btn btn-primary requireAdminAuth px-3 py-2">Submit</button>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="input-group mb-2">
-          <label class="input-group-text" for="text-role">Current Role</label>
-          <input type="text" id="text-role" class="form-control" name="role" value="None" readonly>
-        </div>
-      </div>
-    </div>
+        <div class="container-fluid mb-4 row row-cols-1 row-cols-md-2 row-cols-lg-3 g-0">
+            <!--Chat Panel-->
+            <div class="col userAuthGroup">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4 class="card-title mb-0">Chat</h4>
+                    </div>
 
-    <!--Controls-->
-    <div class="container-fluid mb-4">
-      <div class="row row-cols-1 row-cols-md-2">
-
-        <!--Tools-->
-        <div class="col userAuthGroup">
-          <h3>Tools</h3>
-          <nav>
-            <div class="nav nav-tabs" id="nav-tools" role="tablist">
-              <button class="nav-link active" id="nav-tools-general-tab" data-bs-toggle="tab" data-bs-target="#nav-tools-general" type="button" role="tab" aria-controls="nav-tools-general" aria-selected="true">General</button>
-              <button class="nav-link" id="nav-tools-tts-tab" data-bs-toggle="tab" data-bs-target="#nav-tools-tts" type="button" role="tab" aria-controls="nav-tools-tts" aria-selected="false">TTS</button>
-              <button class="nav-link" id="nav-tools-miceffect-tab" data-bs-toggle="tab" data-bs-target="#nav-tools-miceffect" type="button" role="tab" aria-controls="nav-tools-miceffect" aria-selected="false">Mic Effects</button>
-              <button class="nav-link adminAuthGroup" id="nav-tools-timer-tab" data-bs-toggle="tab" data-bs-target="#nav-tools-timer" type="button" role="tab" aria-controls="nav-tools-timer" aria-selected="false">Timer</button>
-            </div>
-          </nav>
-
-          <div class="tab-content p-2" id="nav-generalContent">
-
-            <!--General Tools Tab-->
-            <div class="tab-pane fade show active" id="nav-tools-general" role="tabpanel" aria-labelledby="nav-tools-general-tab">
-
-              <div class="d-flex flex-wrap mb-2">
-                <button class="btn btn-warning requirePrivAuth px-3 py-2 me-2" id="button-Skip">Skip Notification</button>
-                <button class="btn btn-danger requireAdminAuth px-3 py-2" id="button-Quit">Quit</button>
-              </div>
-
-              <div class="input-group mb-2">
-                <label class="input-group-text" for="input-PlaySound">Play Sound</label>
-                <input type="text" id="input-PlaySound" class="form-control" name="playSound">
-                <button class="btn btn-primary requirePrivAuth" id="button-PlaySound">Play</button>
-              </div>
-
-              <div class="input-group mb-2">
-                <label class="input-group-text" for="input-SendMessage">Debug Message</label>
-                <input type="text" id="input-SendMessage" class="form-control" name="sendMessage">
-                <button class="btn btn-primary" id="button-SendMessage">Send</button>
-              </div>
-
-              <div class="input-group adminAuthGroup">
-                <label class="input-group-text" for="input-Speak">Speak</label>
-                <input type="text" id="input-Speak" class="form-control" name="speak">
-                <button class="btn btn-primary" id="button-Speak">Send</button>
-              </div>
-
+                    <div class="card-body">
+                        <ul id="chatBox" class="list-group"> </ul>
+                    </div>
+                </div>
             </div>
 
-            <!--TTS Tools Tab-->
-            <div class="tab-pane fade" id="nav-tools-tts" role="tabpanel" aria-labelledby="nav-tools-tts-tab">
+            <!--Event Panel-->
+            <div class="col userAuthGroup">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4 class="card-title mb-0">Events</h4>
+                    </div>
 
-              <!--TTS Voice-->
-              <div class="row mb-2 g-1">
-                <div class="col">
-                  <div class="form-group">
-                    <label for="select-TTSVoice">Voice</label>
-                    <select class="form-select form-control id=" select-TTSVoice"">
-                      <option>Ivy</option>
-                      <option selected>Joanna</option>
-                      <option>Kendra</option>
-                      <option>Kimberly</option>
-                      <option>Salli</option>
-                      <option>Joey</option>
-                      <option>Justin</option>
-                      <option>Matthew</option>
-                      <option>Amy</option>
-                      <option>Emma</option>
-                      <option>Brian</option>
-                      <option>Geraint</option>
-                      <option>Nicole</option>
-                      <option>Russell</option>
-                      <option>Aditi</option>
-                      <option>Raveena</option>
-                      <option>Celine</option>
-                      <option>Lea</option>
-                      <option>Mathieu</option>
-                      <option>Chantal</option>
-                      <option>Marlene</option>
-                      <option>Vicki</option>
-                      <option>Hans</option>
-                      <option>Bianca</option>
-                      <option>Carla</option>
-                      <option>Giorgio</option>
-                      <option>Ewa</option>
-                      <option>Maja</option>
-                      <option>Jacek</option>
-                      <option>Jan</option>
-                      <option>Vitoria</option>
-                      <option>Camila</option>
-                      <option>Ricardo</option>
-                      <option>Tatyana</option>
-                      <option>Maxim</option>
-                      <option>Lucia</option>
-                      <option>Conchita</option>
-                      <option>Enrique</option>
-                      <option>Mia</option>
-                      <option>Penelope</option>
-                      <option>Lupe</option>
-                      <option>Miguel</option>
-                      <option>Filiz</option>
-                      <option>Gwyneth</option>
-                      <option>en-US-Standard-B</option>
-                      <option>en-US-Standard-C</option>
-                      <option>en-US-Standard-D</option>
-                      <option>en-US-Standard-E</option>
-                      <option>en-US-Standard-G</option>
-                      <option>en-US-Standard-H</option>
-                      <option>en-US-Standard-I</option>
-                      <option>en-US-Standard-J</option>
-                      <option>en-GB-Standard-A</option>
-                      <option>en-GB-Standard-B</option>
-                      <option>en-GB-Standard-C</option>
-                      <option>en-GB-Standard-D</option>
-                      <option>en-GB-Standard-F</option>
-                      <option>en-AU-Standard-A</option>
-                      <option>en-AU-Standard-B</option>
-                      <option>en-AU-Standard-C</option>
-                      <option>en-AU-Standard-D</option>
-                      <option>en-IN-Standard-A</option>
-                      <option>en-IN-Standard-B</option>
-                      <option>en-IN-Standard-C</option>
-                      <option>en-IN-Standard-D</option>
-                    </select>
-                  </div>
+                    <div class="card-body">
+                        <ul id="eventBox" class="list-group"> </ul>
+                    </div>
                 </div>
-
-                <div class="col">
-                  <div class="form-group">
-                    <label for="select-TTSPitch">Pitch</label>
-                    <select class="form-select form-control" id="select-TTSPitch">
-                      <option>X-Low</option>
-                      <option>Low</option>
-                      <option selected>Normal</option>
-                      <option>High</option>
-                      <option>X-High</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div class="col">
-                  <div class="form-group">
-                    <label for="select-TTSSpeed">Speed</label>
-                    <select class="form-select form-control" id="select-TTSSpeed">
-                      <option>X-Slow</option>
-                      <option>Slow</option>
-                      <option selected>Normal</option>
-                      <option>Fast</option>
-                      <option>X-Fast</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <!--TTS User-->
-              <div class="form-group mb-2">
-                <label for="input-TTSUser">User</label>
-                <input type="text" class="form-control" id="input-TTSUser">
-              </div>
-
-              <!--TTS Effect-->
-              <div class="form-group mb-2">
-                <label for="input-TTSEffect">Effect</label>
-                <input type="text" class="form-control" id="input-TTSEffect">
-              </div>
-
-              <!--TTS Input-->
-              <div class="form-group mb-2">
-                <label for="input-TTSText">TTS Text</label>
-                <textarea class="form-control" id="input-TTSText" rows="3"></textarea>
-              </div>
-
-              <!--Clear TTS On Send-->
-              <div class="form-check form-switch mb-2">
-                <input class="form-check-input" type="checkbox" id="input-ClearTTSOnSend" name="enabled" checked>
-                <label class="form-check-label" for="input-ClearTTSOnSend">Clear TTS On Send</label>
-              </div>
-
-              <button class="btn btn-primary mt-1 px-3 py-2" id="button-SubmitTTS">Send</button>
             </div>
 
-            <!--Timer Tools Tab-->
-            <div class="tab-pane fade" id="nav-tools-timer" role="tabpanel" aria-labelledby="nav-tools-timer-tab">
+            <!--Debug Panel-->
+            <div class="col userAuthGroup">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4 class="card-title mb-0">Debug</h4>
+                    </div>
 
-              <!--Timer Toolbar-->
-              <div class="btn-toolbar mb-3" role="toolbar" aria-label="Timer Button Toolbar">
-                <div class="container btn-group" role="group" aria-label="Timer Button Toolbar Group">
-                  <button class="btn btn-primary px-3 py-2" id="button-TimerStart">Start</button>
-                  <button class="btn btn-primary px-3 py-2" id="button-TimerStop">Stop</button>
-                  <button class="btn btn-primary px-3 py-2" id="button-TimerReset">Reset</button>
-                  <button class="btn btn-primary px-3 py-2" id="button-TimerLap">Lap</button>
-                  <button class="btn btn-primary px-3 py-2" id="button-TimerUnlap">Unlap</button>
-                  <button class="btn btn-primary px-3 py-2" id="button-TimerResetLap">Reset Lap</button>
+                    <div class="card-body">
+                        <ul id="debugBox" class="list-group"> </ul>
+                    </div>
                 </div>
-              </div>
-
-              <!--Timer Values-->
-              <div class="row g-1 mb-2">
-                <div class="col-md-3">
-                  <label class="form-label" for="input-TimerCumulative">Cumulative</label>
-                  <input type="text" id="input-TimerCumulative" class="form-control" readonly>
-                </div>
-
-                <div class="col-md-3">
-                  <label class="form-label" for="input-TimerCurrent">Current</label>
-                  <input type="text" id="input-TimerCurrent" class="form-control" readonly>
-                </div>
-
-                <div class="col-md-3">
-                  <label class="form-label" for="input-TimerLap">Lap Start</label>
-                  <input type="text" id="input-TimerLap" class="form-control" readonly>
-                </div>
-
-                <div class="col-md-3">
-                  <label class="form-label" for="input-TimerLapCount">Lap Count</label>
-                  <input type="text" id="input-TimerLapCount" class="form-control" readonly>
-                </div>
-              </div>
-
-              <!--Set Timer-->
-              <div class="input-group mb-2">
-                <label class="input-group-text" for="input-TimerSetTime">Set Time</label>
-                <input type="text" id="input-TimerSetTime" aria-label="SetTime" class="form-control">
-                <button id="button-TimerSetTime" class="btn btn-primary">Set</button>
-              </div>
-
-              <!--Save Timer-->
-              <div class="input-group mb-2">
-                <label class="input-group-text" for="input-TimerSaveName">Save</label>
-                <input type="text" id="input-TimerSaveName" class="form-control">
-                <button id="button-TimerSave" class="btn btn-primary">Save</button>
-              </div>
-
-              <!--Load Timer-->
-              <div class="input-group">
-                <label class="input-group-text" for="select-TimerLoad">Load</label>
-                <select class="form-select form-control" type="text" id="select-TimerLoad"> </select>
-                <button id="button-TimerLoad" class="btn btn-primary" disabled>Load</button>
-              </div>
             </div>
 
-            <!--Mic Effect Tools Tab-->
-            <div class="tab-pane fade" id="nav-tools-miceffect" role="tabpanel" aria-labelledby="nav-tools-miceffect-tab">
+            <!--Notification Panel-->
+            <div class="col privAuthGroup">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4 class="card-title mb-0">Notifications</h4>
+                    </div>
 
-              <!--Mic Current Effect-->
-              <h5>Effect</h5>
-              <div class="input-group mb-2">
-                <label class="input-group-text" for="text-Status">Current Effect</label>
-                <input class="form-control" id="text-Status" type="text" name="release" readonly>
-                <button class="btn btn-primary" id="button-RefreshMicEffect">Refresh</button>
-              </div>
-
-              <!--Mic Custom Effect-->
-              <div class="input-group mb-2">
-                <label class="input-group-text" for="input-CustomEffect">Set Effect</label>
-                <input class="form-control" type="text" id="input-CustomEffect" name="customEffect">
-                <button class="btn btn-primary requireAuth" id="button-SubmitCustomEffect">Submit</button>
-              </div>
-
-              <!--Mic Effect Presets-->
-              <h5>Presets</h5>
-              <div class="d-flex flex-wrap mb-2">
-                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-Normal">Normal</button>
-                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-HighPitch">High Pitch</button>
-                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-LowPitch">Low Pitch</button>
-                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-Modulation">Modulation</button>
-                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-Vocoding">Vocoding</button>
-                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-VocodingPitch">Vocoding And Pitch</button>
-                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-ReverbVeryWarm">Reverb: Very Warm</button>
-                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-ReverbInsideEar">Reverb: Inside Ear</button>
-                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-ReverbInsideBox">Reverb: Inside Box</button>
-                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-Chorus">Chorus</button>
-                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-WorkingRobot">Working Robot</button>
-                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-BrokenRobot">Broken Robot</button>
-                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-Strange">Strange</button>
-                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-Orb">Orb</button>
-                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-OrbHigh">Orb (High)</button>
-                <button class="btn btn-primary requireAuth px-3 py-2 m-1" id="button-Echo">Echo</button>
-              </div>
-
-              <!--Mic Effect Controls-->
-              <h5>Controls</h5>
-              <div class="form-group">
-                <label for="slider-PitchSlider">Pitch</label>
-                <div class="requireAuth" id="slider-PitchSlider"></div>
-              </div>
+                    <div class="card-body">
+                        <ul id="notificationBox" class="list-group"> </ul>
+                    </div>
+                </div>
             </div>
-          </div>
+
+            <!--Pending Notification Panel-->
+            <div class="col privAuthGroup">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4 class="card-title mb-0">Pending Notifications</h4>
+                    </div>
+
+                    <div class="card-body">
+                        <ul id="pendingNotificationBox" class="list-group"> </ul>
+                    </div>
+                </div>
+            </div>
 
         </div>
-
-        <!--Settings-->
-        <div class="col userAuthGroup">
-          <h3>Settings</h3>
-          <nav>
-            <div class="nav nav-tabs" id="nav-settings" role="tablist">
-              <button class="nav-link active" id="nav-settings-misc-tab" data-bs-toggle="tab" data-bs-target="#nav-settings-misc" type="button" role="tab" aria-controls="nav-settings-misc" aria-selected="true">Misc</button>
-              <button class="nav-link" id="nav-settings-mic-tab" data-bs-toggle="tab" data-bs-target="#nav-settings-mic" type="button" role="tab" aria-controls="nav-settings-mic" aria-selected="false">Microphone</button>
-              <button class="nav-link adminAuthGroup" id="nav-settings-inputcapture-tab" data-bs-toggle="tab" data-bs-target="#nav-settings-inputcapture" type="button" role="tab" aria-controls="nav-settings-inputcapture">Input Capture</button>
-              <button class="nav-link adminAuthGroup" id="nav-settings-audio-tab" data-bs-toggle="tab" data-bs-target="#nav-settings-audio" type="button" role="tab" aria-controls="nav-settings-audio" aria-selected="false">Audio Devices</button>
-              <button class="nav-link adminAuthGroup" id="nav-settings-midi-tab" data-bs-toggle="tab" data-bs-target="#nav-settings-midi" type="button" role="tab" aria-controls="nav-settings-midi" aria-selected="false">Midi</button>
-              <button class="nav-link adminAuthGroup" id="nav-settings-timer-tab" data-bs-toggle="tab" data-bs-target="#nav-settings-timer" type="button" role="tab" aria-controls="nav-settings-timer" aria-selected="false">Timer</button>
-            </div>
-          </nav>
-
-          <div class="tab-content p-2" id="nav-settingsContent">
-
-            <!--Input Capture Settings Tab-->
-            <div class="tab-pane fade" id="nav-settings-inputcapture" role="tabpanel" aria-labelledby="nav-settings-inputcapture-tab">
-
-              <div class="input-group">
-                <label class="input-group-text" for="select-SerialDevice">Serial Devices</label>
-                <select class="form-select form-control" id="select-SerialDevice">
-                  <option selected>None</option>
-                </select>
-              </div>
-            </div>
-
-            <!--Microphone Settings Tab-->
-            <div class="tab-pane fade" id="nav-settings-mic" role="tabpanel" aria-labelledby="nav-settings-mic-tab">
-
-              <!--Mic Enabled-->
-              <div class="form-check form-switch mb-3">
-                <input class="form-check-input" type="checkbox" id="input-Mic-Enabled" name="enabled">
-                <label class="form-check-label" for="input-Mic-Enabled">Mic Handling</label>
-              </div>
-
-              <button class="btn btn-primary requireAdminAuth mb-3 px-3 py-2" id="button-Submit-Mic-Enabled">Submit</button>
-
-              <!--Mic Filters-->
-              <h5 class="adminAuthGroup">Filters</h5>
-              <nav class="adminAuthGroup">
-                <div class="nav nav-tabs" id="nav-filters" role="tablist">
-                  <button class="nav-link active" id="nav-filters-gate-tab" data-bs-toggle="tab" data-bs-target="#nav-filters-gate" type="button" role="tab" aria-controls="nav-filters-gate" aria-selected="true">Noise Gate</button>
-                  <button class="nav-link" id="nav-filters-expander-tab" data-bs-toggle="tab" data-bs-target="#nav-filters-expander" type="button" role="tab" aria-controls="nav-filters-expander" aria-selected="false">Expander</button>
-                  <button class="nav-link" id="nav-filters-compressor-tab" data-bs-toggle="tab" data-bs-target="#nav-filters-compressor" type="button" role="tab" aria-controls="nav-filters-compressor" aria-selected="false">Compressor</button>
-                </div>
-              </nav>
-
-              <div class="tab-content my-2 p-2 adminAuthGroup" id="nav-filtersContent">
-
-                <!--Microphone - Noise Gate Settings Tab-->
-                <div class="tab-pane fade show active" id="nav-filters-gate" role="tabpanel" aria-labelledby="nav-filters-gate-tab">
-
-                  <div class="form-check form-switch mb-3">
-                    <input class="form-check-input" type="checkbox" id="input-NoiseGate-Enabled" name="enabled">
-                    <label class="form-check-label" for="input-NoiseGate-Enabled">Enabled</label>
-                  </div>
-
-                  <div class="input-group mb-2">
-                    <label class="input-group-text" for="input-NoiseGate-OpenThreshold">Open Threshold (dB)</label>
-                    <input type="number" id="input-NoiseGate-OpenThreshold" class="form-control" name="openThreshold" min="-60.0" max="0.0" step="1">
-                  </div>
-
-                  <div class="input-group mb-2">
-                    <label class="input-group-text" for="input-NoiseGate-CloseThreshold">Close Threshold (dB)</label>
-                    <input type="number" id="input-NoiseGate-CloseThreshold" class="form-control" name="closeThreshold" min="-60.0" max="0.0" step="1">
-                  </div>
-
-                  <div class="input-group mb-2">
-                    <label class="input-group-text" for="input-NoiseGate-Attack">Attack Duration (s)</label>
-                    <input type="number" id="input-NoiseGate-Attack" class="form-control" name="attack" min="0.0" max="1.0" step="0.001">
-                  </div>
-
-                  <div class="input-group mb-2">
-                    <label class="input-group-text" for="input-NoiseGate-Hold">Hold Duration (s)</label>
-                    <input type="number" id="input-NoiseGate-Hold" class="form-control" name="hold" min="0.0" max="1.0" step="0.001">
-                  </div>
-
-                  <div class="input-group mb-2">
-                    <label class="input-group-text" for="input-NoiseGate-Release">Release Duration (s)</label>
-                    <input type="number" id="input-NoiseGate-Release" class="form-control" name="release" min="0.0" max="1.0" step="0.001">
-                  </div>
-
-                  <button class="btn btn-primary requirePrivAuth mt-1 px-3 py-2" id="button-SubmitNoiseGateSettings">Submit</button>
-                </div>
-
-                <!--Microphone - Expander Settings Tab-->
-                <div class="tab-pane fade" id="nav-filters-expander" role="tabpanel" aria-labelledby="nav-filters-expander-tab">
-
-                  <div class="form-check form-switch mb-3">
-                    <input class="form-check-input" type="checkbox" id="input-Expander-Enabled" name="enabled">
-                    <label class="form-check-label" for="input-Expander-Enabled">Enabled</label>
-                  </div>
-
-                  <div class="input-group mb-2">
-                    <label class="input-group-text" for="input-Expander-Ratio">Ratio</label>
-                    <input type="number" id="input-Expander-Ratio" class="form-control" name="ratio" min="1" max="40" step="0.1">
-                  </div>
-
-                  <div class="input-group mb-2">
-                    <label class="input-group-text" for="input-Expander-Threshold">Threshold (dB)</label>
-                    <input type="number" id="input-Expander-Threshold" class="form-control" name="threshold" min="-60.0" max="0.0" step="1">
-                  </div>
-
-                  <div class="input-group mb-2">
-                    <label class="input-group-text" for="input-Expander-Attack">Attack Duration (s)</label>
-                    <input type="number" id="input-Expander-Attack" class="form-control" name="attack" min="0.0" max="1.0" step="0.001">
-                  </div>
-
-                  <div class="input-group mb-2">
-                    <label class="input-group-text" for="input-Expander-Release">Release Duration (s)</label>
-                    <input type="number" id="input-Expander-Release" class="form-control" name="release" min="0.0" max="1.0" step="0.001">
-                  </div>
-
-                  <div class="input-group mb-2" for="input-Expander-Gain">
-                    <label class="input-group-text">Gain (dB)</label>
-                    <input type="number" id="input-Expander-Gain" class="form-control" name="gain" min="0.0" max="60.0" step="1">
-                  </div>
-
-                  <button class="btn btn-primary requirePrivAuth mt-1 px-3 py-2" id="button-SubmitExpanderSettings">Submit</button>
-                </div>
-
-                <!--Microphone - Compressor Settings Tab-->
-                <div class="tab-pane fade" id="nav-filters-compressor" role="tabpanel" aria-labelledby="nav-filters-compressor-tab">
-
-                  <div class="form-check form-switch mb-3">
-                    <input class="form-check-input" type="checkbox" id="input-Compressor-Enabled" name="enabled">
-                    <label class="form-check-label" for="input-Compressor-Enabled">Enabled</label>
-                  </div>
-
-                  <div class="input-group mb-2">
-                    <label class="input-group-text" for="input-Compressor-Ratio">Ratio</label>
-                    <input type="number" id="input-Compressor-Ratio" class="form-control" name="ratio" min="1" max="40" step="0.1">
-                  </div>
-
-                  <div class="input-group mb-2">
-                    <label class="input-group-text" for="input-Compressor-Threshold">Threshold (dB)</label>
-                    <input type="number" id="input-Compressor-Threshold" class="form-control" name="threshold" min="-60.0" max="0.0" step="1">
-                  </div>
-
-                  <div class="input-group mb-2">
-                    <label class="input-group-text" for="input-Compressor-Attack">Attack Duration (s)</label>
-                    <input type="number" id="input-Compressor-Attack" class="form-control" name="attack" min="0.0" max="1.0" step="0.001">
-                  </div>
-
-                  <div class="input-group mb-2">
-                    <label class="input-group-text" for="input-Compressor-Release">Release Duration (s)</label>
-                    <input type="number" id="input-Compressor-Release" class="form-control" name="release" min="0.0" max="1.0" step="0.001">
-                  </div>
-
-                  <div class="input-group mb-2">
-                    <label class="input-group-text" for="input-Compressor-Gain">Gain (dB)</label>
-                    <input type="number" id="input-Compressor-Gain" class="form-control" name="gain" min="0.0" max="60.0" step="1">
-                  </div>
-
-                  <button class="btn btn-primary requirePrivAuth mt-1 px-3 py-2" id="button-SubmitCompressorSettings">Submit</button>
-
-                </div>
-              </div>
-
-            </div>
-
-            <!--Audio Settings Tab-->
-            <div class="tab-pane fade" id="nav-settings-audio" role="tabpanel" aria-labelledby="nav-settings-audio-tab">
-
-              <!--Effect Output-->
-              <div class="input-group mb-2">
-                <label class="input-group-text" for="select-EffectOutputDevice">Effect Output</label>
-                <select class="form-select form-control" id="select-EffectOutputDevice">
-                  <option selected>None</option>
-                </select>
-              </div>
-
-              <!--Voice Output-->
-              <div class="input-group mb-2">
-                <label class="input-group-text" for="select-VoiceOutputDevice">Voice Output</label>
-                <select class="form-select form-control" id="select-VoiceOutputDevice">
-                  <option selected>None</option>
-                </select>
-              </div>
-
-              <!--Voice Input-->
-              <div class="input-group mb-2">
-                <label class="input-group-text" for="select-VoiceInputDevice">Voice Input</label>
-                <select class="form-select form-control" id="select-VoiceInputDevice">
-                  <option selected>None</option>
-                </select>
-              </div>
-
-              <!--Midi Output-->
-              <div class="input-group">
-                <label class="input-group-text" for="select-MidiOutputDevice">Midi Output</label>
-                <select class="form-select form-control" id="select-MidiOutputDevice">
-                  <option selected>None</option>
-                </select>
-              </div>
-
-            </div>
-
-            <!--Midi Settings Tab-->
-            <div class="tab-pane fade" id="nav-settings-midi" role="tabpanel" aria-labelledby="nav-settings-midi-tab">
-
-              <div class="input-group mb-2">
-                <label class="input-group-text" for="select-MidiDevice">Midi Device</label>
-                <select class="form-select form-control" id="select-MidiDevice">
-                  <option selected>None</option>
-                </select>
-              </div>
-
-              <div class="input-group mb-2">
-                <label class="input-group-text" for="select-MidiInstrument">Bind To Instrument</label>
-                <select class="form-select form-control" id="select-MidiInstrument">
-                  <option selected>None</option>
-                </select>
-                <button class="btn btn-primary" id="button-MidiBindInstrument">Bind</button>
-              </div>
-
-              <div class="input-group">
-                <label class="input-group-text" for="input-MidiBindSFX">Bind To Sound Effect</label>
-                <input type="text" id="input-MidiBindSFX" class="form-control" name="midiSFX">
-                <button class="btn btn-primary" id="button-MidiBindSFX">Bind</button>
-              </div>
-
-            </div>
-
-            <!--Timer Settings Tab-->
-            <div class="tab-pane fade g-4" id="nav-settings-timer" role="tabpanel" aria-labelledby="nav-settings-timer-tab">
-
-              <div class="row py-2">
-                <div class="col">Timer</div>
-                <div class="col">Label</div>
-                <div class="col">Value</div>
-              </div>
-
-              <div class="row py-2">
-                <div class="col">Main</div>
-                <div class="col"> <input type="text" id="input-TimerMainLabel" class="form-control"> </div>
-                <div class="col"> <select class="form-select form-control" id="select-TimerMainValue"></select> </div>
-              </div>
-
-              <div class="row py-2">
-                <div class="col">Secondary</div>
-                <div class="col"> <input type="text" id="input-TimerSecondaryLabel" class="form-control"> </div>
-                <div class="col"> <select class="form-select form-control" id="select-TimerSecondaryValue"></select> </div>
-              </div>
-
-              <button id="button-TimerApplyLayout" class="btn btn-primary px-3 py-2">Apply Layout</button>
-
-            </div>
-
-            <!--Misc Settings Tab-->
-            <div class="tab-pane fade show active" id="nav-settings-misc" role="tabpanel" aria-labelledby="nav-settings-misc-tab">
-
-              <!--Error Handling-->
-              <div class="form-check form-switch mb-3">
-                <input class="form-check-input" type="checkbox" id="input-ErrorH-Enabled" name="enabled">
-                <label class="form-check-label" for="input-ErrorH-Enabled">Error Handling ('u wot mate')</label>
-              </div>
-
-              <button id="button-Submit-errorh-Enabled" class="btn btn-primary requireAdminAuth px-3 py-2">Submit</button>
-
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="container-fluid mb-4 row row-cols-1 row-cols-md-2 row-cols-lg-3 g-0">
-      <!--Chat Panel-->
-      <div class="col userAuthGroup">
-        <div class="card h-100">
-          <div class="card-header">
-            <h4 class="card-title mb-0">Chat</h4>
-          </div>
-
-          <div class="card-body">
-            <ul id="chatBox" class="list-group"> </ul>
-          </div>
-        </div>
-      </div>
-
-      <!--Event Panel-->
-      <div class="col userAuthGroup">
-        <div class="card h-100">
-          <div class="card-header">
-            <h4 class="card-title mb-0">Events</h4>
-          </div>
-
-          <div class="card-body">
-            <ul id="eventBox" class="list-group"> </ul>
-          </div>
-        </div>
-      </div>
-
-      <!--Debug Panel-->
-      <div class="col userAuthGroup">
-        <div class="card h-100">
-          <div class="card-header">
-            <h4 class="card-title mb-0">Debug</h4>
-          </div>
-
-          <div class="card-body">
-            <ul id="debugBox" class="list-group"> </ul>
-          </div>
-        </div>
-      </div>
-
-      <!--Notification Panel-->
-      <div class="col privAuthGroup">
-        <div class="card h-100">
-          <div class="card-header">
-            <h4 class="card-title mb-0">Notifications</h4>
-          </div>
-
-          <div class="card-body">
-            <ul id="notificationBox" class="list-group"> </ul>
-          </div>
-        </div>
-      </div>
-
-      <!--Pending Notification Panel-->
-      <div class="col privAuthGroup">
-        <div class="card h-100">
-          <div class="card-header">
-            <h4 class="card-title mb-0">Pending Notifications</h4>
-          </div>
-
-          <div class="card-body">
-            <ul id="pendingNotificationBox" class="list-group"> </ul>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </main>
+    </main>
 </body>
 </html>

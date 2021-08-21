@@ -133,6 +133,7 @@ namespace TASagentTwitchBot.Core
                 .AddSingleton<IRC.IIRCLogger, IRC.IRCLogger>()
                 .AddSingleton<TTS.ITTSRenderer, TTS.NewTTSRenderer>()
                 .AddSingleton<Timer.ITimerManager, Timer.TimerManager>()
+                .AddSingleton<Chat.IBanHandler, Chat.BanHandler>()
                 .AddSingleton<PubSub.IRedemptionSystem, PubSub.RedemptionSystem>()
                 .AddSingleton<Database.IUserHelper, Database.UserHelper>();
 
