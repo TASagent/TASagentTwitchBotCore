@@ -9,6 +9,7 @@
             <label class="input-group-text">${val.regex}</label>
             <label class="input-group-text">Text Type: ${val.textContentType}</label>
             <label class="input-group-text">Timeout Seconds: ${val.timeoutSeconds}</label>
+            <label class="input-group-text">Timeout Cooldown: ${val.timeoutCooldown}</label>
             <label class="input-group-text">Show Message: ${val.showMessage}</label>
             <label class="input-group-text">Use Timeout: ${val.useTimeout}</label>
 
@@ -74,6 +75,8 @@
             const rule = $('#input-banrule').val();
             const msgType = parseInt($('#select-messageType').val());
             const timeoutSeconds = parseInt($('#input-timeoutseconds').val());
+            const timeoutCooldown = parseInt($('#input-timeoutcooldown').val());
+
             let useTimeout = $('#input-timeout').is(":checked");
             let showMessage = $('#input-showmsg').is(":checked");
             useTimeout = useTimeout.constructor === Boolean ?
@@ -85,6 +88,7 @@
                     regex: rule,
                     textContentType: msgType,
                     timeoutSeconds,
+                    timeoutCooldown,
                     showMessage,
                     useTimeout,
                 };
@@ -102,12 +106,17 @@
         $('#input-timeout').change(function () {
             if (this.checked) {
                 $('#input-timeoutseconds').prop('disabled', false);
+                $('#input-timeoutcooldown').prop('disabled', false);
+
                 $('#container-timeout-seconds').show();
             }
             else {
                 $('#input-timeoutseconds').prop('disabled', true);
+                $('#input-timeoutcooldown').prop('disabled', true);
+
                 $('#container-timeout-seconds').hide();
                 $('#input-timeoutseconds').val(1);
+                $('#input-timeoutcooldown').val(-1);
             }
         });
     });

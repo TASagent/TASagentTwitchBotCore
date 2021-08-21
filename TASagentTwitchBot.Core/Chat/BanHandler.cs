@@ -18,13 +18,14 @@ namespace TASagentTwitchBot.Core.Chat
              banRule.RegexRule,
                 banRule.TextContentType,
                 banRule.TimeoutSeconds,
+                banRule.TimeoutCooldown,
                 banRule.ShowMessage,
                 banRule.UseTimeout,
                 banRule.BanRuleId
          );
 
 
-        public record BanRuleDTO(string regex, TextContentType textContentType, int timeoutSeconds, bool showMessage, bool useTimeout, int id);
+        public record BanRuleDTO(string regex, TextContentType textContentType, int timeoutSeconds, int timeoutCooldown, bool showMessage, bool useTimeout, int id);
     }
 
     public interface IBanHandler
@@ -112,6 +113,19 @@ namespace TASagentTwitchBot.Core.Chat
             UpdateBanRules();
         }
 
+        public DateTime? GetLastTimeoutOfUser(int banRuleId, string username)
+        {
+            using IServiceScope scope = scopeFactory.CreateScope();
+            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+            var last = db.BannedUsers.Select(c => c)
+                .Where(x => x.RuleId == banRuleId)
+                .Where(x => x.Username == username.ToLower())
+                .OrderByDescending(x => x.BannedOn).First();
+            if (last != null)
+                return last.BannedOn;
+            return null;
+        }
+
         public async Task<BanHelpers.BanRuleDTO> AddBanRule(BanHelpers.BanRuleDTO banRule)
         {
             using IServiceScope scope = scopeFactory.CreateScope();
@@ -120,6 +134,7 @@ namespace TASagentTwitchBot.Core.Chat
             {
                 RegexRule = banRule.regex,
                 TimeoutSeconds = banRule.timeoutSeconds,
+                TimeoutCooldown = banRule.timeoutCooldown,
                 TextContentType = banRule.textContentType,
                 ShowMessage = banRule.showMessage,
                 UseTimeout = banRule.useTimeout,
@@ -161,25 +176,41 @@ namespace TASagentTwitchBot.Core.Chat
             {
                 using IServiceScope scope = scopeFactory.CreateScope();
 
-                BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
-                BannedUser user = new BannedUser
+                var db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+                var user = new BannedUser
                 {
-                    Username = chatter.User.TwitchUserName,
+                    // normalize to lowercase for easier querying
+                    Username = chatter.User.TwitchUserName.ToLower(),
                     RuleId = rule.BanRuleId,
-                    Banned = DateTime.UtcNow
+                    BannedOn = DateTime.UtcNow
                 };
-                //Find Quote
-                //Quote matchingQuote = await db.Quotes.FindAsync(quoteId);
+
                 await db.AddAsync(user);
 
                 await db.SaveChangesAsync();
                 if (rule.UseTimeout)
-                    communication.SendPublicChatMessage(string.Format("/timeout {0} {1}", chatter.User.TwitchUserName, rule.TimeoutSeconds));
+                {
+                    var last = GetLastTimeoutOfUser(rule.BanRuleId, chatter.User.TwitchUserName);
+                    double secondsDiff = rule.TimeoutCooldown + 1;
+                    if (last != null)
+                    {
+                        var now = DateTime.UtcNow;
+                        secondsDiff = (now - (DateTime)last).TotalSeconds;
+                    }
+                    if (secondsDiff > rule.TimeoutCooldown || rule.TimeoutCooldown == -1)
+                    {
+                        communication.SendPublicChatMessage(string.Format("/timeout {0} {1}", chatter.User.TwitchUserName, rule.TimeoutSeconds));
+                        if (rule.ShowMessage)
+                            communication.SendPublicChatMessage($"{banMessages.PopNext()}");
+                    }
+                }
 
                 else
+                {
                     communication.SendPublicChatMessage(string.Format("/ban {0}", chatter.User.TwitchUserName));
-                if (rule.ShowMessage)
-                    communication.SendPublicChatMessage($"{banMessages.PopNext()}");
+                    if (rule.ShowMessage)
+                        communication.SendPublicChatMessage($"{banMessages.PopNext()}");
+                }
 
             }
         }

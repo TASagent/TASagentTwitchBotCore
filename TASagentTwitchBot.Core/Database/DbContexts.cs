@@ -56,6 +56,8 @@ namespace TASagentTwitchBot.Core.Database
         public string RegexRule { get; set; }
 
         public int TimeoutSeconds { get; set; }
+        public int TimeoutCooldown { get; set; }
+
         public TextContentType TextContentType { get; set; }
         public bool ShowMessage { get; set; }
 
@@ -68,7 +70,7 @@ namespace TASagentTwitchBot.Core.Database
 
         public int RuleId { get; set; }
         public BanRule Rule { get; set; }
-        public DateTime? Banned { get; set; }
+        public DateTime BannedOn { get; set; }
         public string Username { get; set; }
     }
 
