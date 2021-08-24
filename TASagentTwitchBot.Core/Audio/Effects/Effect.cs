@@ -195,7 +195,7 @@ namespace TASagentTwitchBot.Core.Audio.Effects
 
         public NoEffect() : base(null) { }
 
-        protected override IBGCStream ApplyEffect(IBGCStream input) => throw new NotSupportedException();
+        protected override IBGCStream ApplyEffect(IBGCStream input) => input;
 
         protected override string GetEffectString() => "None";
 

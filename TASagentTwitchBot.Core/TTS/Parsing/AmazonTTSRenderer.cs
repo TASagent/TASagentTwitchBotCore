@@ -32,26 +32,44 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
 
         protected override string GetModeMarkup(TTSRenderMode mode, bool start)
         {
-            switch (mode)
+            if (voice.IsNeuralVoice())
             {
-                case TTSRenderMode.Whisper:
-                    return start ? "<amazon:effect name=\"whispered\">" : "</amazon:effect>";
+                switch (mode)
+                {
+                    case TTSRenderMode.Whisper:
+                    case TTSRenderMode.Emphasis:
+                        return "";
 
-                case TTSRenderMode.Emphasis:
-                    return start ? "<emphasis level=\"strong\">" : "</emphasis>";
+                    case TTSRenderMode.Censor:
+                        return start ? "<say-as interpret-as=\"expletive\">" : "</say-as>";
 
-                case TTSRenderMode.Censor:
-                    return start ? "<say-as interpret-as=\"expletive\">" : "</say-as>";
-
-                case TTSRenderMode.Normal:
-                default:
-                    throw new Exception($"Unsupported RenderMode for Markup: {mode}");
+                    case TTSRenderMode.Normal:
+                    default:
+                        throw new Exception($"Unsupported RenderMode for Markup: {mode}");
+                }
             }
+            else
+            {
+                switch (mode)
+                {
+                    case TTSRenderMode.Whisper:
+                        return start ? "<amazon:effect name=\"whispered\">" : "</amazon:effect>";
+
+                    case TTSRenderMode.Emphasis:
+                        return start ? "<emphasis level=\"strong\">" : "</emphasis>";
+
+                    case TTSRenderMode.Censor:
+                        return start ? "<say-as interpret-as=\"expletive\">" : "</say-as>";
+
+                    case TTSRenderMode.Normal:
+                    default:
+                        throw new Exception($"Unsupported RenderMode for Markup: {mode}");
+                }
+            }
+
         }
 
-        protected override async Task<string> SynthesizeSpeech(
-            string interiorSSML,
-            string filename = null)
+        protected override async Task<string> SynthesizeSpeech(string interiorSSML)
         {
             try
             {
@@ -66,15 +84,7 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
                 AmazonSynthesizeSpeechResponse synthesisResponse = await amazonClient.SynthesizeSpeechAsync(synthesisRequest);
 
                 // Write the binary AudioContent of the response to file.
-                string filepath;
-                if (string.IsNullOrWhiteSpace(filename))
-                {
-                    filepath = Path.Combine(TTSFilesPath, $"{Guid.NewGuid()}.mp3");
-                }
-                else
-                {
-                    filepath = Path.Combine(TTSFilesPath, $"{filename}.mp3");
-                }
+                string filepath = Path.Combine(TTSFilesPath, $"{Guid.NewGuid()}.mp3");
 
                 using (Stream file = new FileStream(filepath, FileMode.Create))
                 {
@@ -94,9 +104,19 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
 
         private string WrapSSML(string interiorSSML)
         {
-            if (pitch != TTSPitch.Medium || speed != TTSSpeed.Medium)
+            if (voice.IsNeuralVoice())
             {
-                interiorSSML = $"<prosody pitch=\"{pitch.GetPitchShift()}\" rate=\"{speed.GetSpeedValue()}\">{interiorSSML}</prosody>";
+                if (speed != TTSSpeed.Medium)
+                {
+                    interiorSSML = $"<prosody rate=\"{speed.GetSpeedValue()}\">{interiorSSML}</prosody>";
+                }
+            }
+            else
+            {
+                if (pitch != TTSPitch.Medium || speed != TTSSpeed.Medium)
+                {
+                    interiorSSML = $"<prosody pitch=\"{pitch.GetPitchShift()}\" rate=\"{speed.GetSpeedValue()}\">{interiorSSML}</prosody>";
+                }
             }
 
             if (voice.GetRequiresLangTag())

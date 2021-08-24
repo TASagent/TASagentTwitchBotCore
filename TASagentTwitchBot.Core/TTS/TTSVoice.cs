@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using Amazon.Polly;
 using Google.Cloud.TextToSpeech.V1;
 
-using TASagentTwitchBot.Core.Audio.Effects;
-
 namespace TASagentTwitchBot.Core.TTS
 {
     public enum TTSVoice
@@ -40,7 +38,7 @@ namespace TASagentTwitchBot.Core.TTS
 
         //AWS TTS Voices
         en_AU_Nicole,
-        en_AU_Olivia,
+        en_AU_OliviaNeural,
         en_AU_Russell,
 
         en_GB_Amy,
@@ -102,6 +100,111 @@ namespace TASagentTwitchBot.Core.TTS
 
         cy_GB_Gwyneth,
 
+        //Azure Standard Voices
+        en_AU_Catherine,
+        en_AU_HayleyRUS,
+
+        en_CA_HeatherRUS,
+        en_CA_Linda,
+
+        en_IN_Heera,
+        en_IN_PriyaRUS,
+        en_IN_Ravi,
+
+        en_IE_Sean,
+
+        en_GB_George,
+        en_GB_HazelRUS,
+        en_GB_Susan,
+
+        en_US_BenjaminRUS,
+        en_US_GuyRUS,
+        en_US_AriaRUS,
+        en_US_ZiraRUS,
+
+        //Azure Neural Voices
+        en_AU_NatashaNeural,
+        en_AU_WilliamNeural,
+
+        en_CA_ClaraNeural,
+        en_CA_LiamNeural,
+
+        en_HK_SamNeural,
+        en_HK_YanNeural,
+
+        en_IN_NeerjaNeural,
+        en_IN_PrabhatNeural,
+
+        en_IE_ConnorNeural,
+        en_IE_EmilyNeural,
+
+        en_NZ_MitchellNeural,
+        en_NZ_MollyNeural,
+
+        en_PH_RosaNeural,
+        en_PH_JamesNeural,
+
+        en_SG_LunaNeural,
+        en_SG_WayneNeural,
+
+        en_ZA_LeahNeural,
+        en_ZA_LukeNeural,
+
+        en_GB_LibbyNeural,
+        en_GB_MiaNeural,
+        en_GB_RyanNeural,
+
+        en_US_AriaNeural,
+        en_US_GuyNeural,
+        en_US_JennyNeural,
+
+        //New Google TTS Voices
+        en_US_Standard_A,
+        en_US_Standard_F,
+
+        //Google Neural Voices
+        en_AU_Wavenet_A,
+        en_AU_Wavenet_B,
+        en_AU_Wavenet_C,
+        en_AU_Wavenet_D,
+
+        en_IN_Wavenet_A,
+        en_IN_Wavenet_B,
+        en_IN_Wavenet_C,
+        en_IN_Wavenet_D,
+
+        en_GB_Wavenet_A,
+        en_GB_Wavenet_B,
+        en_GB_Wavenet_C,
+        en_GB_Wavenet_D,
+        en_GB_Wavenet_F,
+
+        en_US_Wavenet_A,
+        en_US_Wavenet_B,
+        en_US_Wavenet_C,
+        en_US_Wavenet_D,
+        en_US_Wavenet_E,
+        en_US_Wavenet_F,
+        en_US_Wavenet_G,
+        en_US_Wavenet_H,
+        en_US_Wavenet_I,
+        en_US_Wavenet_J,
+
+        //AWS Neural
+        en_GB_AmyNeural,
+        en_GB_BrianNeural,
+        en_GB_EmmaNeural,
+
+        en_US_IvyNeural,
+        en_US_JoannaNeural,
+        en_US_JoeyNeural,
+        en_US_JustinNeural,
+        en_US_KendraNeural,
+        en_US_KevinNeural,
+        en_US_KimberlyNeural,
+        en_US_MatthewNeural,
+        en_US_SalliNeural,
+
         MAX
     }
 
@@ -134,7 +237,9 @@ namespace TASagentTwitchBot.Core.TTS
     public enum TTSService
     {
         Amazon,
-        Google
+        Google,
+        Azure,
+        MAX
     }
 
     public static class TTSVoiceExtensions
@@ -149,29 +254,51 @@ namespace TASagentTwitchBot.Core.TTS
                 case TTSVoice.en_AU_Standard_B: return "en-AU-Standard-B";
                 case TTSVoice.en_AU_Standard_C: return "en-AU-Standard-C";
                 case TTSVoice.en_AU_Standard_D: return "en-AU-Standard-D";
-
                 case TTSVoice.en_IN_Standard_A: return "en-IN-Standard-A";
                 case TTSVoice.en_IN_Standard_B: return "en-IN-Standard-B";
                 case TTSVoice.en_IN_Standard_C: return "en-IN-Standard-C";
                 case TTSVoice.en_IN_Standard_D: return "en-IN-Standard-D";
-
                 case TTSVoice.en_GB_Standard_A: return "en-GB-Standard-A";
                 case TTSVoice.en_GB_Standard_B: return "en-GB-Standard-B";
                 case TTSVoice.en_GB_Standard_C: return "en-GB-Standard-C";
                 case TTSVoice.en_GB_Standard_D: return "en-GB-Standard-D";
                 case TTSVoice.en_GB_Standard_F: return "en-GB-Standard-F";
-
+                case TTSVoice.en_US_Standard_A: return "en-US-Standard-A";
                 case TTSVoice.en_US_Standard_B: return "en-US-Standard-B";
                 case TTSVoice.en_US_Standard_C: return "en-US-Standard-C";
                 case TTSVoice.en_US_Standard_D: return "en-US-Standard-D";
                 case TTSVoice.en_US_Standard_E: return "en-US-Standard-E";
+                case TTSVoice.en_US_Standard_F: return "en-US-Standard-F";
                 case TTSVoice.en_US_Standard_G: return "en-US-Standard-G";
                 case TTSVoice.en_US_Standard_H: return "en-US-Standard-H";
                 case TTSVoice.en_US_Standard_I: return "en-US-Standard-I";
                 case TTSVoice.en_US_Standard_J: return "en-US-Standard-J";
 
+                case TTSVoice.en_AU_Wavenet_A: return "en-AU-Wavenet-A";
+                case TTSVoice.en_AU_Wavenet_B: return "en-AU-Wavenet-B";
+                case TTSVoice.en_AU_Wavenet_C: return "en-AU-Wavenet-C";
+                case TTSVoice.en_AU_Wavenet_D: return "en-AU-Wavenet-D";
+                case TTSVoice.en_IN_Wavenet_A: return "en-IN-Wavenet-A";
+                case TTSVoice.en_IN_Wavenet_B: return "en-IN-Wavenet-B";
+                case TTSVoice.en_IN_Wavenet_C: return "en-IN-Wavenet-C";
+                case TTSVoice.en_IN_Wavenet_D: return "en-IN-Wavenet-D";
+                case TTSVoice.en_GB_Wavenet_A: return "en-GB-Wavenet-A";
+                case TTSVoice.en_GB_Wavenet_B: return "en-GB-Wavenet-B";
+                case TTSVoice.en_GB_Wavenet_C: return "en-GB-Wavenet-C";
+                case TTSVoice.en_GB_Wavenet_D: return "en-GB-Wavenet-D";
+                case TTSVoice.en_GB_Wavenet_F: return "en-GB-Wavenet-F";
+                case TTSVoice.en_US_Wavenet_A: return "en-US-Wavenet-A";
+                case TTSVoice.en_US_Wavenet_B: return "en-US-Wavenet-B";
+                case TTSVoice.en_US_Wavenet_C: return "en-US-Wavenet-C";
+                case TTSVoice.en_US_Wavenet_D: return "en-US-Wavenet-D";
+                case TTSVoice.en_US_Wavenet_E: return "en-US-Wavenet-E";
+                case TTSVoice.en_US_Wavenet_F: return "en-US-Wavenet-F";
+                case TTSVoice.en_US_Wavenet_G: return "en-US-Wavenet-G";
+                case TTSVoice.en_US_Wavenet_H: return "en-US-Wavenet-H";
+                case TTSVoice.en_US_Wavenet_I: return "en-US-Wavenet-I";
+                case TTSVoice.en_US_Wavenet_J: return "en-US-Wavenet-J";
+
                 case TTSVoice.en_AU_Nicole: return "Nicole";
-                case TTSVoice.en_AU_Olivia: return "Olivia";
                 case TTSVoice.en_AU_Russell: return "Russell";
                 case TTSVoice.en_GB_Amy: return "Amy";
                 case TTSVoice.en_GB_Emma: return "Emma";
@@ -216,6 +343,62 @@ namespace TASagentTwitchBot.Core.TTS
                 case TTSVoice.es_US_Miguel: return "Miguel";
                 case TTSVoice.tr_TR_Filiz: return "Filiz";
                 case TTSVoice.cy_GB_Gwyneth: return "Gwyneth";
+
+                case TTSVoice.en_AU_Catherine: return "Catherine";
+                case TTSVoice.en_AU_HayleyRUS: return "Hayley";
+                case TTSVoice.en_CA_HeatherRUS: return "Heather";
+                case TTSVoice.en_CA_Linda: return "Linda";
+                case TTSVoice.en_IN_Heera: return "Heera";
+                case TTSVoice.en_IN_PriyaRUS: return "Priya";
+                case TTSVoice.en_IN_Ravi: return "Ravi";
+                case TTSVoice.en_IE_Sean: return "Sean";
+                case TTSVoice.en_GB_George: return "George";
+                case TTSVoice.en_GB_HazelRUS: return "Hazel";
+                case TTSVoice.en_GB_Susan: return "Susan";
+                case TTSVoice.en_US_BenjaminRUS: return "Benjamin";
+                case TTSVoice.en_US_GuyRUS: return "Guy";
+                case TTSVoice.en_US_AriaRUS: return "Aria";
+                case TTSVoice.en_US_ZiraRUS: return "Zira";
+
+                case TTSVoice.en_AU_NatashaNeural: return "NatashaNeural";
+                case TTSVoice.en_AU_WilliamNeural: return "WilliamNeural";
+                case TTSVoice.en_CA_ClaraNeural: return "ClaraNeural";
+                case TTSVoice.en_CA_LiamNeural: return "LiamNeural";
+                case TTSVoice.en_HK_YanNeural: return "YanNeural";
+                case TTSVoice.en_HK_SamNeural: return "SamNeural";
+                case TTSVoice.en_IN_NeerjaNeural: return "NeerjaNeural";
+                case TTSVoice.en_IN_PrabhatNeural: return "PrabhatNeural";
+                case TTSVoice.en_IE_EmilyNeural: return "EmilyNeural";
+                case TTSVoice.en_IE_ConnorNeural: return "ConnorNeural";
+                case TTSVoice.en_NZ_MollyNeural: return "MollyNeural";
+                case TTSVoice.en_NZ_MitchellNeural: return "MitchellNeural";
+                case TTSVoice.en_PH_RosaNeural: return "RosaNeural";
+                case TTSVoice.en_PH_JamesNeural: return "JamesNeural";
+                case TTSVoice.en_SG_LunaNeural: return "LunaNeural";
+                case TTSVoice.en_SG_WayneNeural: return "WayneNeural";
+                case TTSVoice.en_ZA_LeahNeural: return "LeahNeural";
+                case TTSVoice.en_ZA_LukeNeural: return "LukeNeural";
+                case TTSVoice.en_GB_LibbyNeural: return "LibbyNeural";
+                case TTSVoice.en_GB_MiaNeural: return "MiaNeural";
+                case TTSVoice.en_GB_RyanNeural: return "RyanNeural";
+                case TTSVoice.en_US_AriaNeural: return "AriaNeural";
+                case TTSVoice.en_US_JennyNeural: return "JennyNeural";
+                case TTSVoice.en_US_GuyNeural: return "GuyNeural";
+
+                case TTSVoice.en_AU_OliviaNeural: return "OliviaNeural";
+                case TTSVoice.en_GB_AmyNeural: return "AmyNeural";
+                case TTSVoice.en_GB_EmmaNeural: return "EmmaNeural";
+                case TTSVoice.en_GB_BrianNeural: return "BrianNeural";
+                case TTSVoice.en_US_IvyNeural: return "IvyNeural";
+                case TTSVoice.en_US_JoannaNeural: return "JoannaNeural";
+                case TTSVoice.en_US_KendraNeural: return "KendraNeural";
+                case TTSVoice.en_US_KimberlyNeural: return "KimberlyNeural";
+                case TTSVoice.en_US_SalliNeural: return "SalliNeural";
+                case TTSVoice.en_US_JoeyNeural: return "JoeyNeural";
+                case TTSVoice.en_US_JustinNeural: return "JustinNeural";
+                case TTSVoice.en_US_KevinNeural: return "KevinNeural";
+                case TTSVoice.en_US_MatthewNeural: return "MatthewNeural";
+
                 default:
                     BGC.Debug.LogError($"Unsupported TTSVoice {voice}");
                     goto case TTSVoice.en_US_Standard_B;
@@ -289,48 +472,174 @@ namespace TASagentTwitchBot.Core.TTS
             }
         }
 
-        public static Effect TranslateTTSEffect(this string effectString)
+        public static bool IsNeuralVoice(this TTSVoice voice)
         {
-            effectString = effectString.ToLowerInvariant();
-
-            switch (effectString)
+            switch (voice)
             {
-                case "default":
-                case "normal":
-                case "none":
-                    return new NoEffect();
+                case TTSVoice.en_AU_Standard_A:
+                case TTSVoice.en_AU_Standard_B:
+                case TTSVoice.en_AU_Standard_C:
+                case TTSVoice.en_AU_Standard_D:
+                case TTSVoice.en_IN_Standard_A:
+                case TTSVoice.en_IN_Standard_B:
+                case TTSVoice.en_IN_Standard_C:
+                case TTSVoice.en_IN_Standard_D:
+                case TTSVoice.en_GB_Standard_A:
+                case TTSVoice.en_GB_Standard_B:
+                case TTSVoice.en_GB_Standard_C:
+                case TTSVoice.en_GB_Standard_D:
+                case TTSVoice.en_GB_Standard_F:
+                case TTSVoice.en_US_Standard_A:
+                case TTSVoice.en_US_Standard_B:
+                case TTSVoice.en_US_Standard_C:
+                case TTSVoice.en_US_Standard_D:
+                case TTSVoice.en_US_Standard_E:
+                case TTSVoice.en_US_Standard_F:
+                case TTSVoice.en_US_Standard_G:
+                case TTSVoice.en_US_Standard_H:
+                case TTSVoice.en_US_Standard_I:
+                case TTSVoice.en_US_Standard_J:
+                    return false;
 
-                case "vocode":
-                case "vocoded":
-                case "noise":
-                    return new NoiseVocodeEffect(22, prior: null);
+                case TTSVoice.en_AU_Nicole:
+                case TTSVoice.en_AU_Russell:
+                case TTSVoice.en_GB_Amy:
+                case TTSVoice.en_GB_Emma:
+                case TTSVoice.en_GB_Brian:
+                case TTSVoice.en_IN_Aditi:
+                case TTSVoice.en_IN_Raveena:
+                case TTSVoice.en_US_Ivy:
+                case TTSVoice.en_US_Joanna:
+                case TTSVoice.en_US_Kendra:
+                case TTSVoice.en_US_Kimberly:
+                case TTSVoice.en_US_Salli:
+                case TTSVoice.en_US_Joey:
+                case TTSVoice.en_US_Justin:
+                case TTSVoice.en_US_Matthew:
+                case TTSVoice.en_GB_WLS_Geraint:
+                    return false;
 
-                case "modulated":
-                case "modulate":
-                    return new FrequencyModulationEffect(4.0, 250.0, null);
+                case TTSVoice.fr_FR_Celine:
+                case TTSVoice.fr_FR_Lea:
+                case TTSVoice.fr_FR_Mathieu:
+                case TTSVoice.fr_CA_Chantal:
+                case TTSVoice.de_DE_Marlene:
+                case TTSVoice.de_DE_Vicki:
+                case TTSVoice.de_DE_Hans:
+                case TTSVoice.it_IT_Bianca:
+                case TTSVoice.it_IT_Carla:
+                case TTSVoice.it_IT_Giorgio:
+                case TTSVoice.pl_PL_Ewa:
+                case TTSVoice.pl_PL_Maja:
+                case TTSVoice.pl_PL_Jacek:
+                case TTSVoice.pl_PL_Jan:
+                case TTSVoice.pt_BR_Vitoria:
+                case TTSVoice.pt_BR_Camila:
+                case TTSVoice.pt_BR_Ricardo:
+                case TTSVoice.ru_RU_Tatyana:
+                case TTSVoice.ru_RU_Maxim:
+                case TTSVoice.es_ES_Lucia:
+                case TTSVoice.es_ES_Conchita:
+                case TTSVoice.es_ES_Enrique:
+                case TTSVoice.es_MX_Mia:
+                case TTSVoice.es_US_Penelope:
+                case TTSVoice.es_US_Lupe:
+                case TTSVoice.es_US_Miguel:
+                case TTSVoice.tr_TR_Filiz:
+                case TTSVoice.cy_GB_Gwyneth:
+                    return false;
 
-                case "shifted":
-                case "shift":
-                case "shiftup":
-                    return new FrequencyShiftEffect(100.0, null);
+                case TTSVoice.en_AU_Catherine:
+                case TTSVoice.en_AU_HayleyRUS:
+                case TTSVoice.en_CA_HeatherRUS:
+                case TTSVoice.en_CA_Linda:
+                case TTSVoice.en_IN_Heera:
+                case TTSVoice.en_IN_PriyaRUS:
+                case TTSVoice.en_IN_Ravi:
+                case TTSVoice.en_IE_Sean:
+                case TTSVoice.en_GB_George:
+                case TTSVoice.en_GB_HazelRUS:
+                case TTSVoice.en_GB_Susan:
+                case TTSVoice.en_US_BenjaminRUS:
+                case TTSVoice.en_US_GuyRUS:
+                case TTSVoice.en_US_AriaRUS:
+                case TTSVoice.en_US_ZiraRUS:
+                    return false;
 
-                case "shiftdown":
-                    return new FrequencyShiftEffect(-100.0, null);
+                //AWS Neural Voices
+                case TTSVoice.en_AU_OliviaNeural:
+                case TTSVoice.en_GB_AmyNeural:
+                case TTSVoice.en_GB_EmmaNeural:
+                case TTSVoice.en_GB_BrianNeural:
+                case TTSVoice.en_US_IvyNeural:
+                case TTSVoice.en_US_JoannaNeural:
+                case TTSVoice.en_US_KendraNeural:
+                case TTSVoice.en_US_KimberlyNeural:
+                case TTSVoice.en_US_SalliNeural:
+                case TTSVoice.en_US_JoeyNeural:
+                case TTSVoice.en_US_JustinNeural:
+                case TTSVoice.en_US_KevinNeural:
+                case TTSVoice.en_US_MatthewNeural:
+                    return true;
 
-                case "chibi":
-                    return new PitchShiftEffect(1.5, null);
+                //Google Neural Voices
+                case TTSVoice.en_AU_Wavenet_A:
+                case TTSVoice.en_AU_Wavenet_B:
+                case TTSVoice.en_AU_Wavenet_C:
+                case TTSVoice.en_AU_Wavenet_D:
+                case TTSVoice.en_IN_Wavenet_A:
+                case TTSVoice.en_IN_Wavenet_B:
+                case TTSVoice.en_IN_Wavenet_C:
+                case TTSVoice.en_IN_Wavenet_D:
+                case TTSVoice.en_GB_Wavenet_A:
+                case TTSVoice.en_GB_Wavenet_B:
+                case TTSVoice.en_GB_Wavenet_C:
+                case TTSVoice.en_GB_Wavenet_D:
+                case TTSVoice.en_GB_Wavenet_F:
+                case TTSVoice.en_US_Wavenet_A:
+                case TTSVoice.en_US_Wavenet_B:
+                case TTSVoice.en_US_Wavenet_C:
+                case TTSVoice.en_US_Wavenet_D:
+                case TTSVoice.en_US_Wavenet_E:
+                case TTSVoice.en_US_Wavenet_F:
+                case TTSVoice.en_US_Wavenet_G:
+                case TTSVoice.en_US_Wavenet_H:
+                case TTSVoice.en_US_Wavenet_I:
+                case TTSVoice.en_US_Wavenet_J:
+                    return true;
 
-                case "deep":
-                    return new PitchShiftEffect(0.75, null);
+                //Azure Neural Voices
+                case TTSVoice.en_AU_NatashaNeural:
+                case TTSVoice.en_AU_WilliamNeural:
+                case TTSVoice.en_CA_ClaraNeural:
+                case TTSVoice.en_CA_LiamNeural:
+                case TTSVoice.en_HK_YanNeural:
+                case TTSVoice.en_HK_SamNeural:
+                case TTSVoice.en_IN_NeerjaNeural:
+                case TTSVoice.en_IN_PrabhatNeural:
+                case TTSVoice.en_IE_EmilyNeural:
+                case TTSVoice.en_IE_ConnorNeural:
+                case TTSVoice.en_NZ_MollyNeural:
+                case TTSVoice.en_NZ_MitchellNeural:
+                case TTSVoice.en_PH_RosaNeural:
+                case TTSVoice.en_PH_JamesNeural:
+                case TTSVoice.en_SG_LunaNeural:
+                case TTSVoice.en_SG_WayneNeural:
+                case TTSVoice.en_ZA_LeahNeural:
+                case TTSVoice.en_ZA_LukeNeural:
+                case TTSVoice.en_GB_LibbyNeural:
+                case TTSVoice.en_GB_MiaNeural:
+                case TTSVoice.en_GB_RyanNeural:
+                case TTSVoice.en_US_AriaNeural:
+                case TTSVoice.en_US_JennyNeural:
+                case TTSVoice.en_US_GuyNeural:
+                    return true;
 
-                case "chibidemon":
-                case "chibi_demon":
-                case "chibispecial":
-                case "chibi_special":
-                    return new PitchShiftEffect(1.5, new NoiseVocodeEffect(20, prior: null));
+                case TTSVoice.Unassigned: goto case TTSVoice.en_US_Joanna;
 
                 default:
-                    return null;
+                    BGC.Debug.LogError($"Unsupported TTSVoice {voice}");
+                    goto case TTSVoice.en_US_Standard_B;
             }
         }
 
@@ -351,18 +660,44 @@ namespace TASagentTwitchBot.Core.TTS
                 case TTSVoice.en_GB_Standard_C:
                 case TTSVoice.en_GB_Standard_D:
                 case TTSVoice.en_GB_Standard_F:
+                case TTSVoice.en_US_Standard_A:
                 case TTSVoice.en_US_Standard_B:
                 case TTSVoice.en_US_Standard_C:
                 case TTSVoice.en_US_Standard_D:
                 case TTSVoice.en_US_Standard_E:
+                case TTSVoice.en_US_Standard_F:
                 case TTSVoice.en_US_Standard_G:
                 case TTSVoice.en_US_Standard_H:
                 case TTSVoice.en_US_Standard_I:
                 case TTSVoice.en_US_Standard_J:
                     return TTSService.Google;
 
+                case TTSVoice.en_AU_Wavenet_A:
+                case TTSVoice.en_AU_Wavenet_B:
+                case TTSVoice.en_AU_Wavenet_C:
+                case TTSVoice.en_AU_Wavenet_D:
+                case TTSVoice.en_IN_Wavenet_A:
+                case TTSVoice.en_IN_Wavenet_B:
+                case TTSVoice.en_IN_Wavenet_C:
+                case TTSVoice.en_IN_Wavenet_D:
+                case TTSVoice.en_GB_Wavenet_A:
+                case TTSVoice.en_GB_Wavenet_B:
+                case TTSVoice.en_GB_Wavenet_C:
+                case TTSVoice.en_GB_Wavenet_D:
+                case TTSVoice.en_GB_Wavenet_F:
+                case TTSVoice.en_US_Wavenet_A:
+                case TTSVoice.en_US_Wavenet_B:
+                case TTSVoice.en_US_Wavenet_C:
+                case TTSVoice.en_US_Wavenet_D:
+                case TTSVoice.en_US_Wavenet_E:
+                case TTSVoice.en_US_Wavenet_F:
+                case TTSVoice.en_US_Wavenet_G:
+                case TTSVoice.en_US_Wavenet_H:
+                case TTSVoice.en_US_Wavenet_I:
+                case TTSVoice.en_US_Wavenet_J:
+                    return TTSService.Google;
+
                 case TTSVoice.en_AU_Nicole:
-                case TTSVoice.en_AU_Olivia:
                 case TTSVoice.en_AU_Russell:
                 case TTSVoice.en_GB_Amy:
                 case TTSVoice.en_GB_Emma:
@@ -410,6 +745,64 @@ namespace TASagentTwitchBot.Core.TTS
                 case TTSVoice.cy_GB_Gwyneth:
                     return TTSService.Amazon;
 
+                case TTSVoice.en_AU_OliviaNeural:
+                case TTSVoice.en_GB_AmyNeural:
+                case TTSVoice.en_GB_EmmaNeural:
+                case TTSVoice.en_GB_BrianNeural:
+                case TTSVoice.en_US_IvyNeural:
+                case TTSVoice.en_US_JoannaNeural:
+                case TTSVoice.en_US_KendraNeural:
+                case TTSVoice.en_US_KimberlyNeural:
+                case TTSVoice.en_US_SalliNeural:
+                case TTSVoice.en_US_JoeyNeural:
+                case TTSVoice.en_US_JustinNeural:
+                case TTSVoice.en_US_KevinNeural:
+                case TTSVoice.en_US_MatthewNeural:
+                    return TTSService.Amazon;
+
+                case TTSVoice.en_AU_Catherine:
+                case TTSVoice.en_AU_HayleyRUS:
+                case TTSVoice.en_CA_HeatherRUS:
+                case TTSVoice.en_CA_Linda:
+                case TTSVoice.en_IN_Heera:
+                case TTSVoice.en_IN_PriyaRUS:
+                case TTSVoice.en_IN_Ravi:
+                case TTSVoice.en_IE_Sean:
+                case TTSVoice.en_GB_George:
+                case TTSVoice.en_GB_HazelRUS:
+                case TTSVoice.en_GB_Susan:
+                case TTSVoice.en_US_BenjaminRUS:
+                case TTSVoice.en_US_GuyRUS:
+                case TTSVoice.en_US_AriaRUS:
+                case TTSVoice.en_US_ZiraRUS:
+                    return TTSService.Azure;
+
+                case TTSVoice.en_AU_NatashaNeural:
+                case TTSVoice.en_AU_WilliamNeural:
+                case TTSVoice.en_CA_ClaraNeural:
+                case TTSVoice.en_CA_LiamNeural:
+                case TTSVoice.en_HK_YanNeural:
+                case TTSVoice.en_HK_SamNeural:
+                case TTSVoice.en_IN_NeerjaNeural:
+                case TTSVoice.en_IN_PrabhatNeural:
+                case TTSVoice.en_IE_EmilyNeural:
+                case TTSVoice.en_IE_ConnorNeural:
+                case TTSVoice.en_NZ_MollyNeural:
+                case TTSVoice.en_NZ_MitchellNeural:
+                case TTSVoice.en_PH_RosaNeural:
+                case TTSVoice.en_PH_JamesNeural:
+                case TTSVoice.en_SG_LunaNeural:
+                case TTSVoice.en_SG_WayneNeural:
+                case TTSVoice.en_ZA_LeahNeural:
+                case TTSVoice.en_ZA_LukeNeural:
+                case TTSVoice.en_GB_LibbyNeural:
+                case TTSVoice.en_GB_MiaNeural:
+                case TTSVoice.en_GB_RyanNeural:
+                case TTSVoice.en_US_AriaNeural:
+                case TTSVoice.en_US_JennyNeural:
+                case TTSVoice.en_US_GuyNeural:
+                    return TTSService.Azure;
+
                 case TTSVoice.Unassigned: goto case TTSVoice.en_US_Joanna;
 
                 default:
@@ -418,7 +811,7 @@ namespace TASagentTwitchBot.Core.TTS
             }
         }
 
-        private static string GetGoogleTTSVoiceString(this TTSVoice voice)
+        public static string GetTTSVoiceString(this TTSVoice voice)
         {
             switch (voice)
             {
@@ -438,17 +831,45 @@ namespace TASagentTwitchBot.Core.TTS
                 case TTSVoice.en_GB_Standard_D: return "en-GB-Standard-D";
                 case TTSVoice.en_GB_Standard_F: return "en-GB-Standard-F";
 
+                case TTSVoice.en_US_Standard_A: return "en-US-Standard-A";
                 case TTSVoice.en_US_Standard_B: return "en-US-Standard-B";
                 case TTSVoice.en_US_Standard_C: return "en-US-Standard-C";
                 case TTSVoice.en_US_Standard_D: return "en-US-Standard-D";
                 case TTSVoice.en_US_Standard_E: return "en-US-Standard-E";
+                case TTSVoice.en_US_Standard_F: return "en-US-Standard-F";
                 case TTSVoice.en_US_Standard_G: return "en-US-Standard-G";
                 case TTSVoice.en_US_Standard_H: return "en-US-Standard-H";
                 case TTSVoice.en_US_Standard_I: return "en-US-Standard-I";
                 case TTSVoice.en_US_Standard_J: return "en-US-Standard-J";
 
+                case TTSVoice.en_AU_Wavenet_A: return "en-AU-Wavenet-A";
+                case TTSVoice.en_AU_Wavenet_B: return "en-AU-Wavenet-B";
+                case TTSVoice.en_AU_Wavenet_C: return "en-AU-Wavenet-C";
+                case TTSVoice.en_AU_Wavenet_D: return "en-AU-Wavenet-D";
+
+                case TTSVoice.en_IN_Wavenet_A: return "en-IN-Wavenet-A";
+                case TTSVoice.en_IN_Wavenet_B: return "en-IN-Wavenet-B";
+                case TTSVoice.en_IN_Wavenet_C: return "en-IN-Wavenet-C";
+                case TTSVoice.en_IN_Wavenet_D: return "en-IN-Wavenet-D";
+
+                case TTSVoice.en_GB_Wavenet_A: return "en-GB-Wavenet-A";
+                case TTSVoice.en_GB_Wavenet_B: return "en-GB-Wavenet-B";
+                case TTSVoice.en_GB_Wavenet_C: return "en-GB-Wavenet-C";
+                case TTSVoice.en_GB_Wavenet_D: return "en-GB-Wavenet-D";
+                case TTSVoice.en_GB_Wavenet_F: return "en-GB-Wavenet-F";
+
+                case TTSVoice.en_US_Wavenet_A: return "en-US-Wavenet-A";
+                case TTSVoice.en_US_Wavenet_B: return "en-US-Wavenet-B";
+                case TTSVoice.en_US_Wavenet_C: return "en-US-Wavenet-C";
+                case TTSVoice.en_US_Wavenet_D: return "en-US-Wavenet-D";
+                case TTSVoice.en_US_Wavenet_E: return "en-US-Wavenet-E";
+                case TTSVoice.en_US_Wavenet_F: return "en-US-Wavenet-F";
+                case TTSVoice.en_US_Wavenet_G: return "en-US-Wavenet-G";
+                case TTSVoice.en_US_Wavenet_H: return "en-US-Wavenet-H";
+                case TTSVoice.en_US_Wavenet_I: return "en-US-Wavenet-I";
+                case TTSVoice.en_US_Wavenet_J: return "en-US-Wavenet-J";
+
                 case TTSVoice.en_AU_Nicole:
-                case TTSVoice.en_AU_Olivia:
                 case TTSVoice.en_AU_Russell:
                 case TTSVoice.en_GB_Amy:
                 case TTSVoice.en_GB_Emma:
@@ -495,6 +916,63 @@ namespace TASagentTwitchBot.Core.TTS
                     BGC.Debug.LogError($"Tried to get Google Voice string from AWS TTS Voice {voice}");
                     goto case TTSVoice.en_US_Standard_B;
 
+                case TTSVoice.en_AU_OliviaNeural:
+                case TTSVoice.en_GB_AmyNeural:
+                case TTSVoice.en_GB_EmmaNeural:
+                case TTSVoice.en_GB_BrianNeural:
+                case TTSVoice.en_US_IvyNeural:
+                case TTSVoice.en_US_JoannaNeural:
+                case TTSVoice.en_US_KendraNeural:
+                case TTSVoice.en_US_KimberlyNeural:
+                case TTSVoice.en_US_SalliNeural:
+                case TTSVoice.en_US_JoeyNeural:
+                case TTSVoice.en_US_JustinNeural:
+                case TTSVoice.en_US_KevinNeural:
+                case TTSVoice.en_US_MatthewNeural:
+                    BGC.Debug.LogError($"Tried to get Google Voice string from AWS TTS Voice {voice}");
+                    goto case TTSVoice.en_US_Standard_B;
+
+                case TTSVoice.en_AU_Catherine: return "en-AU-Catherine";
+                case TTSVoice.en_AU_HayleyRUS: return "en-AU-HayleyRUS";
+                case TTSVoice.en_CA_HeatherRUS: return "en-CA-HeatherRUS";
+                case TTSVoice.en_CA_Linda: return "en-CA-Linda";
+                case TTSVoice.en_IN_Heera: return "en-IN-Heera";
+                case TTSVoice.en_IN_PriyaRUS: return "en-IN-PriyaRUS";
+                case TTSVoice.en_IN_Ravi: return "en-IN-Ravi";
+                case TTSVoice.en_IE_Sean: return "en-IE-Sean";
+                case TTSVoice.en_GB_George: return "en-GB-George";
+                case TTSVoice.en_GB_HazelRUS: return "en-GB-HazelRUS";
+                case TTSVoice.en_GB_Susan: return "en-GB-Susan";
+                case TTSVoice.en_US_BenjaminRUS: return "en-US-BenjaminRUS";
+                case TTSVoice.en_US_GuyRUS: return "en-US-GuyRUS";
+                case TTSVoice.en_US_AriaRUS: return "en-US-AriaRUS";
+                case TTSVoice.en_US_ZiraRUS: return "en-US-ZiraRUS";
+
+                case TTSVoice.en_AU_NatashaNeural: return "en-AU-NatashaNeural";
+                case TTSVoice.en_AU_WilliamNeural: return "en-AU-WilliamNeural";
+                case TTSVoice.en_CA_ClaraNeural: return "en-CA-ClaraNeural";
+                case TTSVoice.en_CA_LiamNeural: return "en-CA-LiamNeural";
+                case TTSVoice.en_HK_YanNeural: return "en-HK-YanNeural";
+                case TTSVoice.en_HK_SamNeural: return "en-HK-SamNeural";
+                case TTSVoice.en_IN_NeerjaNeural: return "en-IN-NeerjaNeural";
+                case TTSVoice.en_IN_PrabhatNeural: return "en-IN-PrabhatNeural";
+                case TTSVoice.en_IE_EmilyNeural: return "en-IE-EmilyNeural";
+                case TTSVoice.en_IE_ConnorNeural: return "en-IE-ConnorNeural";
+                case TTSVoice.en_NZ_MollyNeural: return "en-NZ-MollyNeural";
+                case TTSVoice.en_NZ_MitchellNeural: return "en-NZ-MitchellNeural";
+                case TTSVoice.en_PH_RosaNeural: return "en-PH-RosaNeural";
+                case TTSVoice.en_PH_JamesNeural: return "en-PH-JamesNeural";
+                case TTSVoice.en_SG_LunaNeural: return "en-SG-LunaNeural";
+                case TTSVoice.en_SG_WayneNeural: return "en-SG-WayneNeural";
+                case TTSVoice.en_ZA_LeahNeural: return "en-ZA-LeahNeural";
+                case TTSVoice.en_ZA_LukeNeural: return "en-ZA-LukeNeural";
+                case TTSVoice.en_GB_LibbyNeural: return "en-GB-LibbyNeural";
+                case TTSVoice.en_GB_MiaNeural: return "en-GB-MiaNeural";
+                case TTSVoice.en_GB_RyanNeural: return "en-GB-RyanNeural";
+                case TTSVoice.en_US_AriaNeural: return "en-US-AriaNeural";
+                case TTSVoice.en_US_JennyNeural: return "en-US-JennyNeural";
+                case TTSVoice.en_US_GuyNeural: return "en-US-GuyNeural";
+
                 case TTSVoice.Unassigned: goto case TTSVoice.en_US_Standard_B;
 
                 default:
@@ -518,9 +996,13 @@ namespace TASagentTwitchBot.Core.TTS
                 case TTSVoice.en_AU_Standard_B:
                 case TTSVoice.en_AU_Standard_C:
                 case TTSVoice.en_AU_Standard_D:
+                case TTSVoice.en_AU_Wavenet_A:
+                case TTSVoice.en_AU_Wavenet_B:
+                case TTSVoice.en_AU_Wavenet_C:
+                case TTSVoice.en_AU_Wavenet_D:
                     return new VoiceSelectionParams
                     {
-                        Name = voice.GetGoogleTTSVoiceString(),
+                        Name = voice.GetTTSVoiceString(),
                         LanguageCode = "en-AU",
                         SsmlGender = SsmlVoiceGender.Neutral
                     };
@@ -529,9 +1011,13 @@ namespace TASagentTwitchBot.Core.TTS
                 case TTSVoice.en_IN_Standard_B:
                 case TTSVoice.en_IN_Standard_C:
                 case TTSVoice.en_IN_Standard_D:
+                case TTSVoice.en_IN_Wavenet_A:
+                case TTSVoice.en_IN_Wavenet_B:
+                case TTSVoice.en_IN_Wavenet_C:
+                case TTSVoice.en_IN_Wavenet_D:
                     return new VoiceSelectionParams
                     {
-                        Name = voice.GetGoogleTTSVoiceString(),
+                        Name = voice.GetTTSVoiceString(),
                         LanguageCode = "en-IN",
                         SsmlGender = SsmlVoiceGender.Neutral
                     };
@@ -541,30 +1027,46 @@ namespace TASagentTwitchBot.Core.TTS
                 case TTSVoice.en_GB_Standard_C:
                 case TTSVoice.en_GB_Standard_D:
                 case TTSVoice.en_GB_Standard_F:
+                case TTSVoice.en_GB_Wavenet_A:
+                case TTSVoice.en_GB_Wavenet_B:
+                case TTSVoice.en_GB_Wavenet_C:
+                case TTSVoice.en_GB_Wavenet_D:
+                case TTSVoice.en_GB_Wavenet_F:
                     return new VoiceSelectionParams
                     {
-                        Name = voice.GetGoogleTTSVoiceString(),
+                        Name = voice.GetTTSVoiceString(),
                         LanguageCode = "en-GB",
                         SsmlGender = SsmlVoiceGender.Neutral
                     };
 
+                case TTSVoice.en_US_Standard_A:
                 case TTSVoice.en_US_Standard_B:
                 case TTSVoice.en_US_Standard_C:
                 case TTSVoice.en_US_Standard_D:
                 case TTSVoice.en_US_Standard_E:
+                case TTSVoice.en_US_Standard_F:
                 case TTSVoice.en_US_Standard_G:
                 case TTSVoice.en_US_Standard_H:
                 case TTSVoice.en_US_Standard_I:
                 case TTSVoice.en_US_Standard_J:
+                case TTSVoice.en_US_Wavenet_A:
+                case TTSVoice.en_US_Wavenet_B:
+                case TTSVoice.en_US_Wavenet_C:
+                case TTSVoice.en_US_Wavenet_D:
+                case TTSVoice.en_US_Wavenet_E:
+                case TTSVoice.en_US_Wavenet_F:
+                case TTSVoice.en_US_Wavenet_G:
+                case TTSVoice.en_US_Wavenet_H:
+                case TTSVoice.en_US_Wavenet_I:
+                case TTSVoice.en_US_Wavenet_J:
                     return new VoiceSelectionParams
                     {
-                        Name = voice.GetGoogleTTSVoiceString(),
+                        Name = voice.GetTTSVoiceString(),
                         LanguageCode = "en-US",
                         SsmlGender = SsmlVoiceGender.Neutral
                     };
 
                 case TTSVoice.en_AU_Nicole:
-                case TTSVoice.en_AU_Olivia:
                 case TTSVoice.en_AU_Russell:
                 case TTSVoice.en_GB_Amy:
                 case TTSVoice.en_GB_Emma:
@@ -611,11 +1113,72 @@ namespace TASagentTwitchBot.Core.TTS
                     BGC.Debug.LogError($"Tried to get Google VoiceSelectionParams from AWS TTS Voice {voice}");
                     goto case TTSVoice.Unassigned;
 
+                case TTSVoice.en_AU_OliviaNeural:
+                case TTSVoice.en_GB_AmyNeural:
+                case TTSVoice.en_GB_EmmaNeural:
+                case TTSVoice.en_GB_BrianNeural:
+                case TTSVoice.en_US_IvyNeural:
+                case TTSVoice.en_US_JoannaNeural:
+                case TTSVoice.en_US_KendraNeural:
+                case TTSVoice.en_US_KimberlyNeural:
+                case TTSVoice.en_US_SalliNeural:
+                case TTSVoice.en_US_JoeyNeural:
+                case TTSVoice.en_US_JustinNeural:
+                case TTSVoice.en_US_KevinNeural:
+                case TTSVoice.en_US_MatthewNeural:
+                    BGC.Debug.LogError($"Tried to get Google VoiceSelectionParams from AWS TTS Voice {voice}");
+                    goto case TTSVoice.Unassigned;
+
+                case TTSVoice.en_AU_Catherine:
+                case TTSVoice.en_AU_HayleyRUS:
+                case TTSVoice.en_CA_HeatherRUS:
+                case TTSVoice.en_CA_Linda:
+                case TTSVoice.en_IN_Heera:
+                case TTSVoice.en_IN_PriyaRUS:
+                case TTSVoice.en_IN_Ravi:
+                case TTSVoice.en_IE_Sean:
+                case TTSVoice.en_GB_George:
+                case TTSVoice.en_GB_HazelRUS:
+                case TTSVoice.en_GB_Susan:
+                case TTSVoice.en_US_BenjaminRUS:
+                case TTSVoice.en_US_GuyRUS:
+                case TTSVoice.en_US_AriaRUS:
+                case TTSVoice.en_US_ZiraRUS:
+                    BGC.Debug.LogError($"Tried to get Google VoiceSelectionParams from Azure TTS Voice {voice}");
+                    goto case TTSVoice.Unassigned;
+
+
+                case TTSVoice.en_AU_NatashaNeural:
+                case TTSVoice.en_AU_WilliamNeural:
+                case TTSVoice.en_CA_ClaraNeural:
+                case TTSVoice.en_CA_LiamNeural:
+                case TTSVoice.en_HK_YanNeural:
+                case TTSVoice.en_HK_SamNeural:
+                case TTSVoice.en_IN_NeerjaNeural:
+                case TTSVoice.en_IN_PrabhatNeural:
+                case TTSVoice.en_IE_EmilyNeural:
+                case TTSVoice.en_IE_ConnorNeural:
+                case TTSVoice.en_NZ_MollyNeural:
+                case TTSVoice.en_NZ_MitchellNeural:
+                case TTSVoice.en_PH_RosaNeural:
+                case TTSVoice.en_PH_JamesNeural:
+                case TTSVoice.en_SG_LunaNeural:
+                case TTSVoice.en_SG_WayneNeural:
+                case TTSVoice.en_ZA_LeahNeural:
+                case TTSVoice.en_ZA_LukeNeural:
+                case TTSVoice.en_GB_LibbyNeural:
+                case TTSVoice.en_GB_MiaNeural:
+                case TTSVoice.en_GB_RyanNeural:
+                case TTSVoice.en_US_AriaNeural:
+                case TTSVoice.en_US_JennyNeural:
+                case TTSVoice.en_US_GuyNeural:
+                    BGC.Debug.LogError($"Tried to get Google VoiceSelectionParams from Azure TTS Voice {voice}");
+                    goto case TTSVoice.Unassigned;
+
                 default:
                     BGC.Debug.LogError($"TTS Voice not supported {voice}");
                     goto case TTSVoice.Unassigned;
             }
-
         }
 
         //Add to lexicons in startup if necessary
@@ -645,10 +1208,12 @@ namespace TASagentTwitchBot.Core.TTS
                 case TTSVoice.en_GB_Standard_C:
                 case TTSVoice.en_GB_Standard_D:
                 case TTSVoice.en_GB_Standard_F:
+                case TTSVoice.en_US_Standard_A:
                 case TTSVoice.en_US_Standard_B:
                 case TTSVoice.en_US_Standard_C:
                 case TTSVoice.en_US_Standard_D:
                 case TTSVoice.en_US_Standard_E:
+                case TTSVoice.en_US_Standard_F:
                 case TTSVoice.en_US_Standard_G:
                 case TTSVoice.en_US_Standard_H:
                 case TTSVoice.en_US_Standard_I:
@@ -656,12 +1221,78 @@ namespace TASagentTwitchBot.Core.TTS
                     BGC.Debug.LogError($"Tried to get Amazon VoiceId from Google TTS Voice {voice}");
                     goto case TTSVoice.en_GB_Brian;
 
-                case TTSVoice.en_AU_Nicole:
-                    synthesisRequest.VoiceId = VoiceId.Nicole;
-                    break;
+                case TTSVoice.en_AU_Wavenet_A:
+                case TTSVoice.en_AU_Wavenet_B:
+                case TTSVoice.en_AU_Wavenet_C:
+                case TTSVoice.en_AU_Wavenet_D:
+                case TTSVoice.en_IN_Wavenet_A:
+                case TTSVoice.en_IN_Wavenet_B:
+                case TTSVoice.en_IN_Wavenet_C:
+                case TTSVoice.en_IN_Wavenet_D:
+                case TTSVoice.en_GB_Wavenet_A:
+                case TTSVoice.en_GB_Wavenet_B:
+                case TTSVoice.en_GB_Wavenet_C:
+                case TTSVoice.en_GB_Wavenet_D:
+                case TTSVoice.en_GB_Wavenet_F:
+                case TTSVoice.en_US_Wavenet_A:
+                case TTSVoice.en_US_Wavenet_B:
+                case TTSVoice.en_US_Wavenet_C:
+                case TTSVoice.en_US_Wavenet_D:
+                case TTSVoice.en_US_Wavenet_E:
+                case TTSVoice.en_US_Wavenet_F:
+                case TTSVoice.en_US_Wavenet_G:
+                case TTSVoice.en_US_Wavenet_H:
+                case TTSVoice.en_US_Wavenet_I:
+                case TTSVoice.en_US_Wavenet_J:
+                    BGC.Debug.LogError($"Tried to get Amazon VoiceId from Google TTS Voice {voice}");
+                    goto case TTSVoice.en_GB_Brian;
 
-                //Olivia is unsupported
-                case TTSVoice.en_AU_Olivia:
+                case TTSVoice.en_AU_Catherine:
+                case TTSVoice.en_AU_HayleyRUS:
+                case TTSVoice.en_CA_HeatherRUS:
+                case TTSVoice.en_CA_Linda:
+                case TTSVoice.en_IN_Heera:
+                case TTSVoice.en_IN_PriyaRUS:
+                case TTSVoice.en_IN_Ravi:
+                case TTSVoice.en_IE_Sean:
+                case TTSVoice.en_GB_George:
+                case TTSVoice.en_GB_HazelRUS:
+                case TTSVoice.en_GB_Susan:
+                case TTSVoice.en_US_BenjaminRUS:
+                case TTSVoice.en_US_GuyRUS:
+                case TTSVoice.en_US_AriaRUS:
+                case TTSVoice.en_US_ZiraRUS:
+                    BGC.Debug.LogError($"Tried to get Amazon VoiceId from Azure TTS Voice {voice}");
+                    goto case TTSVoice.en_GB_Brian;
+
+                case TTSVoice.en_AU_NatashaNeural:
+                case TTSVoice.en_AU_WilliamNeural:
+                case TTSVoice.en_CA_ClaraNeural:
+                case TTSVoice.en_CA_LiamNeural:
+                case TTSVoice.en_HK_YanNeural:
+                case TTSVoice.en_HK_SamNeural:
+                case TTSVoice.en_IN_NeerjaNeural:
+                case TTSVoice.en_IN_PrabhatNeural:
+                case TTSVoice.en_IE_EmilyNeural:
+                case TTSVoice.en_IE_ConnorNeural:
+                case TTSVoice.en_NZ_MollyNeural:
+                case TTSVoice.en_NZ_MitchellNeural:
+                case TTSVoice.en_PH_RosaNeural:
+                case TTSVoice.en_PH_JamesNeural:
+                case TTSVoice.en_SG_LunaNeural:
+                case TTSVoice.en_SG_WayneNeural:
+                case TTSVoice.en_ZA_LeahNeural:
+                case TTSVoice.en_ZA_LukeNeural:
+                case TTSVoice.en_GB_LibbyNeural:
+                case TTSVoice.en_GB_MiaNeural:
+                case TTSVoice.en_GB_RyanNeural:
+                case TTSVoice.en_US_AriaNeural:
+                case TTSVoice.en_US_JennyNeural:
+                case TTSVoice.en_US_GuyNeural:
+                    BGC.Debug.LogError($"Tried to get Amazon VoiceId from Azure TTS Voice {voice}");
+                    goto case TTSVoice.en_GB_Brian;
+
+                case TTSVoice.en_AU_Nicole:
                     synthesisRequest.VoiceId = VoiceId.Nicole;
                     break;
 
@@ -837,6 +1468,72 @@ namespace TASagentTwitchBot.Core.TTS
 
                 case TTSVoice.cy_GB_Gwyneth:
                     synthesisRequest.VoiceId = VoiceId.Gwyneth;
+                    break;
+
+                //AWS Neural Voices
+                case TTSVoice.en_AU_OliviaNeural:
+                    synthesisRequest.VoiceId = VoiceId.Olivia;
+                    synthesisRequest.Engine = Engine.Neural;
+                    break;
+
+                case TTSVoice.en_GB_AmyNeural:
+                    synthesisRequest.VoiceId = VoiceId.Amy;
+                    synthesisRequest.Engine = Engine.Neural;
+                    break;
+
+                case TTSVoice.en_GB_EmmaNeural:
+                    synthesisRequest.VoiceId = VoiceId.Emma;
+                    synthesisRequest.Engine = Engine.Neural;
+                    break;
+
+                case TTSVoice.en_GB_BrianNeural:
+                    synthesisRequest.VoiceId = VoiceId.Brian;
+                    synthesisRequest.Engine = Engine.Neural;
+                    break;
+
+                case TTSVoice.en_US_IvyNeural:
+                    synthesisRequest.VoiceId = VoiceId.Ivy;
+                    synthesisRequest.Engine = Engine.Neural;
+                    break;
+
+                case TTSVoice.en_US_JoannaNeural:
+                    synthesisRequest.VoiceId = VoiceId.Joanna;
+                    synthesisRequest.Engine = Engine.Neural;
+                    break;
+
+                case TTSVoice.en_US_KendraNeural:
+                    synthesisRequest.VoiceId = VoiceId.Kendra;
+                    synthesisRequest.Engine = Engine.Neural;
+                    break;
+
+                case TTSVoice.en_US_KimberlyNeural:
+                    synthesisRequest.VoiceId = VoiceId.Kimberly;
+                    synthesisRequest.Engine = Engine.Neural;
+                    break;
+
+                case TTSVoice.en_US_SalliNeural:
+                    synthesisRequest.VoiceId = VoiceId.Salli;
+                    synthesisRequest.Engine = Engine.Neural;
+                    break;
+
+                case TTSVoice.en_US_JoeyNeural:
+                    synthesisRequest.VoiceId = VoiceId.Joey;
+                    synthesisRequest.Engine = Engine.Neural;
+                    break;
+
+                case TTSVoice.en_US_JustinNeural:
+                    synthesisRequest.VoiceId = VoiceId.Justin;
+                    synthesisRequest.Engine = Engine.Neural;
+                    break;
+
+                case TTSVoice.en_US_KevinNeural:
+                    synthesisRequest.VoiceId = VoiceId.Kevin;
+                    synthesisRequest.Engine = Engine.Neural;
+                    break;
+
+                case TTSVoice.en_US_MatthewNeural:
+                    synthesisRequest.VoiceId = VoiceId.Matthew;
+                    synthesisRequest.Engine = Engine.Neural;
                     break;
 
                 case TTSVoice.Unassigned: goto case TTSVoice.en_US_Joanna;

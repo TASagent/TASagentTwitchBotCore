@@ -35,12 +35,52 @@ namespace BGC.Audio.Filters
 
         public StreamConcatenator(params IBGCStream[] streams)
         {
-            AddStreams(streams);
+            IEnumerable<int> channels = streams.Select(x => x.Channels);
+            int maxChannels = channels.Max();
+            int minChannels = channels.Min();
+
+            if (maxChannels == minChannels)
+            {
+                //All streams have the same channel count
+                AddStreams(streams);
+            }
+            else
+            {
+                //Varied channel counts - correct
+                if (minChannels == 1 && !channels.Any(x => x != maxChannels && x != 1))
+                {
+                    AddStreams(streams.Select(x => EnsureChannelCount(x, maxChannels)));
+                }
+                else
+                {
+                    throw new StreamCompositionException($"No clear path to rectify concatenated streams of channel counts: {string.Join(", ", channels.Select(x => x.ToString()))}");
+                }
+            }
         }
 
         public StreamConcatenator(IEnumerable<IBGCStream> streams)
         {
-            AddStreams(streams);
+            IEnumerable<int> channels = streams.Select(x => x.Channels);
+            int maxChannels = channels.Max();
+            int minChannels = channels.Min();
+
+            if (maxChannels == minChannels)
+            {
+                //All streams have the same channel count
+                AddStreams(streams);
+            }
+            else
+            {
+                //Varied channel counts - correct
+                if (minChannels == 1 && !channels.Any(x => x != maxChannels && x != 1))
+                {
+                    AddStreams(streams.Select(x => EnsureChannelCount(x, maxChannels)));
+                }
+                else
+                {
+                    throw new StreamCompositionException($"No clear path to rectify concatenated streams of channel counts: {string.Join(", ", channels.Select(x => x.ToString()))}");
+                }
+            }
         }
 
         public void AddStream(IBGCStream stream)
@@ -176,32 +216,20 @@ namespace BGC.Audio.Filters
         {
             if (_channelRMS == null)
             {
-                //WTF, this was soo wrong...
-                //
-                //double[] rms = new double[Channels];
-
-                //foreach (IBGCStream stream in streams)
-                //{
-                //    double[] streamRMS = stream.GetChannelRMS().ToArray();
-
-                //    for (int i = 0; i < Channels; i++)
-                //    {
-                //        rms[i] += (stream.ChannelSamples / (double)ChannelSamples) * streamRMS[i] * streamRMS[i];
-                //    }
-                //}
-
-                //for (int i = 0; i < Channels; i++)
-                //{
-                //    rms[i] = Math.Sqrt(rms[i]);
-                //}
-
-                //_channelRMS = rms;
-
-
                 _channelRMS = this.CalculateRMS();
             }
 
             return _channelRMS;
+        }
+
+        private static IBGCStream EnsureChannelCount(IBGCStream stream, int channelCount)
+        {
+            if (stream.Channels == channelCount)
+            {
+                return stream;
+            }
+
+            return stream.UpChannel(channelCount);
         }
     }
 }

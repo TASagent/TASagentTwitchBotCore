@@ -10,19 +10,19 @@ namespace TASagentTwitchBot.Core.Chat
 
     public class ChatMessageHandler : IChatMessageHandler
     {
-        private readonly Config.BotConfiguration botConfig;
+        private readonly TTS.TTSConfiguration ttsConfig;
         
         private readonly ICommunication communication;
         private readonly Notifications.ICheerHandler cheerHandler;
         private readonly IServiceScopeFactory scopeFactory;
 
         public ChatMessageHandler(
-            Config.BotConfiguration botConfig,
+            TTS.TTSConfiguration ttsConfig,
             ICommunication communication,
             Notifications.ICheerHandler cheerHandler,
             IServiceScopeFactory scopeFactory)
         {
-            this.botConfig = botConfig;
+            this.ttsConfig = ttsConfig;
 
             this.communication = communication;
             this.cheerHandler = cheerHandler;
@@ -38,7 +38,6 @@ namespace TASagentTwitchBot.Core.Chat
                 return;
             }
 
-
             IRC.TwitchChatter chatter = await IRC.TwitchChatter.FromIRCMessage(message, communication, scopeFactory);
 
             if (chatter == null)
@@ -48,7 +47,7 @@ namespace TASagentTwitchBot.Core.Chat
 
             communication.DispatchChatMessage(chatter);
 
-            if (chatter.Bits != 0 && chatter.Bits >= botConfig.BitTTSThreshold)
+            if (chatter.Bits != 0 && chatter.Bits >= ttsConfig.BitThreshold)
             {
                 cheerHandler.HandleCheer(chatter.User, chatter.Message, chatter.Bits, true);
             }

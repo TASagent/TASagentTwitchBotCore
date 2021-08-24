@@ -168,6 +168,7 @@ namespace TASagentTwitchBot.Core.Notifications
             if (!string.IsNullOrWhiteSpace(message))
             {
                 ttsRequest = await ttsRenderer.TTSRequest(
+                    authorizationLevel: subscriber.AuthorizationLevel,
                     voicePreference: subscriber.TTSVoicePreference,
                     pitchPreference: subscriber.TTSPitchPreference,
                     speedPreference: subscriber.TTSSpeedPreference,
@@ -315,6 +316,7 @@ namespace TASagentTwitchBot.Core.Notifications
             if (!string.IsNullOrWhiteSpace(message))
             {
                 ttsRequest = await ttsRenderer.TTSRequest(
+                    authorizationLevel: cheerer.AuthorizationLevel,
                     voicePreference: cheerer.TTSVoicePreference,
                     pitchPreference: cheerer.TTSPitchPreference,
                     speedPreference: cheerer.TTSSpeedPreference,
@@ -786,6 +788,7 @@ namespace TASagentTwitchBot.Core.Notifications
             string message)
         {
             return ttsRenderer.TTSRequest(
+                authorizationLevel: user.AuthorizationLevel,
                 voicePreference: user.TTSVoicePreference,
                 pitchPreference: user.TTSPitchPreference,
                 speedPreference: user.TTSSpeedPreference,

@@ -23,12 +23,9 @@ namespace TASagentTwitchBot.Core.Config
         public string BroadcasterAccessToken { get; set; } = "";
         public string BroadcasterRefreshToken { get; set; } = "";
 
-        public int TTSTimeoutTime { get; set; } = 20;
-
         public bool LogAllErrors { get; set; } = true;
         public bool ExhaustiveIRCLogging { get; set; } = true;
 
-        public int BitTTSThreshold { get; set; } = 0;
         [Obsolete("Moved to CommandConfiguration.EnableErrorHandling")]
         public bool EnableErrorHandling { get; set; } = true;
 

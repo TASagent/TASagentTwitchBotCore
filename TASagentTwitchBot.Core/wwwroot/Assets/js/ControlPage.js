@@ -403,6 +403,41 @@
         }
     }
 
+    function UpdateTTSSettings() {
+        $.get({
+            url: "/TASagentBotAPI/TTS/Settings",
+            headers: { "Authorization": "PASS NONE" },
+            success: function (settings) {
+                $("#input-TTS-Enabled").prop('checked', settings.enabled);
+                $("#input-TTS-BitThreshold").val(settings.bitThreshold);
+                $("#input-TTS-Command-Enabled").prop('checked', settings.commandEnabled);
+                $("#input-TTS-Command-Cooldown").val(settings.commandCooldown);
+                $("#input-TTS-Redemption-Enabled").prop('checked', settings.redemptionEnabled);
+                $("#input-TTS-Neural-Enabled").prop('checked', settings.allowNeuralVoices);
+            },
+            beforeSend: ApplyAuth,
+            error: HandleErrorResponse
+        });
+    }
+
+    function SubmitTTSSettings() {
+        $.post({
+            url: "/TASagentBotAPI/TTS/Settings",
+            headers: { "Authorization": "PASS NONE" },
+            contentType: "application/json;charset=utf-8",
+            data: JSON.stringify({
+                enabled: $("#input-TTS-Enabled").prop('checked'),
+                bitThreshold: $("#input-TTS-BitThreshold").val(),
+                commandEnabled: $("#input-TTS-Command-Enabled").prop('checked'),
+                commandCooldown: $("#input-TTS-Command-Cooldown").val(),
+                redemptionEnabled: $("#input-TTS-Redemption-Enabled").prop('checked'),
+                allowNeuralVoices: $("#input-TTS-Neural-Enabled").prop('checked')
+            }),
+            beforeSend: ApplyAuth,
+            error: HandleErrorResponse
+        });
+    }
+
     function MoveSlider() {
         var value = $('#slider-PitchSlider').slider("value");
         var pitchValue = Math.pow(8, value);
@@ -1100,6 +1135,8 @@
 
         $("#button-RefreshMicEffect").click(RefreshMicEffect);
 
+        $("#button-Submit-TTS-Settings").click(SubmitTTSSettings);
+
         var serialDeviceSelect = $("#select-SerialDevice");
         serialDeviceSelect.change(function () { SubmitSerialDeviceChanged(serialDeviceSelect.val()); });
 
@@ -1114,6 +1151,8 @@
         $("#nav-settings-audio-tab").click(FetchAudioDevices);
         $("#nav-settings-midi-tab").click(FetchMidiDevices);
         $("#nav-settings-timer-tab").click(FetchTimerValues);
+        $("#nav-settings-tts-tab").click(UpdateTTSSettings);
+
 
         RefreshMiscSettings();
         RefreshMicEffect();

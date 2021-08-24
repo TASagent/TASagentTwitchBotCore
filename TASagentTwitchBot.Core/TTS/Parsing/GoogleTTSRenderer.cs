@@ -69,9 +69,7 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
             }
         }
 
-        protected override async Task<string> SynthesizeSpeech(
-            string interiorSSML,
-            string filename = null)
+        protected override async Task<string> SynthesizeSpeech(string interiorSSML)
         {
             try
             {
@@ -95,15 +93,7 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
                 GoogleSynthesizeSpeechResponse response = await googleClient.SynthesizeSpeechAsync(input, voiceParams, config);
 
                 // Write the binary AudioContent of the response to file.
-                string filepath;
-                if (string.IsNullOrWhiteSpace(filename))
-                {
-                    filepath = Path.Combine(TTSFilesPath, $"{Guid.NewGuid()}.mp3");
-                }
-                else
-                {
-                    filepath = Path.Combine(TTSFilesPath, $"{filename}.mp3");
-                }
+                string filepath = Path.Combine(TTSFilesPath, $"{Guid.NewGuid()}.mp3");
 
                 using (Stream file = new FileStream(filepath, FileMode.Create))
                 {

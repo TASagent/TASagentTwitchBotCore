@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Linq;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using BGC.Audio;
@@ -13,6 +14,7 @@ namespace TASagentTwitchBot.Core.Audio
         protected bool cancel = false;
 
         public abstract Task PlayRequest(MMDevice outputDevice);
+        public abstract IBGCStream CacheToBGCStream();
 
         public virtual void RequestCancel()
         {
@@ -55,6 +57,13 @@ namespace TASagentTwitchBot.Core.Audio
             this.filePath = filePath;
         }
 
+        public override IBGCStream CacheToBGCStream()
+        {
+            using DisposableWaveProvider audioStream = AudioTools.GetWaveProvider(filePath);
+            return audioStream.ToBGCStream().SlowRangeFitter().StreamLevelScaler(-10).SafeCache();
+        }
+
+
         public override async Task PlayRequest(MMDevice outputDevice)
         {
             using WasapiOut outputPlayer = new WasapiOut(outputDevice, AudioClientShareMode.Shared, true, 100);
@@ -89,6 +98,12 @@ namespace TASagentTwitchBot.Core.Audio
             this.effectsChain = effectsChain;
         }
 
+        public override IBGCStream CacheToBGCStream()
+        {
+            using DisposableWaveProvider audioStream = AudioTools.GetWaveProvider(filePath);
+            return effectsChain.ApplyEffects(audioStream.ToBGCStream().EnsureMono()).LimitStream().SafeCache();
+        }
+
         public override async Task PlayRequest(MMDevice outputDevice)
         {
             using WasapiOut outputPlayer = new WasapiOut(outputDevice, AudioClientShareMode.Shared, true, 100);
@@ -119,6 +134,12 @@ namespace TASagentTwitchBot.Core.Audio
         public SoundEffectRequest(SoundEffect soundEffect)
         {
             this.soundEffect = soundEffect;
+        }
+
+        public override IBGCStream CacheToBGCStream()
+        {
+            using DisposableWaveProvider audioStream = AudioTools.GetWaveProvider(soundEffect.FilePath);
+            return audioStream.ToBGCStream().SlowRangeFitter().StreamLevelScaler(-10).SafeCache();
         }
 
         public override async Task PlayRequest(MMDevice outputDevice)
@@ -153,6 +174,9 @@ namespace TASagentTwitchBot.Core.Audio
             this.delayMS = delayMS;
         }
 
+        public override IBGCStream CacheToBGCStream() =>
+            new BGC.Audio.Synthesis.SilenceStream(1, (int)Math.Ceiling(44100 * 0.001 * delayMS));
+
         public override async Task PlayRequest(MMDevice outputDevice)
         {
             await Task.Delay(delayMS);
@@ -168,6 +192,9 @@ namespace TASagentTwitchBot.Core.Audio
         {
             this.stream = stream;
         }
+
+        public override IBGCStream CacheToBGCStream() =>
+            stream.SafeCache();
 
         public override async Task PlayRequest(MMDevice outputDevice)
         {
@@ -209,6 +236,9 @@ namespace TASagentTwitchBot.Core.Audio
         {
             internalRequests = requests;
         }
+
+        public override IBGCStream CacheToBGCStream() =>
+            new BGC.Audio.Filters.StreamConcatenator(internalRequests.Select(x => x.CacheToBGCStream()));
 
         public override void RequestCancel()
         {

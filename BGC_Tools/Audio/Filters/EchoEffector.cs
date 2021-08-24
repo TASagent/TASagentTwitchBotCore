@@ -19,6 +19,8 @@ namespace BGC.Audio.Filters
         private int bufferIndex = 0;
         private int samplesRemaining = -1;
         private int echoBufferIndex = 0;
+        private bool samplesDepleted = false;
+        private bool echoTail = false;
 
         private const int READ_BUFFER_SIZE = 512;
         private readonly float[] readBuffer = new float[READ_BUFFER_SIZE];
@@ -87,6 +89,9 @@ namespace BGC.Audio.Filters
             bufferCount = 0;
             samplesRemaining = -1;
 
+            samplesDepleted = false;
+            echoTail = false;
+
             stream.Reset();
 
             Array.Clear(readBuffer, 0, READ_BUFFER_SIZE);
@@ -101,6 +106,9 @@ namespace BGC.Audio.Filters
             bufferCount = 0;
             samplesRemaining = -1;
 
+            samplesDepleted = false;
+            echoTail = false;
+
             stream.Seek(position);
 
             Array.Clear(readBuffer, 0, READ_BUFFER_SIZE);
@@ -109,41 +117,42 @@ namespace BGC.Audio.Filters
 
         public override int Read(float[] data, int offset, int count)
         {
-            int samplesWritten = ReadBody(data, offset, count);
+            int samplesWritten = 0;
+            
+            if (!echoTail)
+            {
+                samplesWritten = ReadBody(data, offset, count);
+            }
 
-            while (samplesWritten < count && samplesRemaining == -1)
+            while (samplesWritten < count && !samplesDepleted)
             {
                 //Read in samples
-                int read = stream.Read(readBuffer, 0, READ_BUFFER_SIZE);
+                bufferCount = stream.Read(readBuffer, 0, READ_BUFFER_SIZE);
+                bufferIndex = 0;
 
-                if (read < READ_BUFFER_SIZE)
+                if (bufferCount < READ_BUFFER_SIZE)
                 {
-                    //Set rest to zero
-                    Array.Clear(readBuffer, read, READ_BUFFER_SIZE - read);
-                    samplesRemaining = read + Channels * channelSampleAdjustment;
+                    //Read past end
+                    samplesRemaining = Channels * channelSampleAdjustment;
+                    samplesDepleted = true;
                 }
 
-                bufferIndex = 0;
-                bufferCount = READ_BUFFER_SIZE;
-
                 samplesWritten += ReadBody(data, offset + samplesWritten, count - samplesWritten);
+            }
+
+            if (echoTail)
+            {
+                samplesWritten += ReadTail(data, offset + samplesWritten, count - samplesWritten);
             }
 
             return samplesWritten;
         }
 
+
         private int ReadBody(float[] buffer, int offset, int count)
         {
             //Write the minimum between the numer of samples available in the buffer and the requested count
             int samplesReady = Math.Min(count, bufferCount - bufferIndex);
-
-            //Enforce and update samplesRemaining if it's set
-            if (samplesRemaining != -1)
-            {
-                samplesReady = Math.Min(samplesReady, samplesRemaining);
-                samplesRemaining -= samplesReady;
-            }
-
             int samplesWritten = 0;
 
             while (samplesWritten < samplesReady)
@@ -158,6 +167,42 @@ namespace BGC.Audio.Filters
 
                 samplesWritten += echoSamplesReady;
                 bufferIndex += echoSamplesReady;
+                echoBufferIndex += echoSamplesReady;
+                offset += echoSamplesReady;
+
+                if (echoBufferIndex >= echoBufferSize)
+                {
+                    echoBufferIndex = 0;
+                }
+            }
+
+            if (samplesDepleted && samplesWritten < count)
+            {
+                echoTail = true;
+            }
+
+            return samplesReady;
+        }
+
+        private int ReadTail(float[] buffer, int offset, int count)
+        {
+            //Write the minimum between the numer of samples available and the requested count
+            int samplesReady = Math.Min(count, samplesRemaining);
+            samplesRemaining -= samplesReady;
+
+            int samplesWritten = 0;
+
+            while (samplesWritten < samplesReady)
+            {
+                int echoSamplesReady = Math.Min(samplesReady - samplesWritten, echoBufferSize - echoBufferIndex);
+
+                for (int i = 0; i < echoSamplesReady; i++)
+                {
+                    buffer[offset + i] = echoBuffer[echoBufferIndex + i];
+                    echoBuffer[echoBufferIndex + i] *= residual;
+                }
+
+                samplesWritten += echoSamplesReady;
                 echoBufferIndex += echoSamplesReady;
                 offset += echoSamplesReady;
 

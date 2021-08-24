@@ -9,6 +9,7 @@
     <PackageReference Include="AWSSDK.Core" Version="3.7.2.2" />
     <PackageReference Include="AWSSDK.Polly" Version="3.7.1.21" />
     <PackageReference Include="Google.Cloud.TextToSpeech.V1" Version="2.2.0" />
+    <PackageReference Include="Microsoft.CognitiveServices.Speech" Version="1.18.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.9">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

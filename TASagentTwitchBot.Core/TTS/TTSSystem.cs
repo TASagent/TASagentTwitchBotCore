@@ -17,20 +17,21 @@ namespace TASagentTwitchBot.Core.TTS
         //Subsystems
         private readonly IServiceScopeFactory scopeFactory;
         private readonly Config.BotConfiguration botConfig;
+        private readonly TTSConfiguration ttsConfig;
         private readonly ICommunication communication;
         private readonly IAudioEffectSystem audioEffectSystem;
         private readonly Notifications.ITTSHandler ttsHandler;
 
-        private bool enabled = true;
-
         public TTSSystem(
             Config.BotConfiguration botConfig,
+            TTSConfiguration ttsConfig,
             ICommunication communication,
             IAudioEffectSystem audioEffectSystem,
             Notifications.ITTSHandler ttsHandler,
             IServiceScopeFactory scopeFactory)
         {
             this.botConfig = botConfig;
+            this.ttsConfig = ttsConfig;
             this.communication = communication;
             this.audioEffectSystem = audioEffectSystem;
             this.ttsHandler = ttsHandler;
@@ -43,18 +44,17 @@ namespace TASagentTwitchBot.Core.TTS
             Dictionary<string, SetFunction> setFunctions,
             Dictionary<string, GetFunction> getFunctions)
         {
-            commands.Add("tts", HandleTTSRequest);
-            commands.Add("faketts", HandleFakeTTSRequest);
-            helpFunctions.Add("tts", HandleTTSHelpRequest);
-            setFunctions.Add("tts", HandleTTSSetRequest);
-            getFunctions.Add("tts", HandleTTSGetRequest);
+            commands.Add(ttsConfig.Command.CommandName, HandleTTSRequest);
+            helpFunctions.Add(ttsConfig.Command.CommandName, HandleTTSHelpRequest);
+            setFunctions.Add(ttsConfig.Command.CommandName, HandleTTSSetRequest);
+            getFunctions.Add(ttsConfig.Command.CommandName, HandleTTSGetRequest);
         }
 
         public IEnumerable<string> GetPublicCommands()
         {
-            if (enabled)
+            if (ttsConfig.Command.Enabled)
             {
-                yield return "tts";
+                yield return ttsConfig.Command.CommandName;
             }
         }
 
@@ -62,28 +62,28 @@ namespace TASagentTwitchBot.Core.TTS
         {
             if (chatter.User.AuthorizationLevel < AuthorizationLevel.Elevated)
             {
-                return $"Looks like you're not authorized to use the TTS system, {chatter.User.TwitchUserName}";
+                return $"Looks like you're not authorized to use the {ttsConfig.FeatureName} system, @{chatter.User.TwitchUserName}";
             }
 
             if (remainingCommand == null || remainingCommand.Length == 0)
             {
-                return "TTS Command - Send text as spoken audio to the stream with: !tts <text>  For more information, visit https://tas.wtf/info/tts";
+                return $"{ttsConfig.FeatureName} Command - Send text as spoken audio to the stream with: !{ttsConfig.Command.CommandName} <text>  For more information, visit https://tas.wtf/info/tts";
             }
             else if (remainingCommand[0].ToLower() == "voice")
             {
-                return "TTS Voice - Set your personal TTS Voice with !set tts voice <Voice>. Eg justin, joanna, brian, or en-US-Standard-B.  For more information, visit https://tas.wtf/info/tts#setting-voice";
+                return $"{ttsConfig.FeatureName} Voice - Set your personal {ttsConfig.FeatureNameBrief} Voice with !set {ttsConfig.Command.CommandName} voice <Voice>. Eg justin, joanna, brian, or en-US-Standard-B.  For more information, visit https://tas.wtf/info/tts#setting-voice";
             }
             else if (remainingCommand[0].ToLower() == "pitch")
             {
-                return "TTS Pitch - Set your personal TTS Voice pitch with !set tts pitch <Pitch>. Eg normal, x-low, low, high, x-high.  For more information, visit https://tas.wtf/info/tts#setting-pitch";
+                return $"{ttsConfig.FeatureName} Pitch - Set your personal {ttsConfig.FeatureNameBrief} Voice pitch with !set {ttsConfig.Command.CommandName} pitch <Pitch>. Eg normal, x-low, low, high, x-high.  For more information, visit https://tas.wtf/info/tts#setting-pitch";
             }
             else if (remainingCommand[0].ToLower() == "speed")
             {
-                return "TTS Speed - Set your personal TTS Voice speed with !set tts speed <Speed>. Eg normal, x-slow, slow, fast, x-fast.  For more information, visit https://tas.wtf/info/tts#setting-speed";
+                return $"{ttsConfig.FeatureName} Speed - Set your personal {ttsConfig.FeatureNameBrief} Voice speed with !set {ttsConfig.Command.CommandName} speed <Speed>. Eg normal, x-slow, slow, fast, x-fast.  For more information, visit https://tas.wtf/info/tts#setting-speed";
             }
             else if (remainingCommand[0].ToLower() == "sounds")
             {
-                return "TTS Sounds - Add sounds to your TTS with commands like /bao, /midway, /jump, /kick, /pipe, /powerup.  For more information, visit https://tas.wtf/info/tts#integrated-sound-effects";
+                return $"{ttsConfig.FeatureName} Sounds - Add sounds to your {ttsConfig.FeatureNameBrief} with commands like /bao, /midway, /jump, /kick, /pipe, /powerup.  For more information, visit https://tas.wtf/info/tts#integrated-sound-effects";
             }
             else
             {
@@ -91,77 +91,45 @@ namespace TASagentTwitchBot.Core.TTS
             }
         }
 
-        private async Task HandleFakeTTSRequest(IRC.TwitchChatter chatter, string[] remainingCommand)
-        {
-            if (!enabled && chatter.User.AuthorizationLevel != AuthorizationLevel.Admin)
-            {
-                communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, I'm afraid the TTS system is currently disabled.");
-                return;
-            }
-
-            if (chatter.User.AuthorizationLevel < AuthorizationLevel.Admin)
-            {
-                communication.SendPublicChatMessage($"I'm afraid I can't let you do that, @{chatter.User.TwitchUserName}.");
-                return;
-            }
-
-            if (remainingCommand is null || remainingCommand.Length == 0)
-            {
-                //TTS Error
-                communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, missing a username to fake a TTS from.");
-                return;
-            }
-
-            string username = remainingCommand[0].ToLower();
-
-            using IServiceScope scope = scopeFactory.CreateScope();
-            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
-
-            User fakeTTSUser = db.Users.FirstOrDefault(x => x.TwitchUserName.ToLower() == username);
-            
-            if (fakeTTSUser is null)
-            {
-                communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, unable to find \"{username}\" in db.");
-                return;
-            }
-
-            remainingCommand = remainingCommand[1..];
-
-
-            IRC.TwitchChatter fakeChatter = new IRC.TwitchChatter()
-            { 
-                User = fakeTTSUser,
-                CreatedAt = chatter.CreatedAt,
-                Badges = chatter.Badges,
-                Message = $"!tts {string.Join(' ', remainingCommand)}",
-                MessageId = chatter.MessageId,
-                Whisper = chatter.Whisper,
-                Bits = 0
-            };
-
-            await HandleTTSRequest(fakeChatter, remainingCommand);
-        }
-
         private async Task HandleTTSRequest(IRC.TwitchChatter chatter, string[] remainingCommand)
         {
-            if (!enabled && chatter.User.AuthorizationLevel != AuthorizationLevel.Admin)
+            if (!ttsConfig.Enabled || !ttsConfig.Command.Enabled)
             {
-                communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, I'm afraid the TTS system is currently disabled.");
+                //TTS disabled entirely
                 return;
             }
 
-            if (chatter.User.AuthorizationLevel < AuthorizationLevel.None)
+            //Check permissions
+            if (!ttsConfig.CanUseCommand(chatter.User.AuthorizationLevel))
             {
-                communication.SendPublicChatMessage($"I'm afraid I can't let you do that, @{chatter.User.TwitchUserName}.");
+                communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, I'm afraid the {ttsConfig.FeatureName} system is currently disabled.");
                 return;
             }
 
-            if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator &&
+            //Check for cooldown
+            if ((chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator || (ttsConfig.Command.ModsIgnoreCooldown && chatter.User.AuthorizationLevel == AuthorizationLevel.Moderator)) &&
                 chatter.User.LastSuccessfulTTS.HasValue &&
-                DateTime.Now < chatter.User.LastSuccessfulTTS.Value + new TimeSpan(hours: 0, minutes: 0, seconds: botConfig.TTSTimeoutTime))
+                DateTime.Now < chatter.User.LastSuccessfulTTS.Value + new TimeSpan(hours: 0, minutes: 0, seconds: ttsConfig.Command.CooldownTime))
             {
-                communication.SendDebugMessage($"User {chatter.User.TwitchUserName} rebuked for TTS Spam");
-                communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, you must wait before you can do that again.");
+                communication.SendDebugMessage($"User {chatter.User.TwitchUserName} rebuked for {ttsConfig.FeatureNameBrief} Spam");
+
+                TimeSpan remainingTime = (chatter.User.LastSuccessfulTTS.Value + new TimeSpan(hours: 0, minutes: 0, seconds: ttsConfig.Command.CooldownTime)) - DateTime.Now;
+
+                string remainingString;
+                if (remainingTime.TotalMinutes > 1)
+                {
+                    remainingString = $"{Math.Floor(remainingTime.TotalMinutes)} minutes and {remainingTime.Seconds} seconds";
+                }
+                else if (remainingTime.Seconds > 1)
+                {
+                    remainingString = $"{remainingTime.Seconds} seconds";
+                }
+                else
+                {
+                    remainingString = $"1 second";
+                }
+
+                communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, you must wait {remainingString} before you can do that again.");
                 return;
             }
 
@@ -180,7 +148,7 @@ namespace TASagentTwitchBot.Core.TTS
             dbUser.LastSuccessfulTTS = DateTime.Now;
             await db.SaveChangesAsync();
 
-            if (chatter.User.AuthorizationLevel < AuthorizationLevel.Elevated)
+            if (!ttsConfig.HasCommandApproval(chatter.User.AuthorizationLevel))
             {
                 communication.SendPublicChatMessage($"TTS Message queued for approval, @{chatter.User.TwitchUserName}.");
                 ttsHandler.HandleTTS(
@@ -199,8 +167,15 @@ namespace TASagentTwitchBot.Core.TTS
 
         private async Task HandleTTSSetRequest(IRC.TwitchChatter chatter, string[] remainingCommand)
         {
-            if (chatter.User.AuthorizationLevel < AuthorizationLevel.Elevated)
+            if (!ttsConfig.Enabled)
             {
+                //TTS disabled entirely
+                return;
+            }
+
+            if (!ttsConfig.CanCustomize(chatter.User.AuthorizationLevel))
+            {
+                //No set permissions
                 communication.SendPublicChatMessage($"I'm afraid I can't let you do that, @{chatter.User.TwitchUserName}.");
                 return;
             }
@@ -215,79 +190,6 @@ namespace TASagentTwitchBot.Core.TTS
 
             switch (settingName)
             {
-                case "enabled":
-                case "disabled":
-                    if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
-                    {
-                        communication.SendPublicChatMessage($"I'm afraid I can't let you do that, @{chatter.User.TwitchUserName}.");
-                        return;
-                    }
-
-                    enabled = (settingName == "enabled");
-                    communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, TTS service has been {settingName}.");
-                    break;
-
-                case "bit":
-                case "bits":
-                case "bitthreshold":
-                    if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
-                    {
-                        communication.SendPublicChatMessage($"I'm afraid I can't let you do that, @{chatter.User.TwitchUserName}.");
-                        return;
-                    }
-
-                    if (remainingCommand.Length == 1)
-                    {
-                        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, no Bit Threshold specified.");
-                        return;
-                    }
-
-                    if (!int.TryParse(remainingCommand[1], out int bitThreshold))
-                    {
-                        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, unable to parse Bit Threshold {remainingCommand[1]}.");
-                        return;
-                    }
-
-                    if (bitThreshold < 0)
-                    {
-                        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, nonsense Bit Threshold {bitThreshold}.");
-                        return;
-                    }
-
-                    botConfig.BitTTSThreshold = bitThreshold;
-                    botConfig.Serialize();
-                    break;
-
-                case "cooldown":
-                case "timeout":
-                    if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
-                    {
-                        communication.SendPublicChatMessage($"I'm afraid I can't let you do that, @{chatter.User.TwitchUserName}.");
-                        return;
-                    }
-
-                    if (remainingCommand.Length == 1)
-                    {
-                        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, no timeout time specified.");
-                        return;
-                    }
-
-                    if (!int.TryParse(remainingCommand[1], out int timeoutValue))
-                    {
-                        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, unable to parse timeout time {remainingCommand[1]}.");
-                        return;
-                    }
-
-                    if (timeoutValue < 0)
-                    {
-                        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, nonsense timeout time {timeoutValue}.");
-                        return;
-                    }
-
-                    botConfig.TTSTimeoutTime = timeoutValue;
-                    botConfig.Serialize();
-                    break;
-
                 case "voice":
                     if (remainingCommand.Length == 1)
                     {
@@ -301,10 +203,29 @@ namespace TASagentTwitchBot.Core.TTS
                     {
                         //Invalid voice
                         communication.SendPublicChatMessage(
-                            $"TTS Voice not in approved list: https://tas.wtf/info/tts#setting-voice " +
+                            $"@{chatter.User.TwitchUserName}, TTS Voice not in approved list: https://tas.wtf/info/tts#setting-voice " +
                             $"submitted: ({remainingCommand[1]})");
+                        return;
                     }
-                    else
+
+                    //Check if service is approved
+                    if (!ttsConfig.IsServiceSupported(voicePreference.GetTTSService()))
+                    {
+                        //Invalid voice
+                        communication.SendPublicChatMessage(
+                            $"@{chatter.User.TwitchUserName}, TTS Service {voicePreference.GetTTSService()} for voice {voicePreference.Serialize()} is not enabled.");
+                        return;
+                    }
+
+                    if (voicePreference.IsNeuralVoice() && !ttsConfig.CanUseNeuralVoice(chatter.User.AuthorizationLevel))
+                    {
+                        //Invalid neural voice
+                        communication.SendPublicChatMessage(
+                            $"@{chatter.User.TwitchUserName}, you are not authorized to select neural voice {voicePreference.Serialize()}.");
+                        return;
+                    }
+
+
                     {
                         //Accepted voice
                         using IServiceScope scope = scopeFactory.CreateScope();
@@ -393,29 +314,20 @@ namespace TASagentTwitchBot.Core.TTS
                 case "effects":
                 case "effectchain":
                 case "effect_chain":
+                case "effectschain":
+                case "effects_chain":
                     if (remainingCommand.Length == 1)
                     {
                         communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, no TTS effects specified.");
                         return;
                     }
 
-                    Effect parsedEffects = null;
-
-                    if (remainingCommand.Length == 2)
+                    //Try to parse
+                    if (!audioEffectSystem.TryParse(string.Join(' ', remainingCommand[1..]), out Effect parsedEffects, out string errorMessage))
                     {
-                        //Check for predefined defaults
-                        parsedEffects = remainingCommand[1].TranslateTTSEffect();
-                    }
-
-                    if (parsedEffects is null)
-                    {
-                        //Try to parse
-                        if (!audioEffectSystem.TryParse(string.Join(' ', remainingCommand[1..]), out parsedEffects, out string errorMessage))
-                        {
-                            //Parsing failed
-                            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, unable to parse effects chain: {errorMessage}");
-                            return;
-                        }
+                        //Parsing failed
+                        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, unable to parse effects chain: {errorMessage}");
+                        return;
                     }
 
                     if (parsedEffects is null)
@@ -520,42 +432,6 @@ namespace TASagentTwitchBot.Core.TTS
 
             switch (settingName)
             {
-                case "enabled":
-                case "disabled":
-                case "status":
-                    if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
-                    {
-                        communication.SendPublicChatMessage($"I'm afraid I can't let you do that, @{chatter.User.TwitchUserName}.");
-                        return;
-                    }
-
-                    communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, TTS service is {(enabled ? "enabled" : "disabled")}.");
-                    break;
-
-                case "bit":
-                case "bits":
-                case "bitthreshold":
-                    if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
-                    {
-                        communication.SendPublicChatMessage($"I'm afraid I can't let you do that, @{chatter.User.TwitchUserName}.");
-                        return;
-                    }
-
-                    communication.SendPublicChatMessage(
-                        $"@{chatter.User.TwitchUserName}, TTS Bit Threshold is set to {botConfig.BitTTSThreshold}.");
-                    break;
-
-                case "cooldown":
-                case "timeout":
-                    if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
-                    {
-                        communication.SendPublicChatMessage($"I'm afraid I can't let you do that, @{chatter.User.TwitchUserName}.");
-                        return;
-                    }
-
-                    communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, TTS Timeout is {botConfig.TTSTimeoutTime} seconds.");
-                    break;
-
                 case "voice":
                 case "pitch":
                 case "effect":

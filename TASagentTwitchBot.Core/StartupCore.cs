@@ -131,10 +131,13 @@ namespace TASagentTwitchBot.Core
                 .AddSingleton<View.IConsoleOutput, View.BasicView>()
                 .AddSingleton<IRC.INoticeHandler, IRC.NoticeHandler>()
                 .AddSingleton<IRC.IIRCLogger, IRC.IRCLogger>()
-                .AddSingleton<TTS.ITTSRenderer, TTS.NewTTSRenderer>()
                 .AddSingleton<Timer.ITimerManager, Timer.TimerManager>()
                 .AddSingleton<PubSub.IRedemptionSystem, PubSub.RedemptionSystem>()
                 .AddSingleton<Database.IUserHelper, Database.UserHelper>();
+
+            services
+                .AddSingleton<TTS.TTSConfiguration>(TTS.TTSConfiguration.GetConfig())
+                .AddSingleton<TTS.ITTSRenderer, TTS.TTSRenderer>();
 
             //Returns the address that websubs should be directed at
             //Replace this with a custom class if you're behind a proxy or have a domain

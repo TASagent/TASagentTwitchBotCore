@@ -70,7 +70,48 @@ namespace TASagentTwitchBot.Core.Web.Controllers
 
             return Ok();
         }
+
+        [HttpGet]
+        [AuthRequired(AuthDegree.Admin)]
+        public ActionResult<TTSSettings> Settings(
+            [FromServices] TTSConfiguration ttsConfig)
+        {
+            return new TTSSettings(
+                Enabled: ttsConfig.Enabled,
+                BitThreshold: ttsConfig.BitThreshold,
+                CommandEnabled: ttsConfig.Command.Enabled,
+                CommandCooldown: ttsConfig.Command.CooldownTime,
+                RedemptionEnabled: ttsConfig.Redemption.Enabled,
+                AllowNeuralVoices: ttsConfig.AllowNeuralVoices);
+        }
+
+        [HttpPost]
+        [AuthRequired(AuthDegree.Admin)]
+        public IActionResult Settings(
+            TTSSettings ttsSettings,
+            [FromServices] TTSConfiguration ttsConfig)
+        {
+            ttsConfig.Enabled = ttsSettings.Enabled;
+            ttsConfig.BitThreshold = ttsSettings.BitThreshold;
+            ttsConfig.Command.Enabled = ttsSettings.CommandEnabled;
+            ttsConfig.Command.CooldownTime = ttsSettings.CommandCooldown;
+            ttsConfig.Redemption.Enabled = ttsSettings.RedemptionEnabled;
+            ttsConfig.AllowNeuralVoices = ttsSettings.AllowNeuralVoices;
+
+            ttsConfig.Serialize();
+
+            return Ok();
+        }
     }
+
+    public record TTSSettings(
+        bool Enabled,
+        int BitThreshold,
+        bool CommandEnabled,
+        int CommandCooldown,
+        bool RedemptionEnabled,
+        bool AllowNeuralVoices);
+
 
     public record TTSRequest(
         string Voice,

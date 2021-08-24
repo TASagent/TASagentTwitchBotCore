@@ -87,7 +87,7 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
 
             StringBuilder ssmlBuilder = new StringBuilder();
 
-            foreach(RenderElement renderElement in renderElements)
+            foreach (RenderElement renderElement in renderElements)
             {
                 switch (renderElement)
                 {
@@ -165,11 +165,9 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
             return new Audio.ConcatenatedAudioRequest(audioRequests);
         }
 
-        public async Task<Audio.AudioRequest> GetAudio(
-            string interiorSSML,
-            string filename = null)
+        public async Task<Audio.AudioRequest> GetAudio(string interiorSSML)
         {
-            string filePath = await SynthesizeSpeech(interiorSSML, filename);
+            string filePath = await SynthesizeSpeech(interiorSSML);
 
             if (string.IsNullOrEmpty(filePath))
             {
@@ -179,7 +177,7 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
             return new Audio.AudioFileRequest(filePath, effectsChain);
         }
 
-        protected abstract Task<string> SynthesizeSpeech(string interiorSSML, string filename = null);
+        protected abstract Task<string> SynthesizeSpeech(string interiorSSML);
 
         protected string UpdateRenderMode(
             ref TTSRenderMode oldMode,
