@@ -71,7 +71,7 @@ namespace TASagentTwitchBot.Core
             ConfigureDatabases(services);
             ConfigureCoreServices(services);
             ConfigureCoreCommandServices(services);
-            ConfigureCoreWebSubServices(services);
+            ConfigureCoreEventSubServices(services);
             ConfigureCustomServices(services);
         }
 
@@ -139,11 +139,6 @@ namespace TASagentTwitchBot.Core
                 .AddSingleton<TTS.TTSConfiguration>(TTS.TTSConfiguration.GetConfig())
                 .AddSingleton<TTS.ITTSRenderer, TTS.TTSRenderer>();
 
-            //Returns the address that websubs should be directed at
-            //Replace this with a custom class if you're behind a proxy or have a domain
-            services.AddSingleton<Config.IExternalWebAccessConfiguration, Config.ExternalWebAccessConfiguration>();
-
-
             //Make handler requests access the same instance of the CustomActivityProvider singleton
             services
                 .AddSingleton<Notifications.ISubscriptionHandler>(x => x.GetRequiredService<Notifications.FullActivityProvider>())
@@ -164,18 +159,15 @@ namespace TASagentTwitchBot.Core
                 .AddSingleton<Audio.Effects.IAudioEffectProvider, Audio.Effects.ReverbEffectProvider>();
         }
 
-        protected virtual void ConfigureCoreWebSubServices(IServiceCollection services)
+        protected virtual void ConfigureCoreEventSubServices(IServiceCollection services)
         {
-            services.AddSingleton<WebSub.WebSubHandler>();
+            services.AddSingleton(EventSub.EventSubConfig.GetConfig());
+
+            services.AddSingleton<EventSub.EventSubHandler>();
 
             services
-                .AddSingleton<WebSub.IFollowSubscriber, WebSub.FollowSubscriber>()
-                .AddSingleton<WebSub.IStreamChangeSubscriber, WebSub.StreamChangeSubscriber>();
-
-            //Make sure the same instance of each subscriber is used in each case
-            services
-                .AddSingleton<WebSub.IWebSubSubscriber>(x => x.GetRequiredService<WebSub.IFollowSubscriber>())
-                .AddSingleton<WebSub.IWebSubSubscriber>(x => x.GetRequiredService<WebSub.IStreamChangeSubscriber>());
+                .AddSingleton<EventSub.IEventSubSubscriber, EventSub.FollowSubscriber>()
+                .AddSingleton<EventSub.IEventSubSubscriber, EventSub.StreamChangeSubscriber>();
         }
 
         protected virtual void ConfigureCoreCommandServices(IServiceCollection services)
@@ -251,21 +243,6 @@ namespace TASagentTwitchBot.Core
 
             app.UseRouting();
             app.UseAuthorization();
-
-            app.Use(async (context, next) =>
-            {
-                //Reject all requests on WebSub Port that aren't hitting the websub endpoints
-                if (context.Request.Host.Port == Web.Middleware.WebSubHandlerMiddleware.WEBSUB_PORT &&
-                    !context.Request.Path.ToString().StartsWith("/TASagentBotAPI/WebSub/"))
-                {
-                    //Not a websub call
-                    //Refuse connections on WebSub Port
-                    context.Response.StatusCode = 401;
-                    return;
-                }
-
-                await next();
-            });
         }
 
         protected virtual void ConfigureStaticFiles(IApplicationBuilder app, IWebHostEnvironment env)
@@ -278,7 +255,6 @@ namespace TASagentTwitchBot.Core
 
         protected virtual void ConfigureCoreMiddleware(IApplicationBuilder app)
         {
-            app.UseMiddleware<Web.Middleware.WebSubHandlerMiddleware>();
             app.UseMiddleware<Web.Middleware.AuthCheckerMiddleware>();
         }
 
@@ -288,6 +264,7 @@ namespace TASagentTwitchBot.Core
             serviceProvider.GetRequiredService<View.IConsoleOutput>();
             serviceProvider.GetRequiredService<Chat.ChatLogger>();
             serviceProvider.GetRequiredService<Commands.CommandSystem>();
+            serviceProvider.GetRequiredService<EventSub.EventSubHandler>();
         }
 
         protected virtual void ConfigureCoreLibraryContent(

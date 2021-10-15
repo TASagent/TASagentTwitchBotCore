@@ -1,0 +1,20 @@
+﻿@page
+@model TokenModel
+@{
+  ViewData["Title"] = "Manage Tokens";
+  ViewData["ActivePage"] = ManageNavPages.Tokens;
+}
+
+<h4>@ViewData["Title"]</h4>
+<partial name="_StatusMessage" model="Model.StatusMessage" />
+<div class="row">
+  <div class="col-md-6">
+    <form id="bot-token-form" method="post">
+      <div class="form-group">
+        <label asp-for="BotToken"></label>
+        <input asp-for="BotToken" class="form-control" disabled />
+        <button class="btn btn-primary" type="submit" asp-page-handler="RegenerateBotToken">Regenerate</button>
+      </div>
+    </form>
+  </div>
+</div>

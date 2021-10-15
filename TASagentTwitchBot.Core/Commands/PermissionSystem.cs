@@ -68,6 +68,11 @@ namespace TASagentTwitchBot.Core.Commands
                 return;
             }
 
+            if (lowerUser.StartsWith('@') && lowerUser.Length > 1)
+            {
+                lowerUser = lowerUser[1..];
+            }
+
             using IServiceScope scope = scopeFactory.CreateScope();
             BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
 
@@ -151,6 +156,11 @@ namespace TASagentTwitchBot.Core.Commands
                 return;
             }
 
+            if (lowerUser.StartsWith('@') && lowerUser.Length > 1)
+            {
+                lowerUser = lowerUser[1..];
+            }
+
             using IServiceScope scope = scopeFactory.CreateScope();
             BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
 
@@ -223,6 +233,11 @@ namespace TASagentTwitchBot.Core.Commands
             {
                 communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, Restrict who?");
                 return;
+            }
+
+            if (lowerUser.StartsWith('@') && lowerUser.Length > 1)
+            {
+                lowerUser = lowerUser[1..];
             }
 
             using IServiceScope scope = scopeFactory.CreateScope();

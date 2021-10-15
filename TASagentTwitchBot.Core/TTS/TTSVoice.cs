@@ -421,9 +421,9 @@ namespace TASagentTwitchBot.Core.TTS
 
             string cleanedString = voiceString.Trim().ToLowerInvariant();
 
-            if (ttsVoiceLookup.ContainsKey(cleanedString))
+            if (ttsVoiceLookup.TryGetValue(cleanedString, out TTSVoice ttsVoice))
             {
-                return ttsVoiceLookup[cleanedString];
+                return ttsVoice;
             }
 
             if (cleanedString == "default")

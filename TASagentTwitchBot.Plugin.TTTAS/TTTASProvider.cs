@@ -95,22 +95,22 @@ namespace TASagentTwitchBot.Plugin.TTTAS
                 word = word[..^1];
             }
 
-            if (recordingData.RecordingLookup.ContainsKey(word))
+            if (recordingData.RecordingLookup.TryGetValue(word, out Recording recording))
             {
                 //Return the word
-                return new AudioFileRequest(recordingData.RecordingLookup[word].FilePath, effect);
+                return new AudioFileRequest(recording.FilePath, effect);
             }
 
             //Request recording
             lock (pendingRecordings)
             {
-                if (recordingData.RecordingLookup.ContainsKey(word))
+                if (recordingData.RecordingLookup.TryGetValue(word, out recording))
                 {
                     //Return the word
-                    return new AudioFileRequest(recordingData.RecordingLookup[word].FilePath, effect);
+                    return new AudioFileRequest(recording.FilePath, effect);
                 }
 
-                if (!pendingRecordings.ContainsKey(word))
+                if (!pendingRecordings.TryGetValue(word, out PendingRecording pendingRecording))
                 {
                     string fileName = word
                         .Replace("'", "_apos_")
@@ -125,12 +125,11 @@ namespace TASagentTwitchBot.Plugin.TTTAS
 
                     string filePath = Path.Combine(TTTASFilesPath, $"{fileName}_{Guid.NewGuid()}.mp3");
 
-                    PendingRecording pendingRecording = new PendingRecording(word, filePath);
-
+                    pendingRecording = new PendingRecording(word, filePath);
                     pendingRecordings.Add(word, pendingRecording);
                 }
 
-                return new TTTASPendingAudioRequest(pendingRecordings[word], effect);
+                return new TTTASPendingAudioRequest(pendingRecording, effect);
             }
         }
 
@@ -190,20 +189,19 @@ namespace TASagentTwitchBot.Plugin.TTTAS
 
             lock (pendingRecordings)
             {
-                if (!pendingRecordings.ContainsKey(preppedWord.Name))
+                if (!pendingRecordings.TryGetValue(preppedWord.Name, out PendingRecording pendingRecording))
                 {
                     communication.SendErrorMessage($"Marked non-pending word \"{preppedWord.Name}\" as complete.");
                     return;
                 }
 
-                PendingRecording pendingRecording = pendingRecordings[preppedWord.Name];
                 pendingRecordings.Remove(preppedWord.Name);
 
-                if (recordingData.RecordingLookup.ContainsKey(preppedWord.Name))
+                if (recordingData.RecordingLookup.TryGetValue(preppedWord.Name, out Recording recording))
                 {
                     communication.SendWarningMessage($"Overriding existing word \"{preppedWord.Name}\".");
 
-                    recordingData.Recordings.Remove(recordingData.RecordingLookup[preppedWord.Name]);
+                    recordingData.Recordings.Remove(recording);
                     recordingData.RecordingLookup.Remove(preppedWord.Name);
                 }
 
@@ -256,9 +254,7 @@ namespace TASagentTwitchBot.Plugin.TTTAS
 
                     string filePath = Path.Combine(TTTASFilesPath, $"{fileName}_{Guid.NewGuid()}.mp3");
 
-                    PendingRecording pendingRecording = new PendingRecording(word, filePath);
-
-                    pendingRecordings.Add(word, pendingRecording);
+                    pendingRecordings.Add(word, new PendingRecording(word, filePath));
                 }
             }
         }

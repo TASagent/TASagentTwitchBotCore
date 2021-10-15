@@ -85,12 +85,12 @@ namespace TASagentTwitchBot.Core.Notifications
                 index = lastFinishedRequest.Id;
             }
 
-            if (!activityDict.ContainsKey(index))
+            if (activityDict.TryGetValue(index, out ActivityRequest activityRequest))
             {
-                return false;
+                return activityWriter.TryWrite(activityRequest);
             }
 
-            return activityWriter.TryWrite(activityDict[index]);
+            return false;
         }
 
         public void Skip() => audioPlayer.RequestCancel();
@@ -115,12 +115,11 @@ namespace TASagentTwitchBot.Core.Notifications
 
         public bool UpdatePendingRequest(int index, bool approve)
         {
-            if (!pendingActivityRequests.ContainsKey(index))
+            if (!pendingActivityRequests.TryGetValue(index, out ActivityRequest activity))
             {
                 return false;
             }
 
-            ActivityRequest activity = pendingActivityRequests[index];
             pendingActivityRequests.Remove(index);
 
             if (approve)

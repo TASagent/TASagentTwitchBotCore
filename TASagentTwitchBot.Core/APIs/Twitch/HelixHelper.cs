@@ -32,8 +32,6 @@ namespace TASagentTwitchBot.Core.API.Twitch
         private readonly Config.BotConfiguration botConfig;
         private readonly ICommunication communication;
 
-        #region Constructors
-
         /// <summary>
         /// Constructor for the Twitch_Helix api helper
         /// </summary>
@@ -45,8 +43,7 @@ namespace TASagentTwitchBot.Core.API.Twitch
             this.communication = communication;
         }
 
-        #endregion
-        #region Authorization
+        #region Authentication
 
         /// <summary>
         /// Gets new OAuth Access token
@@ -158,7 +155,7 @@ namespace TASagentTwitchBot.Core.API.Twitch
             return JsonSerializer.Deserialize<TokenValidationRequest>(response.Content);
         }
 
-        #endregion Authorization
+        #endregion Authentication
 
         /// <summary>
         /// Gets game information as specified
@@ -215,8 +212,6 @@ namespace TASagentTwitchBot.Core.API.Twitch
             request.AddOptionalParameter("id", new List<string>() { id });
 
             IRestResponse response = await restClient.ExecuteAsync(request);
-
-            communication.SendDebugMessage(response.Content);
 
             TwitchUsers twitchUsers = JsonSerializer.Deserialize<TwitchUsers>(response.Content);
 

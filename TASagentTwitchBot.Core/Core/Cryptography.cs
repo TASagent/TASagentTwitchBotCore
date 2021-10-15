@@ -15,6 +15,11 @@ namespace TASagentTwitchBot.Core
             byte[] hash;
             byte[] hashBytes;
 
+            if (string.IsNullOrEmpty(password))
+            {
+                throw new ArgumentException("Password cannot be null or empty", nameof(password));
+            }
+
             if (salt == null)
             {
                 salt = GenerateSalt();
