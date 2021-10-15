@@ -1,0 +1,27 @@
+﻿@{
+  ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center">
+  <h1 class="display-4">Welcome</h1>
+  <p>This is the landing page for my TAS Stream Bot.</p>
+</div>
+
+@if (User.IsInRole("Admin"))
+{
+  <div class="text-center">
+    <form method="post" asp-action="Ping" asp-controller="Home">
+      <div class="card">
+        <div class="card-header">
+          Send a message to all sockets.
+        </div>
+        <div class="card-body">
+          <input name="message" class="form-control"/>
+        </div>
+        <div class="card-footer">
+          <input type="submit" value="Send" class="btn btn-primary" style="width:auto" />
+        </div>
+      </div>
+    </form>
+  </div>
+}

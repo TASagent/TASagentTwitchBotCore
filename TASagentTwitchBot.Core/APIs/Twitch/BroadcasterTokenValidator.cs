@@ -10,7 +10,6 @@ namespace TASagentTwitchBot.Core.API.Twitch
     public class BroadcasterTokenValidator : TokenValidator, IBroadcasterTokenValidator
     {
         private readonly Config.BotConfiguration botConfig;
-        private readonly Config.IExternalWebAccessConfiguration webAccessConfig;
 
         protected override string AccessToken
         {
@@ -24,17 +23,15 @@ namespace TASagentTwitchBot.Core.API.Twitch
             set => botConfig.BroadcasterRefreshToken = value;
         }
 
-        protected override string RedirectURI => $"{webAccessConfig.GetLocalAddress()}/TASagentBotAPI/OAuth/BroadcasterCode";
+        protected override string RedirectURI => $"http://localhost:5000/TASagentBotAPI/OAuth/BroadcasterCode";
 
         public BroadcasterTokenValidator(
             Config.BotConfiguration botConfig,
             ICommunication communication,
-            HelixHelper helixHelper,
-            Config.IExternalWebAccessConfiguration webAccessConfig)
+            HelixHelper helixHelper)
             : base(communication, helixHelper)
         {
             this.botConfig = botConfig;
-            this.webAccessConfig = webAccessConfig;
         }
 
         protected override void SaveChanges() =>

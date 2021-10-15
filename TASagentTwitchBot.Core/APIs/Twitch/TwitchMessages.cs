@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace TASagentTwitchBot.Core.API.Twitch
@@ -136,14 +137,15 @@ namespace TASagentTwitchBot.Core.API.Twitch
         [property: JsonPropertyName("user_id")] string UserID,
         [property: JsonPropertyName("user_name")] string UserName,
         [property: JsonPropertyName("game_id")] string GameID,
-        [property: JsonPropertyName("community_ids")] List<string> CommunityIDs,
+        [property: JsonPropertyName("game_name")] string GameName,
         [property: JsonPropertyName("type")] string Type,
         [property: JsonPropertyName("title")] string Title,
         [property: JsonPropertyName("viewer_count")] int ViewerCount,
-        [property: JsonPropertyName("started_at")] DateTime StartedAt,
+        [property: JsonPropertyName("started_at")] string StartedAt,
         [property: JsonPropertyName("language")] string Language,
         [property: JsonPropertyName("thumbnail_url")] string ThumbnailURL,
-        [property: JsonPropertyName("tag_ids")] List<string> TagIDs);
+        [property: JsonPropertyName("tag_ids")] List<string> TagIDs,
+        [property: JsonPropertyName("is_mature")] bool IsMature);
 
 
     public record TwitchChannels(
@@ -469,4 +471,107 @@ namespace TASagentTwitchBot.Core.API.Twitch
         public record PaginationData(
             [property: JsonPropertyName("cursor")] string Cursor);
     }
+
+
+
+    public record TwitchSubscribeRequest(
+        [property: JsonPropertyName("type")] string SubscriptionType,
+        [property: JsonPropertyName("version")] string Version,
+        [property: JsonPropertyName("condition")] Condition Condition,
+        [property: JsonPropertyName("transport")] Transport Transport);
+
+    public record TwitchSubscribeResponse(
+        [property: JsonPropertyName("data")] TwitchSubscriptionDatum[] Data,
+        [property: JsonPropertyName("total")] int Total,
+        [property: JsonPropertyName("total_cost")] int TotalCost,
+        [property: JsonPropertyName("max_total_cost")] int MaxTotalCost);
+
+    public record TwitchGetSubscriptionsResponse(
+        [property: JsonPropertyName("data")] TwitchSubscriptionDatum[] Data,
+        [property: JsonPropertyName("total")] int Total,
+        [property: JsonPropertyName("total_cost")] int TotalCost,
+        [property: JsonPropertyName("max_total_cost")] int MaxTotalCost,
+        [property: JsonPropertyName("pagination")] Pagination Pagination);
+
+    public record TwitchSubscriptionDatum(
+        [property: JsonPropertyName("id")] string Id,
+        [property: JsonPropertyName("status")] string Status,
+        [property: JsonPropertyName("type")] string Type,
+        [property: JsonPropertyName("version")] string Version,
+        [property: JsonPropertyName("condition")] Condition Condition,
+        [property: JsonPropertyName("created_at")] string CreatedAt,
+        [property: JsonPropertyName("transport")] Transport Transport,
+        [property: JsonPropertyName("cost")] int Cost)
+    {
+        public TwitchSubscriptionStatus GetSubscriptionStatus() => Status switch
+        {
+            "enabled" => TwitchSubscriptionStatus.Enabled,
+            "webhook_callback_verification_pending" => TwitchSubscriptionStatus.WebhookCallbackVerificationPending,
+            "webhook_callback_verification_failed" => TwitchSubscriptionStatus.WebhookCallbackVerificationFailed,
+            "notification_failures_exceeded" => TwitchSubscriptionStatus.NotificationFailuresExceeded,
+            "authorization_revoked" => TwitchSubscriptionStatus.AuthorizationRevoked,
+            "user_removed" => TwitchSubscriptionStatus.UserRemoved,
+
+            _ => TwitchSubscriptionStatus.MAX
+        };
+    }
+
+    public record Condition(
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [property: JsonPropertyName("broadcaster_user_id")]
+        string BroadcasterUserId = null,
+
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [property: JsonPropertyName("from_broadcaster_user_id")]
+        string FromBroadcasterUserId = null,
+
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [property: JsonPropertyName("to_broadcaster_user_id")]
+        string ToBroadcasterUserId = null,
+
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [property: JsonPropertyName("reward_id")]
+        string RewardId = null,
+
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [property: JsonPropertyName("extension_client_id")]
+        string ExtensionClientId = null,
+
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [property: JsonPropertyName("client_id")]
+        string ClientId = null,
+
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [property: JsonPropertyName("user_id")]
+        string UserId = null);
+
+    public record Transport(
+        [property: JsonPropertyName("method")] string Method,
+        [property: JsonPropertyName("callback")] string Callback,
+        [property: JsonPropertyName("secret")] string Secret);
+
+    public record TwitchEventSubPayload(
+        [property: JsonPropertyName("subscription")] TwitchSubscriptionDatum Subscription,
+        [property: JsonPropertyName("event")] JsonElement TwitchEvent,
+        [property: JsonPropertyName("challenge")] string Challenge = null);
+
+    public enum TwitchDeleteSubscriptionResponse
+    {
+        Success = 0,
+        NotFound,
+        AuthFailed,
+        MAX
+    }
+
+    public enum TwitchSubscriptionStatus
+    {
+        Enabled = 0,
+        WebhookCallbackVerificationPending,
+        WebhookCallbackVerificationFailed,
+        NotificationFailuresExceeded,
+        AuthorizationRevoked,
+        UserRemoved,
+        MAX
+    }
+
 }

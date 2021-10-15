@@ -82,34 +82,22 @@ namespace TASagentTwitchBot.Core.EmoteEffects
 
             foreach (BTTVChannelEmote channelEmote in channelData.ChannelEmotes)
             {
-                if (!externalEmoteLookup.ContainsKey(channelEmote.Code))
-                {
-                    externalEmoteLookup.Add(channelEmote.Code, channelEmote.GetLargeURL());
-                }
+                externalEmoteLookup.TryAdd(channelEmote.Code, channelEmote.GetLargeURL());
             }
 
             foreach (BTTVSharedEmote sharedEmote in channelData.SharedEmotes)
             {
-                if (!externalEmoteLookup.ContainsKey(sharedEmote.Code))
-                {
-                    externalEmoteLookup.Add(sharedEmote.Code, sharedEmote.GetLargeURL());
-                }
+                externalEmoteLookup.TryAdd(sharedEmote.Code, sharedEmote.GetLargeURL());
             }
 
             foreach (FFZEmote ffzEmote in ffzEmotes)
             {
-                if (!externalEmoteLookup.ContainsKey(ffzEmote.Code))
-                {
-                    externalEmoteLookup.Add(ffzEmote.Code, ffzEmote.GetLargeURL());
-                }
+                externalEmoteLookup.TryAdd(ffzEmote.Code, ffzEmote.GetLargeURL());
             }
 
             foreach (BTTVGlobalEmote globalEmote in globalEmotes)
             {
-                if (!externalEmoteLookup.ContainsKey(globalEmote.Code))
-                {
-                    externalEmoteLookup.Add(globalEmote.Code, globalEmote.GetLargeURL());
-                }
+                externalEmoteLookup.TryAdd(globalEmote.Code, globalEmote.GetLargeURL());
             }
         }
 
@@ -190,13 +178,14 @@ namespace TASagentTwitchBot.Core.EmoteEffects
 
             //Split
             string[] splitSearchSegment = searchSegment.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            string emote;
 
             //Check each word against External Emotes
             foreach (string word in splitSearchSegment)
             {
-                if (externalEmoteLookup.ContainsKey(word) && ShouldRender(word))
+                if (externalEmoteLookup.TryGetValue(word, out emote) && ShouldRender(word))
                 {
-                    emotes.Add(externalEmoteLookup[word]);
+                    emotes.Add(emote);
                 }
             }
         }

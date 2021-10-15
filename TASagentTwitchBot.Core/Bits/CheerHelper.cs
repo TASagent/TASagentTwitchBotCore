@@ -72,12 +72,8 @@ namespace TASagentTwitchBot.Core.Bits
                 hasData = true;
             }
 
-            prefix = prefix.ToLower();
-
-            if (cheerLookup.ContainsKey(prefix))
+            if (cheerLookup.TryGetValue(prefix.ToLowerInvariant(), out List<TwitchCheermotes.Datum.Tier> tierList))
             {
-                List<TwitchCheermotes.Datum.Tier> tierList = cheerLookup[prefix];
-
                 TwitchCheermotes.Datum.Tier lastMatch = null;
 
                 for (int i = 0; i < tierList.Count; i++)

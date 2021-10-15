@@ -37,7 +37,7 @@ namespace TASagentTwitchBot.Core.PubSub
             //Handle redemption
             string rewardID = redemption.Redemption.Reward.Id;
 
-            if (!redemptionHandlers.ContainsKey(rewardID))
+            if (!redemptionHandlers.TryGetValue(rewardID, out RedemptionHandler redemptionHandler))
             {
                 communication.SendErrorMessage($"Redemption handler not found: {rewardID}");
                 return;
@@ -51,7 +51,7 @@ namespace TASagentTwitchBot.Core.PubSub
                 return;
             }
 
-            await redemptionHandlers[rewardID](user, redemption.Redemption);
+            await redemptionHandler(user, redemption.Redemption);
         }
 
         public async Task Initialize()

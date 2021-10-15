@@ -110,21 +110,9 @@ namespace TASagentTwitchBot.Core.Commands
                         communication.SendPublicChatMessage(response);
                     }
                 }
-                else if (helpFunctions.ContainsKey(splitMessage[1].ToLowerInvariant()))
+                else if (helpFunctions.TryGetValue(splitMessage[1].ToLowerInvariant(), out HelpFunction helpFunction))
                 {
-                    string[] remainingCommand = null;
-
-                    if (splitMessage.Length > 2)
-                    {
-                        remainingCommand = splitMessage[2..];
-                    }
-                    else
-                    {
-                        remainingCommand = Array.Empty<string>();
-                    }
-
-                    string helpString = helpFunctions[splitMessage[1].ToLowerInvariant()](chatter, remainingCommand);
-
+                    string helpString = helpFunction(chatter, GetRemainingCommand(splitMessage, 2));
                     communication.SendPublicChatMessage(helpString);
                 }
                 else
@@ -143,20 +131,9 @@ namespace TASagentTwitchBot.Core.Commands
                 {
                     communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, Set what?");
                 }
-                else if (setFunctions.ContainsKey(splitMessage[1].ToLowerInvariant()))
+                else if (setFunctions.TryGetValue(splitMessage[1].ToLowerInvariant(), out SetFunction setFunction))
                 {
-                    string[] remainingCommand = null;
-
-                    if (splitMessage.Length > 2)
-                    {
-                        remainingCommand = splitMessage[2..];
-                    }
-                    else
-                    {
-                        remainingCommand = Array.Empty<string>();
-                    }
-
-                    await setFunctions[splitMessage[1].ToLowerInvariant()](chatter, remainingCommand);
+                    await setFunction(chatter, GetRemainingCommand(splitMessage, 2));
                 }
                 else
                 {
@@ -174,20 +151,9 @@ namespace TASagentTwitchBot.Core.Commands
                 {
                     communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, Get what?");
                 }
-                else if (getFunctions.ContainsKey(splitMessage[1].ToLowerInvariant()))
+                else if (getFunctions.TryGetValue(splitMessage[1].ToLowerInvariant(), out GetFunction getFunction))
                 {
-                    string[] remainingCommand = null;
-
-                    if (splitMessage.Length > 2)
-                    {
-                        remainingCommand = splitMessage[2..];
-                    }
-                    else
-                    {
-                        remainingCommand = Array.Empty<string>();
-                    }
-
-                    await getFunctions[splitMessage[1].ToLowerInvariant()](chatter, remainingCommand);
+                    await getFunction(chatter, GetRemainingCommand(splitMessage, 2));
                 }
                 else
                 {
@@ -198,21 +164,10 @@ namespace TASagentTwitchBot.Core.Commands
             }
 
             //Roll over to standard command system
-            if (commandHandlers.ContainsKey(command))
+            if (commandHandlers.TryGetValue(command, out CommandHandler commandHandler))
             {
-                string[] remainingCommand = null;
-
-                if (splitMessage.Length > 1)
-                {
-                    remainingCommand = splitMessage[1..];
-                }
-                else
-                {
-                    remainingCommand = Array.Empty<string>();
-                }
-
                 //Invoke handler
-                await commandHandlers[command](chatter, remainingCommand);
+                await commandHandler(chatter, GetRemainingCommand(splitMessage, 1));
             }
             else if (botConfig.CommandConfiguration.EnableErrorHandling)
             {
@@ -234,9 +189,8 @@ namespace TASagentTwitchBot.Core.Commands
                 return;
             }
 
-            if (whisperHandlers.ContainsKey(chatter.User.TwitchUserName))
+            if (whisperHandlers.TryGetValue(chatter.User.TwitchUserName, out ResponseHandler responseHandler))
             {
-                ResponseHandler responseHandler = whisperHandlers[chatter.User.TwitchUserName];
                 whisperHandlers.Remove(chatter.User.TwitchUserName);
                 await responseHandler(chatter);
             }
@@ -247,5 +201,15 @@ namespace TASagentTwitchBot.Core.Commands
         }
 
         public virtual bool IsCommand(string message) => message.TrimStart().StartsWith('!');
+
+        private static string[] GetRemainingCommand(string[] splitMessage, int fromIndex)
+        {
+            if (splitMessage.Length <= fromIndex)
+            {
+                return Array.Empty<string>();
+            }
+
+            return splitMessage[fromIndex..];
+        }
     }
 }

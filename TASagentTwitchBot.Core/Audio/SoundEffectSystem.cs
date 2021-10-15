@@ -73,12 +73,7 @@ namespace TASagentTwitchBot.Core.Audio
                 alias = alias[1..];
             }
 
-            if (!soundEffectData.SoundEffectAliasLookup.ContainsKey(alias))
-            {
-                return null;
-            }
-
-            return soundEffectData.SoundEffectAliasLookup[alias];
+            return soundEffectData.SoundEffectAliasLookup.GetValueOrDefault(alias);
         }
 
         public SoundEffect GetSoundEffectByName(string name)
@@ -88,14 +83,7 @@ namespace TASagentTwitchBot.Core.Audio
                 return null;
             }
 
-            name = name.ToLowerInvariant();
-
-            if (!soundEffectData.SoundEffectNameLookup.ContainsKey(name))
-            {
-                return null;
-            }
-
-            return soundEffectData.SoundEffectNameLookup[name];
+            return soundEffectData.SoundEffectNameLookup.GetValueOrDefault(name.ToLowerInvariant());
         }
 
         public List<string> GetReverbEffects() => new List<string>(soundEffectData.ReverbIRFs.Select(x => x.Name));
@@ -107,14 +95,7 @@ namespace TASagentTwitchBot.Core.Audio
                 return null;
             }
 
-            alias = alias.ToLowerInvariant();
-
-            if (!soundEffectData.ReverbIRFAliasLookup.ContainsKey(alias))
-            {
-                return null;
-            }
-
-            return soundEffectData.ReverbIRFAliasLookup[alias];
+            return soundEffectData.ReverbIRFAliasLookup.GetValueOrDefault(alias.ToLowerInvariant());
         }
 
         public ReverbIRF GetReverbEffectByName(string name)
@@ -124,14 +105,7 @@ namespace TASagentTwitchBot.Core.Audio
                 return null;
             }
 
-            name = name.ToLowerInvariant();
-
-            if (!soundEffectData.ReverbIRFNameLookup.ContainsKey(name))
-            {
-                return null;
-            }
-
-            return soundEffectData.ReverbIRFNameLookup[name];
+            return soundEffectData.ReverbIRFNameLookup.GetValueOrDefault(name.ToLowerInvariant());
         }
 
         public void AddEffect(string name, string filePath, string alias, bool serialize = true) =>

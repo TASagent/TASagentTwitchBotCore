@@ -372,12 +372,11 @@ namespace TASagentTwitchBot.Core.Timer
 
         public async Task<bool> LoadTimer(string name)
         {
-            if (!savedTimerData.Timers.ContainsKey(name))
+            if (!savedTimerData.Timers.TryGetValue(name, out TimerData timerData))
             {
                 return false;
             }
 
-            TimerData timerData = savedTimerData.Timers[name];
             ticking = false;
             timerExtraDuration = TimeSpan.FromMilliseconds(timerData.EndingTime);
             laps.Clear();
@@ -390,10 +389,7 @@ namespace TASagentTwitchBot.Core.Timer
 
         public void SaveTimer(string name)
         {
-            if (savedTimerData.Timers.ContainsKey(name))
-            {
-                savedTimerData.Timers.Remove(name);
-            }
+            savedTimerData.Timers.Remove(name);
 
             double currentTime;
             if (ticking)

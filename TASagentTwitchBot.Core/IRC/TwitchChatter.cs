@@ -41,7 +41,7 @@ namespace TASagentTwitchBot.Core.IRC
                 displayName = message.user;
             }
 
-            string color = message.tags.ContainsKey("color") ? message.tags["color"] : null;
+            string color = message.tags.GetValueOrDefault("color");
 
             if (user == null)
             {
@@ -105,15 +105,17 @@ namespace TASagentTwitchBot.Core.IRC
                 }
             }
 
-            int bits = message.tags.ContainsKey("bits") ? int.Parse(message.tags["bits"]) : 0;
+            int bits = 0;
+            if (message.tags.TryGetValue("bits", out string bitString))
+            {
+                bits = int.Parse(bitString);
+            }
 
             List<Emote> emotes = new List<Emote>();
 
-            if (message.tags.ContainsKey("emotes") && !string.IsNullOrEmpty(message.tags["emotes"]))
+            if (message.tags.TryGetValue("emotes", out string emoteString) && !string.IsNullOrEmpty(emoteString))
             {
                 //Tags includes emotes
-
-                string emoteString = message.tags["emotes"];
                 foreach (string emoteSubString in emoteString.Split('/'))
                 {
                     //ForEach unique emote

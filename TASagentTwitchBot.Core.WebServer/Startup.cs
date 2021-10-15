@@ -1,0 +1,160 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System.IO;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.HttpsPolicy;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.FileProviders;
+
+
+using TASagentTwitchBot.Core.WebServer.Database;
+using TASagentTwitchBot.Core.WebServer.Models;
+using TASagentTwitchBot.Core.WebServer.Tokens;
+using TASagentTwitchBot.Core.WebServer.Connections;
+
+namespace TASagentTwitchBot.Core.WebServer
+{
+    public class Startup
+    {
+        public Startup(IConfiguration configuration)
+        {
+            Configuration = configuration;
+        }
+
+        public IConfiguration Configuration { get; }
+        public void ConfigureServices(IServiceCollection services)
+        {
+            Config.WebServerConfig configFile = Config.WebServerConfig.GetConfig();
+
+            services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+            services.AddDatabaseDeveloperPageExceptionFilter();
+
+            services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+                {
+                    options.SignIn.RequireConfirmedEmail = false;
+                    options.SignIn.RequireConfirmedAccount = false;
+                })
+                .AddEntityFrameworkStores<ApplicationDbContext>()
+                .AddDefaultUI()
+                .AddDefaultTokenProviders();
+            services.AddControllersWithViews();
+            services.AddRazorPages();
+
+            services.AddSignalR();
+
+            services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                .AddScheme<TokenAuthenticationOptions, TokenAuthenticationHandler>(TokenAuthenticationHandler.SCHEME_NAME, o => { })
+                .AddCookie()
+                .AddTwitch(options =>
+                {
+                    options.ClientId = configFile.TwitchClientId;
+                    options.ClientSecret = configFile.TwitchClientSecret;
+
+                    options.SaveTokens = true;
+
+                    options.Scope.Add("bits:read");
+                    options.Scope.Add("channel:read:subscriptions");
+                    options.Scope.Add("channel:read:redemptions");
+                    options.Scope.Add("channel:read:polls");
+                    options.Scope.Add("channel:read:predictions");
+                    options.Scope.Add("channel:read:hype_train");
+                    options.Scope.Add("channel:read:goals");
+                });
+
+            services.AddSingleton(configFile);
+
+            services.AddSingleton<TASagentWebServer>();
+
+            services
+                .AddSingleton<ApplicationManagement>()
+                .AddSingleton<ICommunication, WebServerCommunicationHandler>()
+                .AddSingleton<EventSub.IServerEventSubHandler, EventSub.ServerEventSubHandler>();
+
+            services
+                .AddSingleton<API.Twitch.HelixServerHelper>()
+                .AddSingleton<API.Twitch.HelixEventSubHelper>()
+                .AddSingleton<API.Twitch.AppAccessTokenManager>();
+
+            services.AddSingleton<ISocketManager, SocketManager>();
+        }
+
+        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        {
+            if (env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+                app.UseMigrationsEndPoint();
+            }
+            else
+            {
+                app.UseExceptionHandler("/Home/Error");
+                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+                app.UseHsts();
+            }
+
+            app.UseHttpsRedirection();
+
+            app.UseStaticFiles();
+
+            UseCoreLibraryAssets(app, env);
+
+            app.UseRouting();
+
+            app.UseAuthentication();
+            app.UseAuthorization();
+
+            app.UseWebSockets();
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllerRoute(
+                    name: "default",
+                    pattern: "{controller=Home}/{action=Index}/{id?}");
+                endpoints.MapRazorPages();
+
+                endpoints.MapHub<Web.Hubs.BotHub>("/Hubs/BotSocket");
+            });
+        }
+
+        private void UseCoreLibraryAssets(
+            IApplicationBuilder app,
+            IWebHostEnvironment env)
+        {
+            string wwwRootPath;
+
+            if (env.IsDevelopment())
+            {
+                //Navigate relative to the current path in Development
+                wwwRootPath = Path.Combine(
+                    Directory.GetParent(env.ContentRootPath).FullName,
+                    "TASagentTwitchBot.Core",
+                    "wwwroot",
+                    "Assets");
+            }
+            else
+            {
+                //Look in published "_content" directory
+                wwwRootPath = Path.Combine(env.WebRootPath, "_content", "TASagentTwitchBot.Core", "Assets");
+            }
+
+            PhysicalFileProvider fileProvider = new PhysicalFileProvider(wwwRootPath);
+
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = fileProvider,
+                RequestPath = "/Assets"
+            });
+        }
+    }
+}

@@ -55,12 +55,14 @@ namespace TASagentTwitchBot.Core.Audio.Effects
                 {
                     string[] splitEffect = effectString.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-                    if (!effectHandlers.ContainsKey(splitEffect[0]))
+                    if (effectHandlers.TryGetValue(splitEffect[0], out EffectConstructionHandler matchingHandler))
+                    {
+                        lastEffect = matchingHandler(splitEffect, lastEffect);
+                    }
+                    else
                     {
                         throw new EffectParsingException($"Unexpected effect name: {splitEffect[0]}");
                     }
-
-                    lastEffect = effectHandlers[splitEffect[0]](splitEffect, lastEffect);
                 }
             }
             catch (EffectParsingException effectParsingException)
@@ -99,12 +101,14 @@ namespace TASagentTwitchBot.Core.Audio.Effects
                 {
                     string[] splitEffect = effectString.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-                    if (!effectHandlers.ContainsKey(splitEffect[0]))
+                    if (effectHandlers.TryGetValue(splitEffect[0], out EffectConstructionHandler matchingHandler))
+                    {
+                        effect = matchingHandler(splitEffect, effect);
+                    }
+                    else
                     {
                         throw new EffectParsingException($"Unexpected effect name: {splitEffect[0]}");
                     }
-
-                    effect = effectHandlers[splitEffect[0]](splitEffect, effect);
                 }
             }
             catch (EffectParsingException effectParsingException)
