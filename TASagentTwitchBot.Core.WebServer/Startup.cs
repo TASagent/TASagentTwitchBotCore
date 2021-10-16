@@ -19,6 +19,7 @@ using TASagentTwitchBot.Core.WebServer.Database;
 using TASagentTwitchBot.Core.WebServer.Models;
 using TASagentTwitchBot.Core.WebServer.Tokens;
 using TASagentTwitchBot.Core.WebServer.Connections;
+using System.Net;
 
 namespace TASagentTwitchBot.Core.WebServer
 {
@@ -72,8 +73,9 @@ namespace TASagentTwitchBot.Core.WebServer
 
             services.Configure<ForwardedHeadersOptions>(options =>
             {
-                options.ForwardedHeaders =
-                    ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+                options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+                options.KnownProxies.Add(IPAddress.Parse("192.168.254.254"));
+
             });
 
             services.AddSingleton(configFile);
@@ -108,7 +110,7 @@ namespace TASagentTwitchBot.Core.WebServer
                 app.UseHsts();
             }
 
-            //app.UseHttpsRedirection();
+            app.UseHttpsRedirection();
 
             app.UseStaticFiles();
 
