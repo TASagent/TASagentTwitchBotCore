@@ -44,12 +44,7 @@ namespace TASagentTwitchBot.Core.WebServer
                 }
             }
 
-            await host.StartAsync();
-
-            TASagentWebServer application = host.Services.GetService(typeof(TASagentWebServer)) as TASagentWebServer;
-            await application.RunAsync();
-
-            await host.StopAsync();
+            host.Run();
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>

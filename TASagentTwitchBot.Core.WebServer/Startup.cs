@@ -73,8 +73,6 @@ namespace TASagentTwitchBot.Core.WebServer
 
             services.AddSingleton(configFile);
 
-            services.AddSingleton<TASagentWebServer>();
-
             services
                 .AddSingleton<ApplicationManagement>()
                 .AddSingleton<ICommunication, WebServerCommunicationHandler>()
