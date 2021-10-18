@@ -76,7 +76,6 @@ namespace TASagentTwitchBot.Core.WebServer.EventSub
                 {
                     //Iterate over pages
                     subResponse = await eventSubHelper.GetSubscriptions(
-                        status: "enabled",
                         subscriptionType: subType,
                         after: after);
 
@@ -91,6 +90,11 @@ namespace TASagentTwitchBot.Core.WebServer.EventSub
                         //Iterate over subs
                         if (sub.Condition?.BroadcasterUserId == user.TwitchBroadcasterId)
                         {
+                            if (sub.Status != "enabled")
+                            {
+                                logger.LogWarning($"Found matching sub, but its status is {sub.Status}");
+                            }
+
                             found = true;
                             break;
                         }

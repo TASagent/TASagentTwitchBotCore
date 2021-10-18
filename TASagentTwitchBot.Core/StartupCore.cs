@@ -166,8 +166,8 @@ namespace TASagentTwitchBot.Core
             services.AddSingleton<EventSub.EventSubHandler>();
 
             services
-                .AddSingleton<EventSub.FollowSubscriber>()
-                .AddSingleton<EventSub.StreamChangeSubscriber>();
+                .AddSingleton<EventSub.IEventSubSubscriber, EventSub.FollowSubscriber>()
+                .AddSingleton<EventSub.IEventSubSubscriber, EventSub.StreamChangeSubscriber>();
         }
 
         protected virtual void ConfigureCoreCommandServices(IServiceCollection services)
