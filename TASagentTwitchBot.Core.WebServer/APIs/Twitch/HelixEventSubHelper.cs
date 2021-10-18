@@ -50,7 +50,7 @@ namespace TASagentTwitchBot.Core.WebServer.API.Twitch
 
             IRestResponse response = await restClient.ExecuteAsync(request);
 
-            if (response.StatusCode != HttpStatusCode.Created)
+            if (response.StatusCode != HttpStatusCode.Accepted)
             {
                 logger.LogWarning($"Bad response to Subscribe request: {response.StatusCode} - {response.Content}");
                 return null;

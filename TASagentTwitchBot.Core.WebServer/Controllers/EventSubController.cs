@@ -112,19 +112,19 @@ namespace TASagentTwitchBot.Core.WebServer.Controllers
             {
                 case "webhook_callback_verification":
                     //Handle Subscription Verification
-                    if (!string.IsNullOrEmpty(payload.Challenge))
+                    if (string.IsNullOrEmpty(payload.Challenge))
                     {
-                        logger.LogWarning("Received webhook_callback_verification without a Challenge payload.");
+                        logger.LogWarning($"Received webhook_callback_verification without a Challenge payload: {body}");
                         return BadRequest("No Challenge Payload found");
                     }
 
                     if (eventSubHandler.HandleSubVerification(payload.Subscription.Id))
                     {
-                        logger.LogInformation($"Confirmed Sub Payload");
+                        logger.LogInformation($"Confirmed Sub Payload, subscription verified.");
                         return Ok(payload.Challenge);
                     }
 
-                    logger.LogInformation($"Received unexpected webhook_callback_verification: {payload}");
+                    logger.LogInformation($"Received unexpected webhook_callback_verification: {body}");
                     return BadRequest("No match to pending subs");
 
                 case "revocation":
@@ -133,7 +133,7 @@ namespace TASagentTwitchBot.Core.WebServer.Controllers
                         return Ok();
                     }
 
-                    logger.LogInformation($"Received unexpected webhook revocation: {payload}");
+                    logger.LogInformation($"Received unexpected webhook revocation: {body}");
                     return Ok();
 
                 case "notification":
@@ -142,7 +142,7 @@ namespace TASagentTwitchBot.Core.WebServer.Controllers
                     return Ok();
 
                 default:
-                    logger.LogInformation($"Received unexpected messageType: {messageType}, {payload}");
+                    logger.LogInformation($"Received unexpected messageType: {messageType}, {body}");
                     //Handle event anyway
                     eventSubHandler.HandleEventPayload(user, payload);
                     return Ok();
