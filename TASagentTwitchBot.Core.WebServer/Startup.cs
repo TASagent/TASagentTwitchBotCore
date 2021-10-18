@@ -1,8 +1,7 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using System.IO;
+using System.Net;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -14,12 +13,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.FileProviders;
 
-
 using TASagentTwitchBot.Core.WebServer.Database;
 using TASagentTwitchBot.Core.WebServer.Models;
 using TASagentTwitchBot.Core.WebServer.Tokens;
 using TASagentTwitchBot.Core.WebServer.Connections;
-using System.Net;
 
 namespace TASagentTwitchBot.Core.WebServer
 {
@@ -33,10 +30,14 @@ namespace TASagentTwitchBot.Core.WebServer
         public IConfiguration Configuration { get; }
         public void ConfigureServices(IServiceCollection services)
         {
+            //Initialize DataManagement
+            BGC.IO.DataManagement.Initialize("TASagentBotWebServer");
+
             Config.WebServerConfig configFile = Config.WebServerConfig.GetConfig();
 
             services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(configFile.DBConnectionString));
+
             services.AddDatabaseDeveloperPageExceptionFilter();
 
             services.AddIdentity<ApplicationUser, IdentityRole>(options =>

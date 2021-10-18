@@ -24,6 +24,7 @@ namespace TASagentTwitchBot.Core.WebServer.Tokens
         private readonly UserManager<ApplicationUser> userManager;
         private readonly SignInManager<ApplicationUser> signInManager;
         private readonly API.Twitch.HelixServerHelper helixServerHelper;
+        private readonly ILogger<TokenAuthenticationHandler> logger;
 
         private const string TOKEN_HEADER = "Authorization";
         private const string TOKEN_IDENTIFIER = "Bearer";
@@ -45,6 +46,7 @@ namespace TASagentTwitchBot.Core.WebServer.Tokens
             this.userManager = userManager;
             this.signInManager = signInManager;
             this.helixServerHelper = helixServerHelper;
+            this.logger = logger.CreateLogger<TokenAuthenticationHandler>();
         }
 
         protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -121,6 +123,8 @@ namespace TASagentTwitchBot.Core.WebServer.Tokens
                 AuthenticationTicket ticket = new AuthenticationTicket(
                     principal: claimsPrincipal,
                     authenticationScheme: Scheme.Name);
+
+                logger.LogInformation($"{matchingUser.UserName} Authenticated with a Token.");
 
                 return AuthenticateResult.Success(ticket);
             }

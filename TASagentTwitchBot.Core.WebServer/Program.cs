@@ -20,9 +20,6 @@ namespace TASagentTwitchBot.Core.WebServer
     {
         public async static Task Main(string[] args)
         {
-            //Initialize DataManagement
-            BGC.IO.DataManagement.Initialize("TASagentBotWebServer");
-
             using IHost host = CreateHostBuilder(args).Build();
 
             using (IServiceScope scope = host.Services.CreateScope())

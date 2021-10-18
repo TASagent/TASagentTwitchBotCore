@@ -19,6 +19,8 @@ namespace TASagentTwitchBot.Core.WebServer.Config
 
         public string ExternalAddress { get; set; } = "https://server.tas.wtf";
 
+        public string DBConnectionString { get; set; } = "Server=(localdb)\\mssqllocaldb;Database=aspnet-CoreWebServer-3059A3BF-7213-45FE-955A-C99F61AE2CEF;Trusted_Connection=True;MultipleActiveResultSets=true";
+
         public static WebServerConfig GetConfig()
         {
             WebServerConfig config;
