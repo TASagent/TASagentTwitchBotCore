@@ -95,10 +95,6 @@ namespace TASagentTwitchBot.Core.WebServer.EventSub
                                 found = true;
                                 break;
                             }
-                            else
-                            {
-                                logger.LogWarning($"Found matching sub, but its status is {sub.Status}");
-                            }
                         }
                     }
 

@@ -141,7 +141,7 @@ namespace TASagentTwitchBot.Core.API.Twitch
         [property: JsonPropertyName("type")] string Type,
         [property: JsonPropertyName("title")] string Title,
         [property: JsonPropertyName("viewer_count")] int ViewerCount,
-        [property: JsonPropertyName("started_at")] string StartedAt,
+        [property: JsonPropertyName("started_at")] DateTime StartedAt,
         [property: JsonPropertyName("language")] string Language,
         [property: JsonPropertyName("thumbnail_url")] string ThumbnailURL,
         [property: JsonPropertyName("tag_ids")] List<string> TagIDs,
