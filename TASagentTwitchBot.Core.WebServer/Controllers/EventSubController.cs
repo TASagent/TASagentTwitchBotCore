@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 
 using TASagentTwitchBot.Core.API.Twitch;
 using TASagentTwitchBot.Core.WebServer.Models;
+using TASagentTwitchBot.Core.WebServer.Web.Middleware;
 
 namespace TASagentTwitchBot.Core.WebServer.Controllers
 {
@@ -31,7 +32,7 @@ namespace TASagentTwitchBot.Core.WebServer.Controllers
             this.logger = logger;
         }
 
-
+        [RewindRequired]
         [HttpPost("{userId}")]
         public async Task<IActionResult> Event(
             TwitchEventSubPayload payload,
@@ -88,6 +89,7 @@ namespace TASagentTwitchBot.Core.WebServer.Controllers
                 return BadRequest();
             }
 
+            Request.Body.Position = 0;
             using StreamReader reader = new StreamReader(
                 stream: Request.Body,
                 encoding: Encoding.UTF8,

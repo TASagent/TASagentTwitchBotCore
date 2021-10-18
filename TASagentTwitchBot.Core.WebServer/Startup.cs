@@ -119,6 +119,8 @@ namespace TASagentTwitchBot.Core.WebServer
 
             app.UseRouting();
 
+            app.UseMiddleware<Web.Middleware.RewindRequiredMiddleware>();
+
             app.UseAuthentication();
             app.UseAuthorization();
 

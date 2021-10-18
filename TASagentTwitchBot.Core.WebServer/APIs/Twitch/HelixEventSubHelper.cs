@@ -52,7 +52,7 @@ namespace TASagentTwitchBot.Core.WebServer.API.Twitch
 
             if (response.StatusCode != HttpStatusCode.Created)
             {
-                logger.LogWarning($"Bad response to Subscribe request: {response.Content}");
+                logger.LogWarning($"Bad response to Subscribe request: {response.StatusCode} - {response.Content}");
                 return null;
             }
 
