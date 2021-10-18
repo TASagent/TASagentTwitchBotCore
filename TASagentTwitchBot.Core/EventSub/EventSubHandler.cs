@@ -48,7 +48,12 @@ namespace TASagentTwitchBot.Core.EventSub
                 subscriber.RegisterHandlers(eventHandlers);
             }
 
-            if (!string.IsNullOrEmpty(eventSubConfig.ServerAccessToken) &&
+
+            if (this.eventSubSubscribers.Length == 0)
+            {
+                communication.SendDebugMessage($"No EventSub Listener registered. Skkipping EventSub Websocket.");
+            }
+            else if (!string.IsNullOrEmpty(eventSubConfig.ServerAccessToken) &&
                 !string.IsNullOrEmpty(eventSubConfig.ServerAddress) &&
                 !string.IsNullOrEmpty(eventSubConfig.ServerUserName))
             {
@@ -117,7 +122,6 @@ namespace TASagentTwitchBot.Core.EventSub
         {
             communication.SendDebugMessage($"WebServer Message: {message}");
         }
-
         public async Task ReceiveEvent(EventSubPayload eventSubPayload)
         {
             if (eventHandlers.ContainsKey(eventSubPayload.EventType))
