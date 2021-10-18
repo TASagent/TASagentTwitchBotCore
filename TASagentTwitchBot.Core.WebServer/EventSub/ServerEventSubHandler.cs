@@ -90,13 +90,15 @@ namespace TASagentTwitchBot.Core.WebServer.EventSub
                         //Iterate over subs
                         if (sub.Condition?.BroadcasterUserId == user.TwitchBroadcasterId)
                         {
-                            if (sub.Status != "enabled")
+                            if (sub.Status == "enabled")
+                            {
+                                found = true;
+                                break;
+                            }
+                            else
                             {
                                 logger.LogWarning($"Found matching sub, but its status is {sub.Status}");
                             }
-
-                            found = true;
-                            break;
                         }
                     }
 

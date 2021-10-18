@@ -56,11 +56,13 @@ namespace TASagentTwitchBot.Core.WebServer.Controllers
 
             if (string.IsNullOrEmpty(userId))
             {
+                logger.LogWarning("Received EventCall without a userId.");
                 return BadRequest("Malformed URL");
             }
 
             if (payload is null)
             {
+                logger.LogWarning("Received EventCall without a payload.");
                 return BadRequest();
             }
 
@@ -100,6 +102,7 @@ namespace TASagentTwitchBot.Core.WebServer.Controllers
                 signature: signature,
                 message: $"{messageId}{messageTimestamp}{body}"))
             {
+                logger.LogWarning("Received EventCall but the Signature failed.");
                 return Unauthorized("Signature failed");
             }
 
