@@ -179,14 +179,15 @@ namespace TASagentTwitchBot.Core.WebServer.TTS
                 }
 
                 //Now stream the file back to the requester
-
-                using Stream file = new FileStream(fileName, FileMode.Open);
+                using FileStream file = new FileStream(fileName, FileMode.Open);
                 int totalData = (int)file.Length;
                 int dataPacketSize = Math.Min(totalData, 1 << 13);
                 byte[] dataPacket = new byte[dataPacketSize];
 
-                int bytesReady;
 
+                int totalBytesRead = 0;
+
+                int bytesReady;
                 while((bytesReady = await file.ReadAsync(dataPacket)) > 0)
                 {
                     await botTTSHub.Clients.Groups(user.TwitchBroadcasterId).SendAsync(
@@ -195,6 +196,15 @@ namespace TASagentTwitchBot.Core.WebServer.TTS
                         arg2: dataPacket,
                         arg3: bytesReady,
                         arg4: totalData);
+
+                    logger.LogInformation($"Invoking Read with {bytesReady} Bytes");
+
+                    totalBytesRead += bytesReady;
+                }
+
+                if (totalBytesRead != totalData)
+                {
+                    logger.LogWarning($"Didn't complete reading of the file: {file.Position} / {file.Length} and {totalBytesRead} / {totalData}");
                 }
 
                 file.Close();
