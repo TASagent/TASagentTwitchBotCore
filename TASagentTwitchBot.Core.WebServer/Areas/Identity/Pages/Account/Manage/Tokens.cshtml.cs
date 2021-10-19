@@ -6,12 +6,9 @@ using System.Text.Encodings.Web;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.SignalR;
 
 namespace TASagentTwitchBot.Core.WebServer.Areas.Identity.Pages.Account.Manage
 {
@@ -20,18 +17,15 @@ namespace TASagentTwitchBot.Core.WebServer.Areas.Identity.Pages.Account.Manage
         private readonly UserManager<Models.ApplicationUser> userManager;
         private readonly SignInManager<Models.ApplicationUser> signInManager;
         private readonly ILogger<DownloadPersonalDataModel> logger;
-        private readonly IHubContext<Web.Hubs.BotHub> botHub;
 
         public TokenModel(
             UserManager<Models.ApplicationUser> userManager,
             SignInManager<Models.ApplicationUser> signInManager,
-            ILogger<DownloadPersonalDataModel> logger,
-            IHubContext<Web.Hubs.BotHub> botHub)
+            ILogger<DownloadPersonalDataModel> logger)
         {
             this.userManager = userManager;
             this.signInManager = signInManager;
             this.logger = logger;
-            this.botHub = botHub;
         }
 
         public string Username { get; set; }

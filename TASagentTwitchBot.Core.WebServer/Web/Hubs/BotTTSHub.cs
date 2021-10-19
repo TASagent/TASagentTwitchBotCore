@@ -7,22 +7,23 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Authorization;
 
 using TASagentTwitchBot.Core.WebServer.Models;
-using TASagentTwitchBot.Core.WebServer.EventSub;
+using TASagentTwitchBot.Core.WebServer.TTS;
+using TASagentTwitchBot.Core.TTS;
 
 namespace TASagentTwitchBot.Core.WebServer.Web.Hubs
 {
-    [Authorize(AuthenticationSchemes = "Token", Roles = "EventSub")]
-    public class BotHub : Hub
+    [Authorize(AuthenticationSchemes = "Token", Roles = "TTS")]
+    public class BotTTSHub : Hub
     {
         private readonly UserManager<ApplicationUser> userManager;
-        private readonly IServerEventSubHandler eventSubHandler;
+        private readonly IServerTTSRenderer ttsHandler;
 
-        public BotHub(
+        public BotTTSHub(
             UserManager<ApplicationUser> userManager,
-            IServerEventSubHandler eventSubHandler)
+            IServerTTSRenderer ttsHandler)
         {
             this.userManager = userManager;
-            this.eventSubHandler = eventSubHandler;
+            this.ttsHandler = ttsHandler;
         }
 
         public override async Task OnConnectedAsync()
@@ -42,22 +43,10 @@ namespace TASagentTwitchBot.Core.WebServer.Web.Hubs
             await base.OnDisconnectedAsync(exception);
         }
 
-        public async Task Subscribe(string subType)
+        public async Task RequestTTS(ServerTTSRequest ttsRequest)
         {
             ApplicationUser user = await userManager.GetUserAsync(Context.User);
-            await eventSubHandler.SubscribeToStandardEvent(user, subType);
-        }
-
-        public async Task ReportDesiredEventSubs(HashSet<string> subTypes)
-        {
-            ApplicationUser user = await userManager.GetUserAsync(Context.User);
-            await eventSubHandler.ReportDesiredEventSubs(user, subTypes);
-        }
-
-        public async Task ReportUndesiredEventSub(string subType)
-        {
-            ApplicationUser user = await userManager.GetUserAsync(Context.User);
-            await eventSubHandler.ReportUndesiredEventSub(user, subType);
+            await ttsHandler.HandleTTSRequest(user, ttsRequest);
         }
     }
 }

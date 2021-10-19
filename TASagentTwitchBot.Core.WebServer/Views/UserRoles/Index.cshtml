@@ -12,21 +12,26 @@
       <th>Twitch Broadcaster Id</th>
       <th>Email</th>
       <th>Roles</th>
+      <th>TTS Usage</th>
+      <th>TTS Limit</th>
       <th>Action</th>
     </tr>
   </thead>
   <tbody>
     @foreach (var user in Model)
     {
-      <tr>
-        <td>@user.TwitchBroadcasterName</td>
-        <td>@user.TwitchBroadcasterId</td>
-        <td>@user.Email</td>
-        <td>@string.Join(" , ", user.Roles.ToList())</td>
-        <td>
-          <a class="btn btn-primary" asp-controller="UserRoles" asp-action="Manage" asp-route-userId="@user.UserId">Manage Roles</a>
-        </td>
-      </tr>
+    <tr>
+      <td>@user.TwitchBroadcasterName</td>
+      <td>@user.TwitchBroadcasterId</td>
+      <td>@user.Email</td>
+      <td>@string.Join(" , ", user.Roles.ToList())</td>
+      <td>@user.MonthlyTTSCharactersUsed</td>
+      <td>@user.MonthlyTTSCharacterLimit</td>
+      <td>
+        <a class="btn btn-primary" asp-controller="UserRoles" asp-action="Manage" asp-route-userId="@user.UserId">Manage Roles</a>
+        <a class="btn btn-primary" asp-controller="UserRoles" asp-action="ManageTTS" asp-route-userId="@user.UserId">Manage TTS</a>
+      </td>
+    </tr>
     }
   </tbody>
 </table>

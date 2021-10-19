@@ -158,15 +158,15 @@ namespace TASagentTwitchBot.Core.TTS
             switch (service)
             {
                 case TTSService.Amazon:
-                    ttsSystemRenderer = new AmazonTTSRenderer(amazonClient, communication, voice, pitch, speed, effectsChain);
+                    ttsSystemRenderer = new AmazonTTSLocalRenderer(amazonClient, communication, voice, pitch, speed, effectsChain);
                     break;
 
                 case TTSService.Google:
-                    ttsSystemRenderer = new GoogleTTSRenderer(googleClient, communication, voice, pitch, speed, effectsChain);
+                    ttsSystemRenderer = new GoogleTTSLocalRenderer(googleClient, communication, voice, pitch, speed, effectsChain);
                     break;
 
                 case TTSService.Azure:
-                    ttsSystemRenderer = new AzureTTSRenderer(azureClient, communication, voice, pitch, speed, effectsChain);
+                    ttsSystemRenderer = new AzureTTSLocalRenderer(azureClient, communication, voice, pitch, speed, effectsChain);
                     break;
 
                 default:

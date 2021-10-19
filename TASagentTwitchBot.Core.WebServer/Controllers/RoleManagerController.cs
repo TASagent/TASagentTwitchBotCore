@@ -9,19 +9,20 @@ using Microsoft.EntityFrameworkCore;
 
 namespace TASagentTwitchBot.Core.WebServer.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class RoleManagerController : Controller
     {
-        private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly RoleManager<IdentityRole> roleManager;
 
         public RoleManagerController(RoleManager<IdentityRole> roleManager)
         {
-            _roleManager = roleManager;
+            this.roleManager = roleManager;
         }
 
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Index()
         {
-            List<IdentityRole> roles = await _roleManager.Roles.ToListAsync();
+            List<IdentityRole> roles = await roleManager.Roles.ToListAsync();
             return View(roles);
         }
 
@@ -31,7 +32,7 @@ namespace TASagentTwitchBot.Core.WebServer.Controllers
         {
             if (roleName != null)
             {
-                await _roleManager.CreateAsync(new IdentityRole(roleName.Trim()));
+                await roleManager.CreateAsync(new IdentityRole(roleName.Trim()));
             }
             return RedirectToAction("Index");
         }

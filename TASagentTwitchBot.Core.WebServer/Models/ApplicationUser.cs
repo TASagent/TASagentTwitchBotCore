@@ -13,7 +13,11 @@ namespace TASagentTwitchBot.Core.WebServer.Models
 
         public string SubscriptionSecret { get; set; }
 
+        public int MonthlyTTSUsage { get; set; }
+        public int MonthlyTTSLimit { get; set; }
+
         public virtual HashSet<SubscriptionData> Subscriptions { get; set; }
+
     }
 
     public class SubscriptionData

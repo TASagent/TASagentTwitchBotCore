@@ -1,0 +1,28 @@
+﻿@model ManageUserTTSViewModel
+@{
+  ViewData["Title"] = "Manage TTS";
+  Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<form method="post">
+  <div class="card">
+    <div class="card-header">
+      <h2>Manage User TTS</h2>
+      Adjust TTS Stats for User / @ViewBag.UserName.
+    </div>
+    <div class="card-body">
+      <div class="m-1">
+        <input asp-for="@Model.MonthlyTTSCharactersUsed" />
+        <label asp-for="@Model.MonthlyTTSCharactersUsed"> Monthly TTS Characters Used</label>
+      </div>
+      <div class="m-1">
+        <input asp-for="@Model.MonthlyTTSCharacterLimit" />
+        <label asp-for="@Model.MonthlyTTSCharacterLimit">Monthly Character Limit</label>
+      </div>
+      <div asp-validation-summary="All" class="text-danger"></div>
+    </div>
+    <div class="card-footer">
+      <input type="submit" value="Update" class="btn btn-primary" style="width:auto" />
+      <a asp-action="Index" asp-route-id="@ViewBag.userId" class="btn btn-primary" style="width:auto">Cancel</a>
+    </div>
+  </div>
+</form>

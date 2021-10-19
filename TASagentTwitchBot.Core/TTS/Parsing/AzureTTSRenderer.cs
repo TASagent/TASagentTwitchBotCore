@@ -7,12 +7,9 @@ using TASagentTwitchBot.Core.Audio.Effects;
 
 namespace TASagentTwitchBot.Core.TTS.Parsing
 {
-    public class AzureTTSRenderer : StandardTTSSystemRenderer
+    public abstract class AzureTTSRenderer : StandardTTSSystemRenderer
     {
-        private readonly SpeechConfig azureClient;
-
         public AzureTTSRenderer(
-            SpeechConfig azureClient,
             ICommunication communication,
             TTSVoice voice,
             TTSPitch pitch,
@@ -25,7 +22,6 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
                   speed: speed,
                   effectsChain: effectsChain)
         {
-            this.azureClient = azureClient;
         }
 
         protected override string GetModeMarkup(TTSRenderMode mode, bool start)
@@ -45,6 +41,30 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
                 default:
                     throw new Exception($"Unsupported RenderMode for Markup: {mode}");
             }
+        }
+
+        protected override string PrepareText(string text) => SanitizeXML(text);
+    }
+
+    public class AzureTTSLocalRenderer : AzureTTSRenderer
+    {
+        private readonly SpeechConfig azureClient;
+
+        public AzureTTSLocalRenderer(
+            SpeechConfig azureClient,
+            ICommunication communication,
+            TTSVoice voice,
+            TTSPitch pitch,
+            TTSSpeed speed,
+            Effect effectsChain)
+            : base(
+                  communication: communication,
+                  voice: (voice == TTSVoice.Unassigned) ? TTSVoice.en_US_BenjaminRUS : voice,
+                  pitch: pitch,
+                  speed: speed,
+                  effectsChain: effectsChain)
+        {
+            this.azureClient = azureClient;
         }
 
         protected override async Task<string> SynthesizeSpeech(string interiorSSML)
@@ -130,7 +150,37 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
                 $"{interiorSSML}" +
                 $"</voice></speak>";
         }
+    }
 
-        protected override string PrepareText(string text) => SanitizeXML(text);
+    public class AzureTTSWebRenderer : AzureTTSRenderer
+    {
+        private readonly TTSWebRenderer ttsWebRenderer;
+
+        public AzureTTSWebRenderer(
+            TTSWebRenderer ttsWebRenderer,
+            ICommunication communication,
+            TTSVoice voice,
+            TTSPitch pitch,
+            TTSSpeed speed,
+            Effect effectsChain)
+            : base(
+                  communication: communication,
+                  voice: (voice == TTSVoice.Unassigned) ? TTSVoice.en_US_BenjaminRUS : voice,
+                  pitch: pitch,
+                  speed: speed,
+                  effectsChain: effectsChain)
+        {
+            this.ttsWebRenderer = ttsWebRenderer;
+        }
+
+        protected override Task<string> SynthesizeSpeech(string interiorSSML)
+        {
+            return ttsWebRenderer.SubmitTTSWebRequest(new ServerTTSRequest(
+                RequestIdentifier: Guid.NewGuid().ToString(),
+                Ssml: interiorSSML,
+                Voice: voice,
+                Pitch: pitch,
+                Speed: speed));
+        }
     }
 }

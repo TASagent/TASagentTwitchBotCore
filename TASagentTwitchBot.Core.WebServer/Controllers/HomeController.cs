@@ -14,11 +14,11 @@ namespace TASagentTwitchBot.Core.WebServer.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
+        private readonly ILogger<HomeController> logger;
 
         public HomeController(ILogger<HomeController> logger)
         {
-            _logger = logger;
+            this.logger = logger;
         }
 
         public IActionResult Index()
@@ -41,15 +41,17 @@ namespace TASagentTwitchBot.Core.WebServer.Controllers
         [HttpPost]
         public async Task<IActionResult> Ping(
             string message,
-            [FromServices] IHubContext<BotHub> botHub)
+            [FromServices] IHubContext<BotEventSubHub> botEventSubHub)
         {
             if (string.IsNullOrEmpty(message))
             {
                 message = "Hi";
             }
 
-            await botHub.Clients.All.SendAsync("ReceiveMessage", message);
-            _logger.LogInformation($"Sending message: {message}");
+            message = $"Admin Message: {message}";
+
+            await botEventSubHub.Clients.All.SendAsync("ReceiveMessage", message);
+            logger.LogInformation($"Sending message: {message}");
 
             return RedirectToAction("Index");
         }

@@ -34,7 +34,7 @@ namespace TASagentTwitchBot.Core.WebServer.EventSub
         private readonly Config.WebServerConfig webServerConfig;
         private readonly ILogger<ServerEventSubHandler> logger;
         private readonly HelixEventSubHelper eventSubHelper;
-        private readonly IHubContext<Web.Hubs.BotHub> botHub;
+        private readonly IHubContext<Web.Hubs.BotEventSubHub> botEventSubHub;
 
         private readonly Dictionary<SubKey, SubAttempt> pendingSubs = new Dictionary<SubKey, SubAttempt>();
         private readonly Dictionary<string, SubKey> pendingSubIds = new Dictionary<string, SubKey>();
@@ -46,12 +46,12 @@ namespace TASagentTwitchBot.Core.WebServer.EventSub
             Config.WebServerConfig webServerConfig,
             ILogger<ServerEventSubHandler> logger,
             HelixEventSubHelper eventSubHelper,
-            IHubContext<Web.Hubs.BotHub> botHub)
+            IHubContext<Web.Hubs.BotEventSubHub> botEventSubHub)
         {
             this.webServerConfig = webServerConfig;
             this.logger = logger;
             this.eventSubHelper = eventSubHelper;
-            this.botHub = botHub;
+            this.botEventSubHub = botEventSubHub;
         }
 
         public async Task ReportDesiredEventSubs(ApplicationUser user, HashSet<string> subTypes)
@@ -65,12 +65,6 @@ namespace TASagentTwitchBot.Core.WebServer.EventSub
                 string after = null;
                 TwitchGetSubscriptionsResponse subResponse;
                 bool found = false;
-
-                if (EventSubHandler.GetEventSubConditionType(subType) != EventSubConditionType.BroadcasterUserId)
-                {
-                    logger.LogWarning($"User {user.TwitchBroadcasterName} requested currently unsupported subtype {subType}");
-                    continue;
-                }
 
                 do
                 {
@@ -132,6 +126,11 @@ namespace TASagentTwitchBot.Core.WebServer.EventSub
                 {
                     //It hasn't been long enough.
                     logger.LogWarning($"{user.TwitchBroadcasterName} Requesting sub to {subType} too frequently.");
+
+                    await botEventSubHub.Clients.Groups(user.TwitchBroadcasterId).SendAsync(
+                        method: "ReceiveWarning",
+                        arg1: $"Requesting sub to {subType} too frequently. Await pending sub request.");
+
                     return;
                 }
 
@@ -140,15 +139,53 @@ namespace TASagentTwitchBot.Core.WebServer.EventSub
                 pendingSubs.Remove(key);
             }
 
-            TwitchSubscribeResponse response = await eventSubHelper.Subscribe(
-                subscriptionType: subType,
-                condition: new Condition(BroadcasterUserId: user.TwitchBroadcasterId),
-                transport: new Transport("webhook", $"{webServerConfig.ExternalAddress}/TASagentServerAPI/EventSub/Event/{user.Id}", user.SubscriptionSecret));
-
-            if (response is not null && response.Data.Length > 0)
+            //Get information about the structure of the Condition
+            try
             {
-                pendingSubs.Add(key, new SubAttempt(response.Data[0].Id, DateTime.Now));
-                pendingSubIds.Add(response.Data[0].Id, key);
+                EventSubConditionType conditionType = EventSubHandler.GetEventSubConditionType(subType);
+                Condition condition;
+
+                if (conditionType == EventSubConditionType.BroadcasterUserId)
+                {
+                    //Condition is Only BroadcasterUserId
+                    condition = new Condition(BroadcasterUserId: user.TwitchBroadcasterId);
+                }
+                else if ((conditionType & EventSubConditionType.BroadcasterUserId) == EventSubConditionType.BroadcasterUserId)
+                {
+                    //Condition Includes BroadcasterUserId (like Channel Point Redemptions)
+                    condition = new Condition(BroadcasterUserId: user.TwitchBroadcasterId);
+                }
+                else if ((conditionType & EventSubConditionType.ToBroadcasterUserId) == EventSubConditionType.ToBroadcasterUserId)
+                {
+                    //Condition Includes ToBroadcasterUserId (like Raid)
+                    condition = new Condition(ToBroadcasterUserId: user.TwitchBroadcasterId);
+                }
+                else if (conditionType == EventSubConditionType.UserId)
+                {
+                    condition = new Condition(UserId: user.TwitchBroadcasterId);
+                }
+                else
+                {
+                    throw new NotSupportedException($"Unrecognized ConditionType for EventSub {subType}: {conditionType}");
+                }
+
+                TwitchSubscribeResponse response = await eventSubHelper.Subscribe(
+                    subscriptionType: subType,
+                    condition: condition,
+                    transport: new Transport("webhook", $"{webServerConfig.ExternalAddress}/TASagentServerAPI/EventSub/Event/{user.Id}", user.SubscriptionSecret));
+
+                if (response is not null && response.Data.Length > 0)
+                {
+                    pendingSubs.Add(key, new SubAttempt(response.Data[0].Id, DateTime.Now));
+                    pendingSubIds.Add(response.Data[0].Id, key);
+                }
+            }
+            catch (NotSupportedException ex)
+            {
+                logger.LogWarning($"{user.TwitchBroadcasterName} Requesting sub to unsupported {subType}: {ex.Message}");
+                await botEventSubHub.Clients.Groups(user.TwitchBroadcasterId).SendAsync(
+                    method: "ReceiveWarning",
+                    arg1: $"Unable to subscribe to event {subType}: {ex.Message}");
             }
         }
 
@@ -172,9 +209,7 @@ namespace TASagentTwitchBot.Core.WebServer.EventSub
             TwitchEventSubPayload payload)
         {
             //Do the thing
-            logger.LogInformation($"{user.TwitchBroadcasterName} Payload Received: {JsonSerializer.Serialize(payload)}");
-
-            await botHub.Clients.Groups(user.TwitchBroadcasterId).SendAsync(
+            await botEventSubHub.Clients.Groups(user.TwitchBroadcasterId).SendAsync(
                 method: "ReceiveEvent",
                 arg1: new EventSubPayload(
                     SubId: payload.Subscription.Id,
