@@ -184,7 +184,6 @@ namespace TASagentTwitchBot.Core.WebServer.TTS
                 int dataPacketSize = Math.Min(totalData, 1 << 13);
                 byte[] dataPacket = new byte[dataPacketSize];
 
-
                 int bytesReady;
                 while((bytesReady = await file.ReadAsync(dataPacket)) > 0)
                 {
@@ -194,8 +193,6 @@ namespace TASagentTwitchBot.Core.WebServer.TTS
                         arg2: dataPacket,
                         arg3: bytesReady,
                         arg4: totalData);
-
-                    logger.LogInformation($"Invoking Read with {bytesReady} Bytes");
                 }
 
                 file.Close();
