@@ -15,14 +15,13 @@ namespace TASagentTwitchBot.Core.WebServer.TTS
 {
     public interface IServerTTSRenderer
     {
-        Task HandleTTSRequest(ApplicationUser user, ServerTTSRequest ttsRequest);
+        Task HandleTTSRequest(UserManager<ApplicationUser> userManager, ApplicationUser user, ServerTTSRequest ttsRequest);
     }
 
 
     public class ServerTTSRenderer : IServerTTSRenderer
     {
         private readonly ILogger<ServerTTSRenderer> logger;
-        private readonly UserManager<ApplicationUser> userManager;
         private readonly IHubContext<Web.Hubs.BotTTSHub> botTTSHub;
 
         private static string TTSFilesPath => BGC.IO.DataManagement.PathForDataDirectory("TTSFiles");
@@ -33,11 +32,9 @@ namespace TASagentTwitchBot.Core.WebServer.TTS
 
         public ServerTTSRenderer(
             ILogger<ServerTTSRenderer> logger,
-            UserManager<ApplicationUser> userManager,
             IHubContext<Web.Hubs.BotTTSHub> botTTSHub)
         {
             this.logger = logger;
-            this.userManager = userManager;
             this.botTTSHub = botTTSHub;
 
 
@@ -112,7 +109,7 @@ namespace TASagentTwitchBot.Core.WebServer.TTS
         }
 
 
-        public async Task HandleTTSRequest(ApplicationUser user, ServerTTSRequest ttsRequest)
+        public async Task HandleTTSRequest(UserManager<ApplicationUser> userManager, ApplicationUser user, ServerTTSRequest ttsRequest)
         {
             try
             {

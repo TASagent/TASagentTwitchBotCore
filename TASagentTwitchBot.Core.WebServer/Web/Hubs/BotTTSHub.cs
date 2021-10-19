@@ -46,7 +46,7 @@ namespace TASagentTwitchBot.Core.WebServer.Web.Hubs
         public async Task RequestTTS(ServerTTSRequest ttsRequest)
         {
             ApplicationUser user = await userManager.GetUserAsync(Context.User);
-            await ttsHandler.HandleTTSRequest(user, ttsRequest);
+            await ttsHandler.HandleTTSRequest(userManager, user, ttsRequest);
         }
     }
 }

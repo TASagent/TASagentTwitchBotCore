@@ -89,6 +89,8 @@ namespace TASagentTwitchBot.Core.WebServer
                 .AddSingleton<API.Twitch.HelixServerHelper>()
                 .AddSingleton<API.Twitch.HelixEventSubHelper>()
                 .AddSingleton<API.Twitch.AppAccessTokenManager>();
+
+            services.AddSingleton<TTS.IServerTTSRenderer, TTS.ServerTTSRenderer>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
