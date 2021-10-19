@@ -185,24 +185,17 @@ namespace TASagentTwitchBot.Core.WebServer.TTS
                 int dataPacketSize = Math.Min(totalData, 1 << 13);
                 byte[] dataPacket = new byte[dataPacketSize];
 
-                int bytesWritten;
-                do
+                int bytesReady;
+
+                while((bytesReady = await file.ReadAsync(dataPacket)) > 0)
                 {
-                    bytesWritten = await file.ReadAsync(dataPacket);
-
-                    if (bytesWritten == 0)
-                    {
-                        break;
-                    }
-
                     await botTTSHub.Clients.Groups(user.TwitchBroadcasterId).SendAsync(
                         method: "ReceiveData",
                         arg1: ttsRequest.RequestIdentifier,
                         arg2: dataPacket,
-                        arg3: bytesWritten,
+                        arg3: bytesReady,
                         arg4: totalData);
                 }
-                while (bytesWritten == dataPacketSize);
 
                 file.Close();
 
