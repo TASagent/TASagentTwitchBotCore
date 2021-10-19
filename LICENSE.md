@@ -1,4 +1,4 @@
-# TASagent Twitch Bot License
+# TASagent Stream Bot License
 
 Copyright (C) 2021 TASagent
 

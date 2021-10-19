@@ -1,6 +1,6 @@
-# TASagent Twitch Bot
+# TASagent Stream Bot
 
-My extensible, modular C# twitch bot development framework.
+My extensible, modular C# stream bot development framework (for integration with Twitch) .
 
 ## How do I use this?
 
@@ -32,15 +32,21 @@ git submodule update
 
 If you're using this as a twitch bot, you're going to need to make a new Twitch account for that bot.  You also need to go to [The Twitch Dev Console](https://dev.twitch.tv/console/apps) and register an application to receive a ClientID.  Enter any name, use `http://localhost:5000/TASagentBotAPI/OAuth/BotCode` and `http://localhost:5000/TASagentBotAPI/OAuth/BroadcasterCode` as the OAuth Redirect URLs, and choose "Chat Bot" as the category.
 
-You will need to forward port `9000` to the computer you intend to use get follower notifications to work, since port `9000` is used for Twitch WebSub callbacks. But the middleware should reject all other calls to port `9000`.
-
 If the project you're building uses the database, navigate to the project directory via command line.  If the migration files already exist for it (and are up-to-date), then just run `dotnet ef database update`.  If they do not exist yet, you'll have to create them first with `dotnet ef migrations add InitialDBCreation`, followed by `dotnet ef database update`.  
 
 The first time you run a demo program, you'll be prompted for several values, and it will prepare some configuration files in your `Documents/TASagentBotDemo` directory.  
 
 ### TTS
 
-If you wish to use TTS, you'll have to create a GoogleCloud account with TTS enabled and put the credentials in `TASagentBotDemo/Config/googleCloudCredentials.json` and an AWSPolly account with its credentials stored `TASagentBotDemo/Config/awsPollyCredentials.json`.  Otherwise, you'll have to use a configuration of the bot that doesn't support TTS.  Read and understand the pricing schemes of each service.  It's unlikely one streamer would be able to use enough TTS in a single month to result leave the free tier of either service, but it's your responsibility to understand how the pricing works.
+There are now two methods of using TTS.
+
+#### The Easy Way - My Webserver
+
+The first is to head to [My Webserver](https://server.tas.wtf/) and register a new account using the Twitch OAuth option (make sure to log in as the Broadcaster). Then contact me at [TASagent.Streams@gmail.com](mailto:TASagent.Streams@gmail.com) and give me your Twitch username and ask me to authorize you to connect and increase your TTS Character Limit.  Be sure to include whether you'd like to use the Neural voices, but understand that the Neural TTS Voices consume 4x the character limit (because of the increased cost). You'll be given some values to insert into `TASagentBotDemo/Config/ServerConfig.json` in order to be able to connect.
+
+#### The Hard Way - Self-hosing
+
+I have made sure to keep _The Hard Way_ available because I don't want to keep a stranglehold on how the bot is used. If you wish to use TTS the hard way, you'll have to create a GoogleCloud account with TTS enabled and put the credentials in `TASagentBotDemo/Config/googleCloudCredentials.json`, an AWSPolly account with its credentials stored `TASagentBotDemo/Config/awsPollyCredentials.json`, and/or a Microsoft Azure account with its credentials stored in `TASagentBotDemo/Config/azureSpeechSynthesisCredentials.json`. Otherwise, you'll have to use a configuration of the bot that doesn't support TTS.  Read and understand the pricing schemes of each service.  It's unlikely one streamer would be able to use enough TTS in a single month to result leave the free tier of any service (while it lasts), but it's your responsibility to understand how the pricing works.
 
 Example `googleCloudCredentials.json` file:
 ```json
@@ -64,6 +70,20 @@ Example `awsPollyCredentials.json` file:
     "AccessKey": "AN ACCESS KEY HERE",
     "SecretKey": "A SECRET KEY HERE"
 }
+```
+
+Example `azureSpeechSynthesisCredentials.json` file:
+```json
+{
+    "AccessKey": "AN ACCESS KEY HERE",
+    "Region": "westus2"
+}
+```
+
+Depending on which Demo you use, you may need to change the `ITTSRenderer` provider to the Local one in the `Startup` class like so:
+```csharp
+services.UnregisterImplementation<Core.TTS.TTSWebRenderer>()
+    .AddSingleton<Core.TTS.ITTSRenderer, Core.TTS.TTSRenderer>();
 ```
 
 ### Database
