@@ -8,16 +8,17 @@ using Microsoft.AspNetCore.Authorization;
 
 using TASagentTwitchBot.Core.WebServer.Models;
 using TASagentTwitchBot.Core.WebServer.EventSub;
+using TASagentTwitchBot.Core.WebServer.TTS;
 
 namespace TASagentTwitchBot.Core.WebServer.Web.Hubs
 {
     [Authorize(AuthenticationSchemes = "Token", Roles = "EventSub")]
-    public class BotHub : Hub
+    public class BotEventSubHub : Hub
     {
         private readonly UserManager<ApplicationUser> userManager;
         private readonly IServerEventSubHandler eventSubHandler;
 
-        public BotHub(
+        public BotEventSubHub(
             UserManager<ApplicationUser> userManager,
             IServerEventSubHandler eventSubHandler)
         {

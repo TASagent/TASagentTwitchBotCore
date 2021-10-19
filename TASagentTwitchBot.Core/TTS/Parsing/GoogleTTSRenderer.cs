@@ -11,7 +11,7 @@ using GoogleSynthesizeSpeechResponse = Google.Cloud.TextToSpeech.V1.SynthesizeSp
 
 namespace TASagentTwitchBot.Core.TTS.Parsing
 {
-    public class GoogleTTSRenderer : StandardTTSSystemRenderer
+    public abstract class GoogleTTSRenderer : StandardTTSSystemRenderer
     {
         //TAS Regex:
         //  \bTAS\b
@@ -31,10 +31,7 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
         //    No Match TASagenta
         private static readonly Regex tasAgentRegex = new Regex(@"\bTASagent\b", RegexOptions.IgnoreCase);
 
-        private readonly TextToSpeechClient googleClient;
-
         public GoogleTTSRenderer(
-            TextToSpeechClient googleClient,
             ICommunication communication,
             TTSVoice voice,
             TTSPitch pitch,
@@ -47,7 +44,6 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
                   speed: speed,
                   effectsChain: effectsChain)
         {
-            this.googleClient = googleClient;
         }
 
         protected override string GetModeMarkup(TTSRenderMode mode, bool start)
@@ -67,6 +63,37 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
                 default:
                     throw new Exception($"Unsupported RenderMode for Markup: {mode}");
             }
+        }
+
+        protected override string PrepareText(string text) => SanitizeXML(FixTASagent(text));
+
+        private static string FixTASagent(string text)
+        {
+            text = tasRegex.Replace(text, "tass");
+            text = tasAgentRegex.Replace(text, "tass agent");
+            return text;
+        }
+    }
+
+    public class GoogleTTSLocalRenderer : GoogleTTSRenderer
+    {
+        private readonly TextToSpeechClient googleClient;
+
+        public GoogleTTSLocalRenderer(
+            TextToSpeechClient googleClient,
+            ICommunication communication,
+            TTSVoice voice,
+            TTSPitch pitch,
+            TTSSpeed speed,
+            Effect effectsChain)
+            : base(
+                  communication: communication,
+                  voice: (voice == TTSVoice.Unassigned) ? TTSVoice.en_US_Standard_B : voice,
+                  pitch: pitch,
+                  speed: speed,
+                  effectsChain: effectsChain)
+        {
+            this.googleClient = googleClient;
         }
 
         protected override async Task<string> SynthesizeSpeech(string interiorSSML)
@@ -109,18 +136,41 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
             }
         }
 
-        protected override string PrepareText(string text) => SanitizeXML(FixTASagent(text));
-
         private string WrapSSML(string interiorSSML)
         {
             return $"<speak>{interiorSSML}</speak>";
         }
+    }
 
-        private static string FixTASagent(string text)
+    public class GoogleTTSWebRenderer : GoogleTTSRenderer
+    {
+        private readonly TTSWebRenderer ttsWebRenderer;
+
+        public GoogleTTSWebRenderer(
+            TTSWebRenderer ttsWebRenderer,
+            ICommunication communication,
+            TTSVoice voice,
+            TTSPitch pitch,
+            TTSSpeed speed,
+            Effect effectsChain)
+            : base(
+                  communication: communication,
+                  voice: (voice == TTSVoice.Unassigned) ? TTSVoice.en_US_Standard_B : voice,
+                  pitch: pitch,
+                  speed: speed,
+                  effectsChain: effectsChain)
         {
-            text = tasRegex.Replace(text, "tass");
-            text = tasAgentRegex.Replace(text, "tass agent");
-            return text;
+            this.ttsWebRenderer = ttsWebRenderer;
+        }
+
+        protected override Task<string> SynthesizeSpeech(string interiorSSML)
+        {
+            return ttsWebRenderer.SubmitTTSWebRequest(new ServerTTSRequest(
+                RequestIdentifier: Guid.NewGuid().ToString(),
+                Ssml: interiorSSML,
+                Voice: voice,
+                Pitch: pitch,
+                Speed: speed));
         }
     }
 }

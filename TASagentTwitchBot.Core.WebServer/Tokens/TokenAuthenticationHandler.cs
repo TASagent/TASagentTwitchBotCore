@@ -124,8 +124,7 @@ namespace TASagentTwitchBot.Core.WebServer.Tokens
                     principal: claimsPrincipal,
                     authenticationScheme: Scheme.Name);
 
-                logger.LogInformation($"{matchingUser.UserName} Authenticated with a Token.");
-
+                //logger.LogInformation($"{matchingUser.UserName} Authenticated with a Token.");
                 return AuthenticateResult.Success(ticket);
             }
             catch (Exception ex)

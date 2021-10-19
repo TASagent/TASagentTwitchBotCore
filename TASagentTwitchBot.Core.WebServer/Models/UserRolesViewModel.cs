@@ -13,5 +13,7 @@ namespace TASagentTwitchBot.Core.WebServer.Models
         public string UserName { get; set; }
         public string Email { get; set; }
         public IEnumerable<string> Roles { get; set; }
+        public int MonthlyTTSCharactersUsed { get; set; }
+        public int MonthlyTTSCharacterLimit { get; set; }
     }
 }

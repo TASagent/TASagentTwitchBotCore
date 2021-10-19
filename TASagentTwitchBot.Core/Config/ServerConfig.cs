@@ -1,28 +1,28 @@
 ﻿using System.IO;
 using System.Text.Json;
 
-namespace TASagentTwitchBot.Core.EventSub
+namespace TASagentTwitchBot.Core.Config
 {
-    public class EventSubConfig
+    public class ServerConfig
     {
-        private static string ConfigFilePath => BGC.IO.DataManagement.PathForDataFile("Config", "EventSubConfig.json");
+        private static string ConfigFilePath => BGC.IO.DataManagement.PathForDataFile("Config", "ServerConfig.json");
         private static readonly object _lock = new object();
 
         public string ServerUserName { get; set; } = "";
         public string ServerAccessToken { get; set; } = "";
         public string ServerAddress { get; set; } = "https://server.tas.wtf";
 
-        public static EventSubConfig GetConfig()
+        public static ServerConfig GetConfig()
         {
-            EventSubConfig config;
+            ServerConfig config;
             if (File.Exists(ConfigFilePath))
             {
                 //Load existing config
-                config = JsonSerializer.Deserialize<EventSubConfig>(File.ReadAllText(ConfigFilePath));
+                config = JsonSerializer.Deserialize<ServerConfig>(File.ReadAllText(ConfigFilePath));
             }
             else
             {
-                config = new EventSubConfig();
+                config = new ServerConfig();
             }
 
             config.Serialize();

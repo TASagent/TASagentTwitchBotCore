@@ -18,7 +18,7 @@ namespace TASagentTwitchBot.Core.EventSub
 
     public class EventSubHandler : IDisposable
     {
-        private readonly EventSubConfig eventSubConfig;
+        private readonly Config.ServerConfig serverConfig;
         private readonly ICommunication communication;
         private readonly HubConnection serverHubConnection;
         private readonly ErrorHandler errorHandler;
@@ -32,12 +32,12 @@ namespace TASagentTwitchBot.Core.EventSub
         private bool disposedValue;
 
         public EventSubHandler(
-            EventSubConfig eventSubConfig,
+            Config.ServerConfig serverConfig,
             ICommunication communication,
             ErrorHandler errorHandler,
             IEnumerable<IEventSubSubscriber> eventSubSubscribers)
         {
-            this.eventSubConfig = eventSubConfig;
+            this.serverConfig = serverConfig;
             this.communication = communication;
             this.errorHandler = errorHandler;
 
@@ -51,17 +51,17 @@ namespace TASagentTwitchBot.Core.EventSub
 
             if (this.eventSubSubscribers.Length == 0)
             {
-                communication.SendDebugMessage($"No EventSub Listener registered. Skkipping EventSub Websocket.");
+                communication.SendDebugMessage($"No EventSub Listener registered. Skipping EventSub Websocket.");
             }
-            else if (!string.IsNullOrEmpty(eventSubConfig.ServerAccessToken) &&
-                !string.IsNullOrEmpty(eventSubConfig.ServerAddress) &&
-                !string.IsNullOrEmpty(eventSubConfig.ServerUserName))
+            else if (!string.IsNullOrEmpty(serverConfig.ServerAccessToken) &&
+                !string.IsNullOrEmpty(serverConfig.ServerAddress) &&
+                !string.IsNullOrEmpty(serverConfig.ServerUserName))
             {
                 serverHubConnection = new HubConnectionBuilder()
-                    .WithUrl($"{eventSubConfig.ServerAddress}/Hubs/BotSocket", options =>
+                    .WithUrl($"{serverConfig.ServerAddress}/Hubs/BotEventSubHub", options =>
                     {
-                        options.Headers.Add("User-Id", eventSubConfig.ServerUserName);
-                        options.Headers.Add("Authorization", $"Bearer {eventSubConfig.ServerAccessToken}");
+                        options.Headers.Add("User-Id", serverConfig.ServerUserName);
+                        options.Headers.Add("Authorization", $"Bearer {serverConfig.ServerAccessToken}");
                     })
                     .WithAutomaticReconnect()
                     .Build();
@@ -69,6 +69,8 @@ namespace TASagentTwitchBot.Core.EventSub
                 serverHubConnection.Closed += ServerHubConnectionClosed;
 
                 serverHubConnection.On<string>("ReceiveMessage", ReceiveMessage);
+                serverHubConnection.On<string>("ReceiveWarning", ReceiveWarning);
+                serverHubConnection.On<string>("ReceiveError", ReceiveError);
                 serverHubConnection.On<EventSubPayload>("ReceiveEvent", ReceiveEvent);
 
                 Initialize();
@@ -76,7 +78,7 @@ namespace TASagentTwitchBot.Core.EventSub
             else
             {
                 communication.SendErrorMessage($"EventSub not configured, skipping. Register at https://server.tas.wtf/ and contact TASagent. " +
-                    $"Then update relevant details in ~/Config/EventSubConfig.json");
+                    $"Then update relevant details in Config/ServerConfig.json");
             }
         }
 
@@ -118,10 +120,10 @@ namespace TASagentTwitchBot.Core.EventSub
             return Task.CompletedTask;
         }
 
-        public void ReceiveMessage(string message)
-        {
-            communication.SendDebugMessage($"WebServer Message: {message}");
-        }
+        public void ReceiveMessage(string message) => communication.SendDebugMessage($"EventSub WebServer Message: {message}");
+        public void ReceiveWarning(string message) => communication.SendWarningMessage($"EventSub WebServer Warning: {message}");
+        public void ReceiveError(string message) => communication.SendErrorMessage($"EventSub WebServer Error: {message}");
+
         public async Task ReceiveEvent(EventSubPayload eventSubPayload)
         {
             if (eventHandlers.ContainsKey(eventSubPayload.EventType))

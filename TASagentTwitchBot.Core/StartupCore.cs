@@ -137,7 +137,7 @@ namespace TASagentTwitchBot.Core
 
             services
                 .AddSingleton<TTS.TTSConfiguration>(TTS.TTSConfiguration.GetConfig())
-                .AddSingleton<TTS.ITTSRenderer, TTS.TTSRenderer>();
+                .AddSingleton<TTS.ITTSRenderer, TTS.TTSWebRenderer>();
 
             //Make handler requests access the same instance of the CustomActivityProvider singleton
             services
@@ -157,12 +157,12 @@ namespace TASagentTwitchBot.Core
                 .AddSingleton<Audio.Effects.IAudioEffectProvider, Audio.Effects.NoiseVocoderEffectProvider>()
                 .AddSingleton<Audio.Effects.IAudioEffectProvider, Audio.Effects.PitchShiftEffectProvider>()
                 .AddSingleton<Audio.Effects.IAudioEffectProvider, Audio.Effects.ReverbEffectProvider>();
+
+            services.AddSingleton(Config.ServerConfig.GetConfig());
         }
 
         protected virtual void ConfigureCoreEventSubServices(IServiceCollection services)
         {
-            services.AddSingleton(EventSub.EventSubConfig.GetConfig());
-
             services.AddSingleton<EventSub.EventSubHandler>();
 
             services

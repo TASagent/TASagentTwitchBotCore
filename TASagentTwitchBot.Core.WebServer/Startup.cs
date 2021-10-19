@@ -16,7 +16,6 @@ using Microsoft.Extensions.FileProviders;
 using TASagentTwitchBot.Core.WebServer.Database;
 using TASagentTwitchBot.Core.WebServer.Models;
 using TASagentTwitchBot.Core.WebServer.Tokens;
-using TASagentTwitchBot.Core.WebServer.Connections;
 
 namespace TASagentTwitchBot.Core.WebServer
 {
@@ -91,7 +90,7 @@ namespace TASagentTwitchBot.Core.WebServer
                 .AddSingleton<API.Twitch.HelixEventSubHelper>()
                 .AddSingleton<API.Twitch.AppAccessTokenManager>();
 
-            services.AddSingleton<ISocketManager, SocketManager>();
+            services.AddSingleton<TTS.IServerTTSRenderer, TTS.ServerTTSRenderer>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -133,7 +132,8 @@ namespace TASagentTwitchBot.Core.WebServer
                     pattern: "{controller=Home}/{action=Index}/{id?}");
                 endpoints.MapRazorPages();
 
-                endpoints.MapHub<Web.Hubs.BotHub>("/Hubs/BotSocket");
+                endpoints.MapHub<Web.Hubs.BotEventSubHub>("/Hubs/BotEventSubHub");
+                endpoints.MapHub<Web.Hubs.BotTTSHub>("/Hubs/BotTTSHub");
             });
         }
 
