@@ -200,7 +200,7 @@ namespace TASagentTwitchBot.Core.TTS
                 sourceIndex: 0,
                 destinationArray: ongoingDownload.Data,
                 destinationIndex: ongoingDownload.Downloaded,
-                length: data.Length);
+                length: current);
 
             ongoingDownload.Downloaded += current;
 
