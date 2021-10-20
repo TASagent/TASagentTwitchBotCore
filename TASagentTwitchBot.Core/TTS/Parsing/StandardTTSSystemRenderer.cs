@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 using TASagentTwitchBot.Core.Audio.Effects;
 using TASagentTwitchBot.Core.TTS.Parsing.RenderElements;
@@ -15,17 +16,20 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
         protected readonly TTSSpeed speed;
         protected readonly Effect effectsChain;
 
+        protected readonly ILogger logger;
         protected readonly ICommunication communication;
         protected static string TTSFilesPath => BGC.IO.DataManagement.PathForDataDirectory("TTSFiles");
 
         public StandardTTSSystemRenderer(
             ICommunication communication,
+            ILogger logger,
             TTSVoice voice,
             TTSPitch pitch,
             TTSSpeed speed,
             Effect effectsChain)
         {
             this.communication = communication;
+            this.logger = logger;
 
             switch (pitch)
             {
@@ -165,9 +169,59 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
             return new Audio.ConcatenatedAudioRequest(audioRequests);
         }
 
+        public override async Task<(string filename, int ssmlLength)> RenderRaw(IEnumerable<RenderElement> renderElements)
+        {
+            TTSRenderMode renderMode = TTSRenderMode.Normal;
+            Stack<TTSRenderMode> modifierStack = new Stack<TTSRenderMode>();
+
+            StringBuilder ssmlBuilder = new StringBuilder();
+
+            foreach (RenderElement renderElement in renderElements)
+            {
+                switch (renderElement)
+                {
+                    case SoundElement soundElement:
+                        //Output text
+                        logger.LogWarning($"Found SoundElement in RenderRaw elements");
+                        break;
+
+                    case TextElement textElement:
+                        ssmlBuilder.Append(UpdateRenderMode(ref renderMode, textElement.renderMode, modifierStack));
+                        ssmlBuilder.Append(PrepareText(textElement.text));
+                        break;
+
+                    default:
+                        throw new NotImplementedException($"RenderElement Support not implemented: {renderElement.GetType()}");
+                }
+            }
+
+            //Output remaining text
+            if (ssmlBuilder.Length == 0)
+            {
+                logger.LogWarning($"So sound produced");
+                return (null, 0);
+            }
+
+            ssmlBuilder.Append(UpdateRenderMode(ref renderMode, TTSRenderMode.Normal, modifierStack));
+
+            string finalSSML = FinalizeSSML(ssmlBuilder.ToString());
+
+            return (await SynthesizeSpeech(finalSSML), finalSSML.Length);
+        }
+
         public async Task<Audio.AudioRequest> GetAudio(string interiorSSML)
         {
-            string filePath = await SynthesizeSpeech(interiorSSML);
+            string filePath = null;
+
+            try
+            {
+                filePath = await SynthesizeSpeech(FinalizeSSML(interiorSSML));
+            }
+            catch (Exception ex)
+            {
+                communication?.SendErrorMessage($"Exception caught when rendering TTS {ex}");
+                logger?.LogError(ex, "Exception caught when rendering TTS");
+            }
 
             if (string.IsNullOrEmpty(filePath))
             {
@@ -177,7 +231,8 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
             return new Audio.AudioFileRequest(filePath, effectsChain);
         }
 
-        protected abstract Task<string> SynthesizeSpeech(string interiorSSML);
+        protected abstract string FinalizeSSML(string interiorSSML);
+        public abstract Task<string> SynthesizeSpeech(string finalSSML);
 
         protected string UpdateRenderMode(
             ref TTSRenderMode oldMode,

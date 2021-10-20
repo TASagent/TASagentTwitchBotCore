@@ -7,6 +7,7 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
     public abstract class TTSSystemRenderer
     {
         public abstract Task<Audio.AudioRequest> Render(IEnumerable<RenderElement> renderElements);
+        public abstract Task<(string filename, int ssmlLength)> RenderRaw(IEnumerable<RenderElement> renderElements);
 
         protected static bool HasExtraMode(TTSRenderMode oldMode, TTSRenderMode newMode) => (oldMode & ~newMode) > 0;
 
