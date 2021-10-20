@@ -35,6 +35,26 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
             return await renderer.Render(renderElements);
         }
 
+        public static async Task<(string, int)> ParseTTSNoSoundEffects(
+            string text,
+            TTSSystemRenderer renderer)
+        {
+            using TTSReader reader = new TTSReader(text);
+
+            IEnumerable<RenderElement> renderElements = reader
+                .GetTokens()
+                .StripSpecials()
+                .GlueStrings()
+                .ToList()
+                .HandleRenderModeModifiers()
+                .StripRemainingMarkup()
+                .GlueStrings()
+                .StripUnnecessaryWhitespace()
+                .ToRenderElements();
+
+            return await renderer.RenderRaw(renderElements);
+        }
+
         private static IEnumerable<ParsingUnit> HandleSoundEffects(
             this IEnumerable<ParsingUnit> tokens,
             ISoundEffectSystem soundEffectSystem)
@@ -55,6 +75,27 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
                         //Return constitutient components as string
                         yield return new StringUnit(apparentSoundEffect.position, apparentSoundEffect.ToString());
                     }
+                }
+                else
+                {
+                    yield return token;
+                }
+            }
+        }
+
+        private static IEnumerable<ParsingUnit> StripSpecials(this IEnumerable<ParsingUnit> tokens)
+        {
+            foreach (ParsingUnit token in tokens)
+            {
+                if (token is ApparentSoundEffectToken apparentSoundEffect)
+                {
+                    //Re-stringify
+                    yield return new StringUnit(apparentSoundEffect.position, apparentSoundEffect.ToString());
+                }
+                else if (token is ApparentCommandToken apparentCommand)
+                {
+                    //Re-stringify
+                    yield return new StringUnit(apparentCommand.position, apparentCommand.ToString());
                 }
                 else
                 {

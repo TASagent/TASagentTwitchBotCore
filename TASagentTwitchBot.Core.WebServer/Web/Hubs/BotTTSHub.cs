@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using TASagentTwitchBot.Core.WebServer.Models;
 using TASagentTwitchBot.Core.WebServer.TTS;
 using TASagentTwitchBot.Core.TTS;
+using System.Text.Json.Serialization;
 
 namespace TASagentTwitchBot.Core.WebServer.Web.Hubs
 {
@@ -48,5 +49,18 @@ namespace TASagentTwitchBot.Core.WebServer.Web.Hubs
             ApplicationUser user = await userManager.GetUserAsync(Context.User);
             await ttsHandler.HandleTTSRequest(userManager, user, ttsRequest);
         }
+
+        public async Task RequestRawTTS(RawServerTTSRequest rawTTSRequest)
+        {
+            ApplicationUser user = await userManager.GetUserAsync(Context.User);
+            await ttsHandler.HandleRawTTSRequest(userManager, user, rawTTSRequest);
+        }
     }
+
+    public record RawServerTTSRequest(
+        [property: JsonPropertyName("requestIdentifier")] string RequestIdentifier,
+        [property: JsonPropertyName("text")] string Text,
+        [property: JsonPropertyName("voice")] string Voice,
+        [property: JsonPropertyName("pitch")] string Pitch,
+        [property: JsonPropertyName("speed")] string Speed);
 }

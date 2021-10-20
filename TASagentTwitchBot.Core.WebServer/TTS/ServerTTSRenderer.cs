@@ -8,7 +8,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 
+using TASagentTwitchBot.Core.Audio.Effects;
 using TASagentTwitchBot.Core.TTS;
+using TASagentTwitchBot.Core.TTS.Parsing;
+using TASagentTwitchBot.Core.WebServer.Controllers;
 using TASagentTwitchBot.Core.WebServer.Models;
 
 namespace TASagentTwitchBot.Core.WebServer.TTS
@@ -16,15 +19,14 @@ namespace TASagentTwitchBot.Core.WebServer.TTS
     public interface IServerTTSRenderer
     {
         Task HandleTTSRequest(UserManager<ApplicationUser> userManager, ApplicationUser user, ServerTTSRequest ttsRequest);
+        Task HandleRawTTSRequest(UserManager<ApplicationUser> userManager, ApplicationUser user, Web.Hubs.RawServerTTSRequest rawTTSRequest);
+        Task<byte[]> HandleRawExternalTTSRequest(UserManager<ApplicationUser> userManager, ApplicationUser user, RawServerExternalTTSRequest rawTTSRequest);
     }
-
 
     public class ServerTTSRenderer : IServerTTSRenderer
     {
         private readonly ILogger<ServerTTSRenderer> logger;
         private readonly IHubContext<Web.Hubs.BotTTSHub> botTTSHub;
-
-        private static string TTSFilesPath => BGC.IO.DataManagement.PathForDataDirectory("TTSFiles");
 
         private readonly Google.Cloud.TextToSpeech.V1.TextToSpeechClient googleClient = null;
         private readonly Amazon.Polly.AmazonPollyClient amazonClient = null;
@@ -153,11 +155,158 @@ namespace TASagentTwitchBot.Core.WebServer.TTS
                     return;
                 }
 
+                //Update usage
+                user.MonthlyTTSUsage += requestedCharacters;
+                await userManager.UpdateAsync(user);
+
+                StandardTTSSystemRenderer renderer;
+
+                switch (ttsRequest.Voice.GetTTSService())
+                {
+                    case TTSService.Amazon:
+                        renderer = new AmazonTTSLocalRenderer(amazonClient, logger, ttsRequest.Voice, ttsRequest.Pitch, ttsRequest.Speed, new NoEffect());
+                        break;
+
+                    case TTSService.Google:
+                        renderer = new GoogleTTSLocalRenderer(googleClient, logger, ttsRequest.Voice, ttsRequest.Pitch, ttsRequest.Speed, new NoEffect());
+                        break;
+
+                    case TTSService.Azure:
+                        renderer = new AzureTTSLocalRenderer(azureClient, logger, ttsRequest.Voice, ttsRequest.Pitch, ttsRequest.Speed, new NoEffect());
+                        break;
+
+                    default:
+                        throw new Exception($"Unrecognized Service: {ttsRequest.Voice.GetTTSService()}");
+                }
+
+                string fileName = await renderer.SynthesizeSpeech(ttsRequest.Ssml);
+
+                if (string.IsNullOrEmpty(fileName))
+                {
+                    //Failed somewhere
+                    throw new Exception("Received null filename.");
+                }
+
+                if (!File.Exists(fileName))
+                {
+                    //Failed somewhere
+                    throw new Exception("Received filename not found.");
+                }
+
+                //Now stream the file back to the requester
+                using FileStream file = new FileStream(fileName, FileMode.Open);
+                int totalData = (int)file.Length;
+                int dataPacketSize = Math.Min(totalData, 1 << 13);
+                byte[] dataPacket = new byte[dataPacketSize];
+
+                int bytesReady;
+                while ((bytesReady = await file.ReadAsync(dataPacket)) > 0)
+                {
+                    await botTTSHub.Clients.Groups(user.TwitchBroadcasterId).SendAsync(
+                        method: "ReceiveData",
+                        arg1: ttsRequest.RequestIdentifier,
+                        arg2: dataPacket,
+                        arg3: bytesReady,
+                        arg4: totalData);
+                }
+
+                file.Close();
+
+                //Delete file from system
+                File.Delete(fileName);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Exception caught trying to render TTS");
+
+                await botTTSHub.Clients.Groups(user.TwitchBroadcasterId).SendAsync(
+                        method: "CancelRequest",
+                        arg1: ttsRequest.RequestIdentifier,
+                        arg2: "An exception was encountered trying to render TTS");
+            }
+        }
+
+
+        public async Task HandleRawTTSRequest(UserManager<ApplicationUser> userManager, ApplicationUser user, Web.Hubs.RawServerTTSRequest ttsRequest)
+        {
+            try
+            {
+                int requestedCharacters = ttsRequest.Text.Length;
+
+                TTSVoice voice = ttsRequest.Voice?.TranslateTTSVoice() ?? TTSVoice.Unassigned;
+                TTSPitch pitch = ttsRequest.Pitch?.TranslateTTSPitch() ?? TTSPitch.Unassigned;
+                TTSSpeed speed = ttsRequest.Speed?.TranslateTTSSpeed() ?? TTSSpeed.Unassigned;
+
+                //Check permissions
+                if (voice.IsNeuralVoice())
+                {
+                    if (!await userManager.IsInRoleAsync(user, "TTSNeural"))
+                    {
+                        //Fix neural request for unauthorized user
+                        voice = TTSVoice.Unassigned;
+
+                        logger.LogInformation($"{user.TwitchBroadcasterName} requested unauthorized Neural TTS");
+
+                        await botTTSHub.Clients.Groups(user.TwitchBroadcasterId).SendAsync(
+                            method: "ReceiveWarning",
+                            arg1: $"Submitted a Neural TTS request when you're not authorized to use Neural voices. Changing to default.");
+                    }
+                }
+
+                //Check Neural voices
+                if (voice.IsNeuralVoice())
+                {
+                    //Neural voices are 4 times the cost across all services
+                    requestedCharacters *= 4;
+                }
+
+                if (user.MonthlyTTSLimit != -1 &&
+                    (user.MonthlyTTSUsage + requestedCharacters) >= user.MonthlyTTSLimit)
+                {
+                    logger.LogInformation($"{user.TwitchBroadcasterName} hit monthly allocation");
+
+                    await botTTSHub.Clients.Groups(user.TwitchBroadcasterId).SendAsync(
+                            method: "CancelRequest",
+                            arg1: ttsRequest.RequestIdentifier,
+                            arg2: $"This adjusted TTS request of {requestedCharacters} characters " +
+                                $"(combinded with Month-to-Date usage of {user.MonthlyTTSUsage} characters) " +
+                                $"would exceed monthly allotment of {user.MonthlyTTSLimit} characters.");
+
+                    return;
+                }
+
                 //Update initial usage
                 user.MonthlyTTSUsage += requestedCharacters;
                 await userManager.UpdateAsync(user);
 
-                (string fileName, int finalCharCount) = await SynthesizeSpeech(ttsRequest);
+                StandardTTSSystemRenderer renderer;
+
+                switch (voice.GetTTSService())
+                {
+                    case TTSService.Amazon:
+                        renderer = new AmazonTTSLocalRenderer(amazonClient, logger, voice, pitch, speed, new NoEffect());
+                        break;
+
+                    case TTSService.Google:
+                        renderer = new GoogleTTSLocalRenderer(googleClient, logger, voice, pitch, speed, new NoEffect());
+                        break;
+
+                    case TTSService.Azure:
+                        renderer = new AzureTTSLocalRenderer(azureClient, logger, voice, pitch, speed, new NoEffect());
+                        break;
+
+                    default:
+                        throw new Exception($"Unrecognized Service: {voice.GetTTSService()}");
+                }
+
+                (string fileName, int finalCharCount) = await TTSParser.ParseTTSNoSoundEffects(ttsRequest.Text, renderer);
+
+                //Check Neural voices
+                if (voice.IsNeuralVoice())
+                {
+                    //Neural voices are 4 times the cost across all services
+                    finalCharCount *= 4;
+                }
 
                 if (finalCharCount > requestedCharacters)
                 {
@@ -185,7 +334,7 @@ namespace TASagentTwitchBot.Core.WebServer.TTS
                 byte[] dataPacket = new byte[dataPacketSize];
 
                 int bytesReady;
-                while((bytesReady = await file.ReadAsync(dataPacket)) > 0)
+                while ((bytesReady = await file.ReadAsync(dataPacket)) > 0)
                 {
                     await botTTSHub.Clients.Groups(user.TwitchBroadcasterId).SendAsync(
                         method: "ReceiveData",
@@ -211,199 +360,115 @@ namespace TASagentTwitchBot.Core.WebServer.TTS
             }
         }
 
-
-        private async Task<(string filepath, int finalCharCount)> SynthesizeSpeech(ServerTTSRequest ttsRequest)
-        {
-            //Submit request
-            switch (ttsRequest.Voice.GetTTSService())
-            {
-                case TTSService.Amazon:
-                    return await SynthesizeAWSPollySpeech(ttsRequest);
-
-                case TTSService.Google:
-                    return await SynthesizeGoogleSpeech(ttsRequest);
-
-                case TTSService.Azure:
-                    return await SynthesizeAzureSpeech(ttsRequest);
-
-                default:
-                    throw new Exception($"Unsupported TTSService: {ttsRequest.Voice.GetTTSService()}");
-            }
-        }
-
-
-        private async Task<(string filepath, int finalCharCount)> SynthesizeGoogleSpeech(ServerTTSRequest ttsRequest)
+        public async Task<byte[]> HandleRawExternalTTSRequest(
+            UserManager<ApplicationUser> userManager,
+            ApplicationUser user,
+            RawServerExternalTTSRequest rawTTSRequest)
         {
             try
             {
-                string ssml = $"<speak>{ttsRequest.Ssml}</speak>";
+                int requestedCharacters = rawTTSRequest.Text.Length;
 
-                Google.Cloud.TextToSpeech.V1.VoiceSelectionParams voiceParams = ttsRequest.Voice.GetGoogleVoiceSelectionParams();
+                TTSVoice voice = rawTTSRequest.Voice?.TranslateTTSVoice() ?? TTSVoice.Unassigned;
+                TTSPitch pitch = rawTTSRequest.Pitch?.TranslateTTSPitch() ?? TTSPitch.Unassigned;
+                TTSSpeed speed = rawTTSRequest.Speed?.TranslateTTSSpeed() ?? TTSSpeed.Unassigned;
 
-                Google.Cloud.TextToSpeech.V1.AudioConfig config = new Google.Cloud.TextToSpeech.V1.AudioConfig
+                //Check permissions
+                if (voice.IsNeuralVoice())
                 {
-                    AudioEncoding = Google.Cloud.TextToSpeech.V1.AudioEncoding.Mp3,
-                    Pitch = ttsRequest.Pitch.GetSemitoneShift(),
-                    SpeakingRate = ttsRequest.Speed.GetGoogleSpeed()
-                };
-
-                //TTS
-                Google.Cloud.TextToSpeech.V1.SynthesisInput input = new Google.Cloud.TextToSpeech.V1.SynthesisInput
-                {
-                    Ssml = ssml
-                };
-
-                // Perform the Text-to-Speech request, passing the text input
-                // with the selected voice parameters and audio file type
-                Google.Cloud.TextToSpeech.V1.SynthesizeSpeechResponse response = await googleClient.SynthesizeSpeechAsync(input, voiceParams, config);
-
-                // Write the binary AudioContent of the response to file.
-                string filepath = Path.Combine(TTSFilesPath, $"{Guid.NewGuid()}.mp3");
-
-                using (Stream file = new FileStream(filepath, FileMode.Create))
-                {
-                    response.AudioContent.WriteTo(file);
+                    if (!await userManager.IsInRoleAsync(user, "TTSNeural"))
+                    {
+                        //Fix neural request for unauthorized user
+                        voice = TTSVoice.Unassigned;
+                        logger.LogInformation($"{user.TwitchBroadcasterName} requested unauthorized Neural TTS");
+                    }
                 }
 
-                return (filepath, ssml.Length);
+                //Check Neural voices
+                if (voice.IsNeuralVoice())
+                {
+                    //Neural voices are 4 times the cost across all services
+                    requestedCharacters *= 4;
+                }
+
+                if (user.MonthlyTTSLimit != -1 &&
+                    (user.MonthlyTTSUsage + requestedCharacters) >= user.MonthlyTTSLimit)
+                {
+                    logger.LogInformation($"{user.TwitchBroadcasterName} hit monthly allocation");
+                    return null;
+                }
+
+                //Update initial usage
+                user.MonthlyTTSUsage += requestedCharacters;
+                await userManager.UpdateAsync(user);
+
+                StandardTTSSystemRenderer renderer;
+
+                switch (voice.GetTTSService())
+                {
+                    case TTSService.Amazon:
+                        renderer = new AmazonTTSLocalRenderer(amazonClient, logger, voice, pitch, speed, new NoEffect());
+                        break;
+
+                    case TTSService.Google:
+                        renderer = new GoogleTTSLocalRenderer(googleClient, logger, voice, pitch, speed, new NoEffect());
+                        break;
+
+                    case TTSService.Azure:
+                        renderer = new AzureTTSLocalRenderer(azureClient, logger, voice, pitch, speed, new NoEffect());
+                        break;
+
+                    default:
+                        throw new Exception($"Unrecognized Service: {voice.GetTTSService()}");
+                }
+
+                (string fileName, int finalCharCount) = await TTSParser.ParseTTSNoSoundEffects(rawTTSRequest.Text, renderer);
+
+                //Check Neural voices
+                if (voice.IsNeuralVoice())
+                {
+                    //Neural voices are 4 times the cost across all services
+                    finalCharCount *= 4;
+                }
+
+                if (finalCharCount > requestedCharacters)
+                {
+                    //Update final actual usage
+                    user.MonthlyTTSUsage += finalCharCount - requestedCharacters;
+                    await userManager.UpdateAsync(user);
+                }
+
+                if (string.IsNullOrEmpty(fileName))
+                {
+                    //Failed somewhere
+                    throw new Exception("Received null filename.");
+                }
+
+                if (!File.Exists(fileName))
+                {
+                    //Failed somewhere
+                    throw new Exception("Received filename not found.");
+                }
+
+                //Now stream the file back to the requester
+                using FileStream file = new FileStream(fileName, FileMode.Open);
+                byte[] dataPacket = new byte[(int)file.Length];
+                await file.ReadAsync(dataPacket);
+
+                file.Close();
+
+                //Delete file from system
+                File.Delete(fileName);
+
+                return dataPacket;
             }
             catch (Exception ex)
             {
-                throw new Exception("Exception caught trying to render Google TTS", ex);
+                logger.LogError(ex, "Exception caught trying to render TTS");
+
+                return null;
             }
         }
 
-
-        private async Task<(string filepath, int finalCharCount)> SynthesizeAWSPollySpeech(ServerTTSRequest ttsRequest)
-        {
-            try
-            {
-                string ssml = ttsRequest.Ssml;
-                if (ttsRequest.Voice.IsNeuralVoice())
-                {
-                    if (ttsRequest.Speed != TTSSpeed.Medium)
-                    {
-                        ssml = $"<prosody rate=\"{ttsRequest.Speed.GetSpeedValue()}\">{ssml}</prosody>";
-                    }
-                }
-                else
-                {
-                    if (ttsRequest.Pitch != TTSPitch.Medium || ttsRequest.Speed != TTSSpeed.Medium)
-                    {
-                        ssml = $"<prosody pitch=\"{ttsRequest.Pitch.GetPitchShift()}\" rate=\"{ttsRequest.Speed.GetSpeedValue()}\">{ssml}</prosody>";
-                    }
-                }
-
-                if (ttsRequest.Voice.GetRequiresLangTag())
-                {
-                    ssml = $"<lang xml:lang=\"en-US\">{ssml}</lang>";
-                }
-
-                ssml = $"<speak>{ssml}</speak>";
-
-
-                Amazon.Polly.Model.SynthesizeSpeechRequest synthesisRequest = ttsRequest.Voice.GetAmazonTTSSpeechRequest();
-                synthesisRequest.TextType = Amazon.Polly.TextType.Ssml;
-                synthesisRequest.Text = ssml;
-
-                // Perform the Text-to-Speech request, passing the text input
-                // with the selected voice parameters and audio file type
-                Amazon.Polly.Model.SynthesizeSpeechResponse synthesisResponse = await amazonClient.SynthesizeSpeechAsync(synthesisRequest);
-
-                // Write the binary AudioContent of the response to file.
-                string filepath = Path.Combine(TTSFilesPath, $"{Guid.NewGuid()}.mp3");
-
-                using (Stream file = new FileStream(filepath, FileMode.Create))
-                {
-                    await synthesisResponse.AudioStream.CopyToAsync(file);
-                    await file.FlushAsync();
-                    file.Close();
-                }
-
-                return (filepath, ssml.Length);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("Exception caught trying to render AWS Polly TTS", ex);
-            }
-        }
-
-        private async Task<(string filepath, int finalCharCount)> SynthesizeAzureSpeech(ServerTTSRequest ttsRequest)
-        {
-            try
-            {
-                string ssml = ttsRequest.Ssml;
-
-                if (ttsRequest.Pitch != TTSPitch.Medium || ttsRequest.Speed != TTSSpeed.Medium)
-                {
-                    ssml = $"<prosody pitch=\"{ttsRequest.Pitch.GetPitchShift()}\" rate=\"{ttsRequest.Speed.GetSpeedValue()}\">{ssml}</prosody>";
-                }
-
-                ssml = $"<speak version=\"1.0\" xml:lang=\"en-US\" xmlns:mstts=\"http://www.w3.org/2001/mstts\">" +
-                    $"<voice name=\"{ttsRequest.Voice.GetTTSVoiceString()}\">" +
-                    $"<mstts:silence type=\"Sentenceboundary\" value=\"250ms\"/>" +
-                    $"<mstts:silence type=\"Tailing\" value=\"0ms\"/>" +
-                    $"{ssml}" +
-                    $"</voice></speak>";
-
-                // Write the binary AudioContent of the response to file.
-                string filepath = Path.Combine(TTSFilesPath, $"{Guid.NewGuid()}.mp3");
-
-                using Microsoft.CognitiveServices.Speech.SpeechSynthesizer synthesizer = new Microsoft.CognitiveServices.Speech.SpeechSynthesizer(azureClient, null);
-                using Microsoft.CognitiveServices.Speech.SpeechSynthesisResult result = await synthesizer.SpeakSsmlAsync(ssml);
-
-                if (result.Reason == Microsoft.CognitiveServices.Speech.ResultReason.Canceled)
-                {
-                    Microsoft.CognitiveServices.Speech.SpeechSynthesisCancellationDetails details = Microsoft.CognitiveServices.Speech.SpeechSynthesisCancellationDetails.FromResult(result);
-
-                    if (details.ErrorCode == Microsoft.CognitiveServices.Speech.CancellationErrorCode.TooManyRequests)
-                    {
-                        //Retry logic
-                        int delay = 1000;
-
-                        while (details.ErrorCode == Microsoft.CognitiveServices.Speech.CancellationErrorCode.TooManyRequests && delay < 64000)
-                        {
-                            logger.LogWarning($"Azure TTS returned TooManyRequests. Waiting {delay}: {details.ErrorDetails}");
-
-                            await Task.Delay(delay);
-                            using Microsoft.CognitiveServices.Speech.SpeechSynthesisResult retryResult = await synthesizer.SpeakSsmlAsync(ssml);
-                            details = Microsoft.CognitiveServices.Speech.SpeechSynthesisCancellationDetails.FromResult(retryResult);
-
-                            if (details.ErrorCode == Microsoft.CognitiveServices.Speech.CancellationErrorCode.NoError)
-                            {
-                                //Success
-                                using Microsoft.CognitiveServices.Speech.AudioDataStream retryStream = Microsoft.CognitiveServices.Speech.AudioDataStream.FromResult(retryResult);
-                                await retryStream.SaveToWaveFileAsync(filepath);
-                                return (filepath, ssml.Length);
-                            }
-
-                            if (details.ErrorCode != Microsoft.CognitiveServices.Speech.CancellationErrorCode.TooManyRequests)
-                            {
-                                //Some other error
-                                throw new Exception($"Error caught when rendering Azure TTS: {details.ErrorDetails}");
-                            }
-
-                            delay *= 2;
-                        }
-
-                        //Timeout failure
-                        throw new Exception($"Error caught when rendering Azure TTS. Unable to out-wait TooManyRequests: {details.ErrorDetails}");
-                    }
-                    else
-                    {
-                        //Failed
-                        throw new Exception($"Error caught when rendering Azure TTS: {details.ErrorDetails}");
-                    }
-                }
-
-                using Microsoft.CognitiveServices.Speech.AudioDataStream stream = Microsoft.CognitiveServices.Speech.AudioDataStream.FromResult(result);
-                await stream.SaveToWaveFileAsync(filepath);
-                return (filepath, ssml.Length);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Exception caught when rendering Azure TTS", ex);
-            }
-        }
     }
 }

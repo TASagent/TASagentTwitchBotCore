@@ -13,6 +13,7 @@ namespace TASagentTwitchBot.Core.WebServer.Enums
         Basic,
         TTS,
         TTSNeural,
+        TTSExternal,
         EventSub,
         MAX
     }

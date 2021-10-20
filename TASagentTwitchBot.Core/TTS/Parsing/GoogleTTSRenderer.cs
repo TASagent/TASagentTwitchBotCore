@@ -2,7 +2,7 @@
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-
+using Microsoft.Extensions.Logging;
 using Google.Cloud.TextToSpeech.V1;
 
 using TASagentTwitchBot.Core.Audio.Effects;
@@ -33,12 +33,14 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
 
         public GoogleTTSRenderer(
             ICommunication communication,
+            ILogger logger,
             TTSVoice voice,
             TTSPitch pitch,
             TTSSpeed speed,
             Effect effectsChain)
             : base(
                   communication: communication,
+                  logger: logger,
                   voice: (voice == TTSVoice.Unassigned) ? TTSVoice.en_US_Standard_B : voice,
                   pitch: pitch,
                   speed: speed,
@@ -73,6 +75,11 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
             text = tasAgentRegex.Replace(text, "tass agent");
             return text;
         }
+
+        protected override string FinalizeSSML(string interiorSSML)
+        {
+            return $"<speak>{interiorSSML}</speak>";
+        }
     }
 
     public class GoogleTTSLocalRenderer : GoogleTTSRenderer
@@ -88,6 +95,7 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
             Effect effectsChain)
             : base(
                   communication: communication,
+                  logger: null,
                   voice: (voice == TTSVoice.Unassigned) ? TTSVoice.en_US_Standard_B : voice,
                   pitch: pitch,
                   speed: speed,
@@ -96,49 +104,54 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
             this.googleClient = googleClient;
         }
 
-        protected override async Task<string> SynthesizeSpeech(string interiorSSML)
+        public GoogleTTSLocalRenderer(
+            TextToSpeechClient googleClient,
+            ILogger logger,
+            TTSVoice voice,
+            TTSPitch pitch,
+            TTSSpeed speed,
+            Effect effectsChain)
+            : base(
+                  communication: null,
+                  logger: logger,
+                  voice: (voice == TTSVoice.Unassigned) ? TTSVoice.en_US_Standard_B : voice,
+                  pitch: pitch,
+                  speed: speed,
+                  effectsChain: effectsChain)
         {
-            try
-            {
-                VoiceSelectionParams voiceParams = voice.GetGoogleVoiceSelectionParams();
-
-                AudioConfig config = new AudioConfig
-                {
-                    AudioEncoding = AudioEncoding.Mp3,
-                    Pitch = pitch.GetSemitoneShift(),
-                    SpeakingRate = speed.GetGoogleSpeed()
-                };
-
-                //TTS
-                SynthesisInput input = new SynthesisInput
-                {
-                    Ssml = WrapSSML(interiorSSML)
-                };
-
-                // Perform the Text-to-Speech request, passing the text input
-                // with the selected voice parameters and audio file type
-                GoogleSynthesizeSpeechResponse response = await googleClient.SynthesizeSpeechAsync(input, voiceParams, config);
-
-                // Write the binary AudioContent of the response to file.
-                string filepath = Path.Combine(TTSFilesPath, $"{Guid.NewGuid()}.mp3");
-
-                using (Stream file = new FileStream(filepath, FileMode.Create))
-                {
-                    response.AudioContent.WriteTo(file);
-                }
-
-                return filepath;
-            }
-            catch (Exception e)
-            {
-                communication.SendErrorMessage($"Exception caught when rendering Google TTS {e}");
-                return null;
-            }
+            this.googleClient = googleClient;
         }
 
-        private string WrapSSML(string interiorSSML)
+        public override async Task<string> SynthesizeSpeech(string finalSSML)
         {
-            return $"<speak>{interiorSSML}</speak>";
+            VoiceSelectionParams voiceParams = voice.GetGoogleVoiceSelectionParams();
+
+            AudioConfig config = new AudioConfig
+            {
+                AudioEncoding = AudioEncoding.Mp3,
+                Pitch = pitch.GetSemitoneShift(),
+                SpeakingRate = speed.GetGoogleSpeed()
+            };
+
+            //TTS
+            SynthesisInput input = new SynthesisInput
+            {
+                Ssml = finalSSML
+            };
+
+            // Perform the Text-to-Speech request, passing the text input
+            // with the selected voice parameters and audio file type
+            GoogleSynthesizeSpeechResponse response = await googleClient.SynthesizeSpeechAsync(input, voiceParams, config);
+
+            // Write the binary AudioContent of the response to file.
+            string filepath = Path.Combine(TTSFilesPath, $"{Guid.NewGuid()}.mp3");
+
+            using (Stream file = new FileStream(filepath, FileMode.Create))
+            {
+                response.AudioContent.WriteTo(file);
+            }
+
+            return filepath;
         }
     }
 
@@ -155,6 +168,7 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
             Effect effectsChain)
             : base(
                   communication: communication,
+                  logger: null,
                   voice: (voice == TTSVoice.Unassigned) ? TTSVoice.en_US_Standard_B : voice,
                   pitch: pitch,
                   speed: speed,
@@ -163,11 +177,11 @@ namespace TASagentTwitchBot.Core.TTS.Parsing
             this.ttsWebRenderer = ttsWebRenderer;
         }
 
-        protected override Task<string> SynthesizeSpeech(string interiorSSML)
+        public override Task<string> SynthesizeSpeech(string finalSSML)
         {
             return ttsWebRenderer.SubmitTTSWebRequest(new ServerTTSRequest(
                 RequestIdentifier: Guid.NewGuid().ToString(),
-                Ssml: interiorSSML,
+                Ssml: finalSSML,
                 Voice: voice,
                 Pitch: pitch,
                 Speed: speed));
