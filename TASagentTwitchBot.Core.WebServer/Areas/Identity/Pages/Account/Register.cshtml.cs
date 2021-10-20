@@ -75,12 +75,14 @@ namespace TASagentTwitchBot.Core.WebServer.Areas.Identity.Pages.Account
             returnUrl ??= Url.Content("~/");
             ExternalLogins = (await signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 
+            MailAddress m = new MailAddress(Input.Email);
+
             if (ModelState.IsValid)
             {
                 Models.ApplicationUser user = new Models.ApplicationUser
                 {
                     TwitchBroadcasterName = Input.TwitchBroadcasterName,
-                    UserName = Input.Email,
+                    UserName = m.User,
                     Email = Input.Email
                 };
 
