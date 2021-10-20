@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using TASagentTwitchBot.Core.Audio.Effects;
 using TASagentTwitchBot.Core.TTS;
 using TASagentTwitchBot.Core.TTS.Parsing;
+using TASagentTwitchBot.Core.WebServer.Controllers;
 using TASagentTwitchBot.Core.WebServer.Models;
 
 namespace TASagentTwitchBot.Core.WebServer.TTS
@@ -19,6 +20,7 @@ namespace TASagentTwitchBot.Core.WebServer.TTS
     {
         Task HandleTTSRequest(UserManager<ApplicationUser> userManager, ApplicationUser user, ServerTTSRequest ttsRequest);
         Task HandleRawTTSRequest(UserManager<ApplicationUser> userManager, ApplicationUser user, Web.Hubs.RawServerTTSRequest rawTTSRequest);
+        Task<byte[]> HandleRawExternalTTSRequest(UserManager<ApplicationUser> userManager, ApplicationUser user, RawServerExternalTTSRequest rawTTSRequest);
     }
 
     public class ServerTTSRenderer : IServerTTSRenderer
@@ -357,5 +359,116 @@ namespace TASagentTwitchBot.Core.WebServer.TTS
                         arg2: "An exception was encountered trying to render TTS");
             }
         }
+
+        public async Task<byte[]> HandleRawExternalTTSRequest(
+            UserManager<ApplicationUser> userManager,
+            ApplicationUser user,
+            RawServerExternalTTSRequest rawTTSRequest)
+        {
+            try
+            {
+                int requestedCharacters = rawTTSRequest.Text.Length;
+
+                TTSVoice voice = rawTTSRequest.Voice?.TranslateTTSVoice() ?? TTSVoice.Unassigned;
+                TTSPitch pitch = rawTTSRequest.Pitch?.TranslateTTSPitch() ?? TTSPitch.Unassigned;
+                TTSSpeed speed = rawTTSRequest.Speed?.TranslateTTSSpeed() ?? TTSSpeed.Unassigned;
+
+                //Check permissions
+                if (voice.IsNeuralVoice())
+                {
+                    if (!await userManager.IsInRoleAsync(user, "TTSNeural"))
+                    {
+                        //Fix neural request for unauthorized user
+                        voice = TTSVoice.Unassigned;
+                        logger.LogInformation($"{user.TwitchBroadcasterName} requested unauthorized Neural TTS");
+                    }
+                }
+
+                //Check Neural voices
+                if (voice.IsNeuralVoice())
+                {
+                    //Neural voices are 4 times the cost across all services
+                    requestedCharacters *= 4;
+                }
+
+                if (user.MonthlyTTSLimit != -1 &&
+                    (user.MonthlyTTSUsage + requestedCharacters) >= user.MonthlyTTSLimit)
+                {
+                    logger.LogInformation($"{user.TwitchBroadcasterName} hit monthly allocation");
+                    return null;
+                }
+
+                //Update initial usage
+                user.MonthlyTTSUsage += requestedCharacters;
+                await userManager.UpdateAsync(user);
+
+                StandardTTSSystemRenderer renderer;
+
+                switch (voice.GetTTSService())
+                {
+                    case TTSService.Amazon:
+                        renderer = new AmazonTTSLocalRenderer(amazonClient, logger, voice, pitch, speed, new NoEffect());
+                        break;
+
+                    case TTSService.Google:
+                        renderer = new GoogleTTSLocalRenderer(googleClient, logger, voice, pitch, speed, new NoEffect());
+                        break;
+
+                    case TTSService.Azure:
+                        renderer = new AzureTTSLocalRenderer(azureClient, logger, voice, pitch, speed, new NoEffect());
+                        break;
+
+                    default:
+                        throw new Exception($"Unrecognized Service: {voice.GetTTSService()}");
+                }
+
+                (string fileName, int finalCharCount) = await TTSParser.ParseTTSNoSoundEffects(rawTTSRequest.Text, renderer);
+
+                //Check Neural voices
+                if (voice.IsNeuralVoice())
+                {
+                    //Neural voices are 4 times the cost across all services
+                    finalCharCount *= 4;
+                }
+
+                if (finalCharCount > requestedCharacters)
+                {
+                    //Update final actual usage
+                    user.MonthlyTTSUsage += finalCharCount - requestedCharacters;
+                    await userManager.UpdateAsync(user);
+                }
+
+                if (string.IsNullOrEmpty(fileName))
+                {
+                    //Failed somewhere
+                    throw new Exception("Received null filename.");
+                }
+
+                if (!File.Exists(fileName))
+                {
+                    //Failed somewhere
+                    throw new Exception("Received filename not found.");
+                }
+
+                //Now stream the file back to the requester
+                using FileStream file = new FileStream(fileName, FileMode.Open);
+                byte[] dataPacket = new byte[(int)file.Length];
+                await file.ReadAsync(dataPacket);
+
+                file.Close();
+
+                //Delete file from system
+                File.Delete(fileName);
+
+                return dataPacket;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Exception caught trying to render TTS");
+
+                return null;
+            }
+        }
+
     }
 }
