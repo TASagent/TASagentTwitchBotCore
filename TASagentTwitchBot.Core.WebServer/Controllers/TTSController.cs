@@ -14,7 +14,7 @@ using TASagentTwitchBot.Core.WebServer.TTS;
 namespace TASagentTwitchBot.Core.WebServer.Controllers
 {
     [ApiController]
-    [Authorize(AuthenticationSchemes = "Token", Roles = "TTS, TTSExternal")]
+    [Authorize(AuthenticationSchemes = "Token", Roles = "TTSExternal")]
     [Route("/TASagentServerAPI/[controller]/[action]")]
     public class TTSController : Controller
     {
@@ -48,7 +48,7 @@ namespace TASagentTwitchBot.Core.WebServer.Controllers
                 return BadRequest();
             }
 
-            return File(data, "audio/mpeg");
+            return File(data, "audio/mpeg", "synthesis.mp3");
         }
     }
 
