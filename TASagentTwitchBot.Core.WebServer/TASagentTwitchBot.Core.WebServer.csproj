@@ -8,9 +8,9 @@
 
 	<ItemGroup>
 		<PackageReference Include="AspNet.Security.OAuth.Twitch" Version="6.0.0" />
-		<PackageReference Include="AWSSDK.Core" Version="3.7.4" />
-		<PackageReference Include="AWSSDK.Polly" Version="3.7.3.38" />
-		<PackageReference Include="Google.Cloud.TextToSpeech.V1" Version="2.3.0" />
+		<PackageReference Include="AWSSDK.Core" Version="3.7.5.1" />
+		<PackageReference Include="AWSSDK.Polly" Version="3.7.3.45" />
+		<PackageReference Include="Google.Cloud.TextToSpeech.V1" Version="2.4.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="6.0.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="6.0.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="6.0.0" />
