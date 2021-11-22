@@ -1,87 +1,82 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 
-namespace TASagentTwitchBot.Core.EventSub
+namespace TASagentTwitchBot.Core.EventSub;
+
+public class FollowSubscriber : IEventSubSubscriber
 {
-    public class FollowSubscriber : IEventSubSubscriber
+    private readonly ICommunication communication;
+    private readonly Notifications.IFollowerHandler followerHandler;
+
+    private readonly IServiceScopeFactory scopeFactory;
+
+    public FollowSubscriber(
+        ICommunication communication,
+        Notifications.IFollowerHandler followerHandler,
+        IServiceScopeFactory scopeFactory)
     {
-        private readonly ICommunication communication;
-        private readonly Notifications.IFollowerHandler followerHandler;
+        this.communication = communication;
+        this.followerHandler = followerHandler;
 
-        private readonly IServiceScopeFactory scopeFactory;
+        this.scopeFactory = scopeFactory;
+    }
 
-        public FollowSubscriber(
-            ICommunication communication,
-            Notifications.IFollowerHandler followerHandler,
-            IServiceScopeFactory scopeFactory)
+    public void RegisterHandlers(Dictionary<string, EventHandler> handlers)
+    {
+        handlers.Add("channel.follow", HandleFollowEvent);
+    }
+
+    public async Task HandleFollowEvent(JsonElement twitchEvent)
+    {
+        string name = twitchEvent.GetProperty("user_name").GetString()!;
+        string id = twitchEvent.GetProperty("user_id").GetString()!;
+
+        if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(id))
         {
-            this.communication = communication;
-            this.followerHandler = followerHandler;
-
-            this.scopeFactory = scopeFactory;
+            communication.SendWarningMessage($"Received bad Follower event: {twitchEvent.GetString()}");
+            return;
         }
 
-        public void RegisterHandlers(Dictionary<string, EventHandler> handlers)
-        {
-            handlers.Add("channel.follow", HandleFollowEvent);
-        }
+        using IServiceScope scope = scopeFactory.CreateScope();
+        Database.BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<Database.BaseDatabaseContext>();
+        Database.User? follower = await db.Users.FirstOrDefaultAsync(x => x.TwitchUserId == id);
 
-        public async Task HandleFollowEvent(JsonElement twitchEvent)
+        if (follower is null)
         {
-            string name = twitchEvent.GetProperty("user_name").GetString();
-            string id = twitchEvent.GetProperty("user_id").GetString();
-
-            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(id))
+            follower = new Database.User()
             {
-                communication.SendWarningMessage($"Received bad Follower event: {twitchEvent.GetString()}");
-                return;
+                TwitchUserName = name,
+                TwitchUserId = id,
+                FirstSeen = DateTime.Now,
+                FirstFollowed = DateTime.Now,
+                AuthorizationLevel = Commands.AuthorizationLevel.None
+            };
+
+            db.Users.Add(follower);
+            await db.SaveChangesAsync();
+        }
+        else
+        {
+            bool changesMade = false;
+
+            if (!follower.FirstSeen.HasValue)
+            {
+                follower.FirstSeen = DateTime.Now;
+                changesMade = true;
             }
 
-            using IServiceScope scope = scopeFactory.CreateScope();
-            Database.BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<Database.BaseDatabaseContext>();
-            Database.User follower = await db.Users.FirstOrDefaultAsync(x => x.TwitchUserId == id);
-
-            if (follower == null)
+            if (!follower.FirstFollowed.HasValue)
             {
-                follower = new Database.User()
-                {
-                    TwitchUserName = name,
-                    TwitchUserId = id,
-                    FirstSeen = DateTime.Now,
-                    FirstFollowed = DateTime.Now,
-                    AuthorizationLevel = Commands.AuthorizationLevel.None
-                };
+                follower.FirstFollowed = DateTime.Now;
+                changesMade = true;
+            }
 
-                db.Users.Add(follower);
+            if (changesMade)
+            {
                 await db.SaveChangesAsync();
             }
-            else
-            {
-                bool changesMade = false;
-
-                if (!follower.FirstSeen.HasValue)
-                {
-                    follower.FirstSeen = DateTime.Now;
-                    changesMade = true;
-                }
-
-                if (!follower.FirstFollowed.HasValue)
-                {
-                    follower.FirstFollowed = DateTime.Now;
-                    changesMade = true;
-                }
-
-                if (changesMade)
-                {
-                    await db.SaveChangesAsync();
-                }
-            }
-
-            followerHandler.HandleFollower(follower, true);
         }
+
+        followerHandler.HandleFollower(follower, true);
     }
 }

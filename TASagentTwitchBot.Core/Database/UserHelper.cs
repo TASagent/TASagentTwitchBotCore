@@ -1,107 +1,101 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.EntityFrameworkCore;
 
-namespace TASagentTwitchBot.Core.Database
+namespace TASagentTwitchBot.Core.Database;
+
+public interface IUserHelper
 {
-    public interface IUserHelper
+    Task<User?> GetUserByTwitchLogin(string twitchLogin, bool create = true);
+    Task<User?> GetUserByTwitchId(string twitchId, bool create = true);
+}
+
+public class UserHelper : IUserHelper
+{
+    private readonly API.Twitch.HelixHelper helixHelper;
+    private readonly IServiceScopeFactory scopeFactory;
+
+    public UserHelper(
+        API.Twitch.HelixHelper helixHelper,
+        IServiceScopeFactory scopeFactory)
     {
-        Task<User> GetUserByTwitchLogin(string twitchLogin, bool create = true);
-        Task<User> GetUserByTwitchId(string twitchId, bool create = true);
+        this.helixHelper = helixHelper;
+        this.scopeFactory = scopeFactory;
     }
 
-    public class UserHelper : IUserHelper
+    public async Task<User?> GetUserByTwitchId(string twitchId, bool create = true)
     {
-        private readonly API.Twitch.HelixHelper helixHelper;
-        private readonly IServiceScopeFactory scopeFactory;
+        using IServiceScope scope = scopeFactory.CreateScope();
+        BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
 
-        public UserHelper(
-            API.Twitch.HelixHelper helixHelper,
-            IServiceScopeFactory scopeFactory)
+        User? user = await db.Users.FirstOrDefaultAsync(x => x.TwitchUserId == twitchId);
+
+        if (user is not null || !create)
         {
-            this.helixHelper = helixHelper;
-            this.scopeFactory = scopeFactory;
+            return user;
         }
 
-        public async Task<User> GetUserByTwitchId(string twitchId, bool create = true)
+        API.Twitch.TwitchUsers.Datum? userData = await helixHelper.GetUserById(twitchId);
+
+        if (userData is not null)
         {
-            using IServiceScope scope = scopeFactory.CreateScope();
-            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
-
-            User user = await db.Users.FirstOrDefaultAsync(x => x.TwitchUserId == twitchId);
-
-            if (user is not null || !create)
+            user = new User()
             {
-                return user;
+                TwitchUserId = twitchId,
+                TwitchUserName = string.IsNullOrWhiteSpace(userData.DisplayName) ? userData.Login : userData.DisplayName,
+                AuthorizationLevel = Commands.AuthorizationLevel.None
+            };
+
+            db.Users.Add(user);
+
+            await db.SaveChangesAsync();
+
+            return user;
+        }
+
+        return null;
+    }
+
+    public async Task<User?> GetUserByTwitchLogin(string twitchLogin, bool create = true)
+    {
+        using IServiceScope scope = scopeFactory.CreateScope();
+        BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+
+        User? user = await db.Users.FirstOrDefaultAsync(x => x.TwitchUserName.ToLower() == twitchLogin.ToLower());
+
+        if (user is not null || !create)
+        {
+            return user;
+        }
+
+        API.Twitch.TwitchUsers.Datum? userData = await helixHelper.GetUserByLogin(twitchLogin);
+
+        if (userData is not null)
+        {
+            User? idMatchUser = await db.Users.FirstOrDefaultAsync(x => x.TwitchUserId == userData.ID);
+
+            if (idMatchUser is not null)
+            {
+                //The twitch login name in the database requires an update
+                idMatchUser.TwitchUserName = string.IsNullOrWhiteSpace(userData.DisplayName) ? userData.Login : userData.DisplayName;
+                user = idMatchUser;
             }
-
-            API.Twitch.TwitchUsers.Datum userData = await helixHelper.GetUserById(twitchId);
-
-            if (userData is not null)
+            else
             {
                 user = new User()
                 {
-                    TwitchUserId = twitchId,
+                    TwitchUserId = userData.ID,
                     TwitchUserName = string.IsNullOrWhiteSpace(userData.DisplayName) ? userData.Login : userData.DisplayName,
                     AuthorizationLevel = Commands.AuthorizationLevel.None
                 };
 
                 db.Users.Add(user);
-
-                await db.SaveChangesAsync();
-
-                return user;
             }
 
-            return null;
+
+            await db.SaveChangesAsync();
+
+            return user;
         }
 
-        public async Task<User> GetUserByTwitchLogin(string twitchLogin, bool create = true)
-        {
-            using IServiceScope scope = scopeFactory.CreateScope();
-            BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
-
-            User user = await db.Users.FirstOrDefaultAsync(x => x.TwitchUserName.ToLower() == twitchLogin.ToLower());
-
-            if (user is not null || !create)
-            {
-                return user;
-            }
-
-            API.Twitch.TwitchUsers.Datum userData = await helixHelper.GetUserByLogin(twitchLogin);
-
-            if (userData is not null)
-            {
-                User idMatchUser = await db.Users.FirstOrDefaultAsync(x => x.TwitchUserId == userData.ID);
-
-                if (idMatchUser is not null)
-                {
-                    //The twitch login name in the database requires an update
-                    idMatchUser.TwitchUserName = string.IsNullOrWhiteSpace(userData.DisplayName) ? userData.Login : userData.DisplayName;
-                    user = idMatchUser;
-                }
-                else
-                {
-                    user = new User()
-                    {
-                        TwitchUserId = userData.ID,
-                        TwitchUserName = string.IsNullOrWhiteSpace(userData.DisplayName) ? userData.Login : userData.DisplayName,
-                        AuthorizationLevel = Commands.AuthorizationLevel.None
-                    };
-
-                    db.Users.Add(user);
-                }
-
-
-                await db.SaveChangesAsync();
-
-                return user;
-            }
-
-            return null;
-        }
+        return null;
     }
 }

@@ -6,7 +6,7 @@ My extensible, modular C# stream bot development framework (for integration with
 
 At the moment, if you aren't comfortable getting your hands dirty with the source or at least json config files, this may not be the project for you.
 
-But once configured, the project should be very simple to use.  It has a number of modular features, and it should be fast and easy to develop new ones.
+But once configured, the project should be very simple to use. It has a number of modular features, and it should be fast and easy to develop new ones.
 
 ![Control Page](assets/ControlPage.png)
 
@@ -14,14 +14,14 @@ I've also developed [a StreamDeck plugin](https://github.com/TASagent/TASagentTw
 
 ## Getting Started
 
-To start with, get the appropriate [NetCore 5 SDK (With AspNet)](https://dotnet.microsoft.com/download/dotnet/5.0).  It will also be useful to install the .NET Entity Framework CLI tools by running:
+To start with, get the appropriate [NetCore 6 SDK (With AspNet)](https://dotnet.microsoft.com/download/dotnet/6.0). It will also be useful to install the .NET Entity Framework CLI tools by running:
 
 ```cmd
 dotnet tool install --global dotnet-ef
 dotnet tool update --global dotnet-ef
 ```
 
-Clone the [TASagentTwitchBotDemos project](https://github.com/TASagent/TASagentTwitchBotDemos) and initialize and update the gitsubmodule (this project):
+Clone the [TASagentTwitchBotDemos project](https://github.com/TASagent/TASagentTwitchBotDemos) and initialize and update the git submodule (this project):
 
 ```cmd
 git clone https://github.com/TASagent/TASagentTwitchBotDemos
@@ -30,9 +30,9 @@ git submodule init
 git submodule update
 ```
 
-If you're using this as a twitch bot, you're going to need to make a new Twitch account for that bot.  You also need to go to [The Twitch Dev Console](https://dev.twitch.tv/console/apps) and register an application to receive a ClientID.  Enter any name, use `http://localhost:5000/TASagentBotAPI/OAuth/BotCode` and `http://localhost:5000/TASagentBotAPI/OAuth/BroadcasterCode` as the OAuth Redirect URLs, and choose "Chat Bot" as the category.
+If you're using this as a twitch bot, you're going to need to make a new Twitch account for that bot. You also need to go to [The Twitch Dev Console](https://dev.twitch.tv/console/apps) and register an application to receive a ClientID. Enter any name, use `http://localhost:5000/TASagentBotAPI/OAuth/BotCode` and `http://localhost:5000/TASagentBotAPI/OAuth/BroadcasterCode` as the OAuth Redirect URLs, and choose "Chat Bot" as the category.
 
-If the project you're building uses the database, navigate to the project directory via command line.  If the migration files already exist for it (and are up-to-date), then just run `dotnet ef database update`.  If they do not exist yet, you'll have to create them first with `dotnet ef migrations add InitialDBCreation`, followed by `dotnet ef database update`.  
+If the project you're building uses the database, navigate to the project directory via command line. If the migration files already exist for it (and are up-to-date), then just run `dotnet ef database update`. If they do not exist yet, you'll have to create them first with `dotnet ef migrations add InitialDBCreation`, followed by `dotnet ef database update`.  
 
 The first time you run a demo program, you'll be prompted for several values, and it will prepare some configuration files in your `Documents/TASagentBotDemo` directory.  
 
@@ -42,11 +42,11 @@ There are now two methods of using TTS.
 
 #### The Easy Way - My Webserver
 
-The first is to head to [My Webserver](https://server.tas.wtf/) and register a new account using the Twitch OAuth option (make sure to log in as the Broadcaster). Then contact me at [TASagent.Streams@gmail.com](mailto:TASagent.Streams@gmail.com) and give me your Twitch username and ask me to authorize you to connect and increase your TTS Character Limit.  Be sure to include whether you'd like to use the Neural voices, but understand that the Neural TTS Voices consume 4x the character limit (because of the increased cost). You'll be given some values to insert into `TASagentBotDemo/Config/ServerConfig.json` in order to be able to connect.
+The first is to head to [My Webserver](https://server.tas.wtf/) and register a new account using the Twitch OAuth option (make sure to log in as the Broadcaster). Then contact me at [TASagent.Streams@gmail.com](mailto:TASagent.Streams@gmail.com) and give me your Twitch username and ask me to authorize you to connect and increase your TTS Character Limit. Be sure to include whether you'd like to use the Neural voices, but understand that the Neural TTS Voices consume 4x the character limit (because of the increased cost). You'll be given some values to insert into `TASagentBotDemo/Config/ServerConfig.json` in order to be able to connect.
 
 #### The Hard Way - Self-hosing
 
-I have made sure to keep _The Hard Way_ available because I don't want to keep a stranglehold on how the bot is used. If you wish to use TTS the hard way, you'll have to create a GoogleCloud account with TTS enabled and put the credentials in `TASagentBotDemo/Config/googleCloudCredentials.json`, an AWSPolly account with its credentials stored `TASagentBotDemo/Config/awsPollyCredentials.json`, and/or a Microsoft Azure account with its credentials stored in `TASagentBotDemo/Config/azureSpeechSynthesisCredentials.json`. Otherwise, you'll have to use a configuration of the bot that doesn't support TTS.  Read and understand the pricing schemes of each service.  It's unlikely one streamer would be able to use enough TTS in a single month to result leave the free tier of any service (while it lasts), but it's your responsibility to understand how the pricing works.
+I have made sure to keep _The Hard Way_ available because I don't want to keep a stranglehold on how the bot is used. If you wish to use TTS the hard way, you'll have to create a GoogleCloud account with TTS enabled and put the credentials in `TASagentBotDemo/Config/googleCloudCredentials.json`, an AWSPolly account with its credentials stored `TASagentBotDemo/Config/awsPollyCredentials.json`, and/or a Microsoft Azure account with its credentials stored in `TASagentBotDemo/Config/azureSpeechSynthesisCredentials.json`. Otherwise, you'll have to use a configuration of the bot that doesn't support TTS. Read and understand the pricing schemes of each service. It's unlikely one streamer would be able to use enough TTS in a single month to result leave the free tier of any service (while it lasts), but it's your responsibility to understand how the pricing works.
 
 Example `googleCloudCredentials.json` file:
 ```json
@@ -90,7 +90,7 @@ services.UnregisterImplementation<Core.TTS.TTSWebRenderer>()
 
 Navigate to the directory of the Bot project (where the `.proj` file lives) and create the initial database with `dotnet ef database update`.
 
-To apply model changes as a new database migration, navigate to the directory of the project and use `dotnet ef migrations add <MigrationName>` where `<MigrationName>` is what you'd like to name this model update, for example, `dotnet ef migrations add AddingNewUserField`.  Then use `dotnet ef database update` to apply the model updates to the database.
+To apply model changes as a new database migration, navigate to the directory of the project and use `dotnet ef migrations add <MigrationName>` where `<MigrationName>` is what you'd like to name this model update, for example, `dotnet ef migrations add AddingNewUserField`. Then use `dotnet ef database update` to apply the model updates to the database.
 
 ## Running and controlling the bot
 
@@ -102,7 +102,7 @@ Voila!
 
 ## Customizing the bot
 
-There are several major subsystems to help streamline customization, and it's simple to create new ones.  A lot of the action takes place in the in the [Dependency Injection system](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/dependency-injection) that's part of ASP.NET.  Classes are registered in `TASagentTwitchBot.Web.StartupCore`, and when an instance of a class is required, it is instantiated (along with all of its constructor pre-requisites).  As a result, no _cycles_ are allowed (where Class A and Class B both require one-another).
+There are several major subsystems to help streamline customization, and it's simple to create new ones. A lot of the action takes place in the in the [Dependency Injection system](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/dependency-injection) that's part of ASP.NET. Classes are registered in `TASagentTwitchBot.Web.StartupCore`, and when an instance of a class is required, it is instantiated (along with all of its constructor pre-requisites). As a result, no _cycles_ are allowed (where Class A and Class B both require one-another).
 
 When multiple classes are registered for an interface or class, only the last one to be registered will be instantiated.
 
@@ -111,7 +111,7 @@ If you wish to register a single class to handle multiple interfaces, be careful
 This block would instantiate only one instance of `Notifications.FullActivityProvider` and provide it for every listed interface:
 
 ```csharp
-services
+builder.Services
     .AddSingleton<Notifications.FullActivityProvider>()
     .AddSingleton<Notifications.ISubscriptionHandler>(x => x.GetRequiredService<Notifications.FullActivityProvider>())
     .AddSingleton<Notifications.ICheerHandler>(x => x.GetRequiredService<Notifications.FullActivityProvider>())
@@ -124,7 +124,7 @@ services
 Whereas this block would instantiate an independent copy of the class as the handler for each interface:
 
 ```csharp
-services
+builder.Services
     .AddSingleton<Notifications.FullActivityProvider>()
     .AddSingleton<Notifications.ISubscriptionHandler, Notifications.FullActivityProvider>()
     .AddSingleton<Notifications.ICheerHandler, Notifications.FullActivityProvider>()
@@ -134,7 +134,7 @@ services
     .AddSingleton<Notifications.ITTSHandler, Notifications.FullActivityProvider>();
 ```
 
-However, when a class accepts an `IEnumerable` as a constructor argument, it receives an instance of every class that's been registered as a handler.  For example, the CommandSystem has the following constructor:
+However, when a class accepts an `IEnumerable` as a constructor argument, it receives an instance of every class that's been registered as a handler. For example, the CommandSystem has the following constructor:
 
 ```csharp
 public CommandSystem(
@@ -146,7 +146,7 @@ public CommandSystem(
 So it recieves and instance of every class registered as an `ICommandContainer`:
 
 ```csharp
-services
+builder.Services
     .AddSingleton<Commands.ICommandContainer, Commands.CustomSimpleCommands>()
     .AddSingleton<Commands.ICommandContainer, Commands.SystemCommandSystem>()
     .AddSingleton<Commands.ICommandContainer, Commands.PermissionSystem>()

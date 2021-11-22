@@ -1,49 +1,45 @@
-﻿using System;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 
-using TASagentTwitchBot.Core.Web.Middleware;
+namespace TASagentTwitchBot.Core.Web.Controllers;
 
-namespace TASagentTwitchBot.Core.Web.Controllers
+[ApiController]
+[Route("/TASagentBotAPI/OAuth/[Action]")]
+[ConditionalFeature("Twitch")]
+public class OAuthController : ControllerBase
 {
-    [ApiController]
-    [Route("/TASagentBotAPI/OAuth/[Action]")]
-    [ConditionalFeature("Twitch")]
-    public class OAuthController : ControllerBase
+    public OAuthController()
     {
-        public OAuthController()
+    }
+
+    [HttpPost]
+    [HttpGet]
+    public IActionResult BotCode(
+        [FromServices] API.Twitch.IBotTokenValidator botTokenValidator,
+        [FromQuery(Name = "code")] string code,
+        [FromQuery(Name = "state")] string state)
+    {
+        if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state))
         {
+            return BadRequest();
         }
 
-        [HttpPost]
-        [HttpGet]
-        public IActionResult BotCode(
-            [FromServices] API.Twitch.IBotTokenValidator botTokenValidator,
-            [FromQuery(Name = "code")] string code,
-            [FromQuery(Name = "state")] string state)
-        {
-            if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state))
-            {
-                return BadRequest();
-            }
+        botTokenValidator.SetCode(code, state);
+        return Ok();
+    }
 
-            botTokenValidator.SetCode(code, state);
-            return Ok();
+    [HttpPost]
+    [HttpGet]
+    public IActionResult BroadcasterCode(
+        [FromServices] API.Twitch.IBroadcasterTokenValidator broadcasterTokenValidator,
+        [FromQuery(Name = "code")] string code,
+        [FromQuery(Name = "state")] string state)
+    {
+        if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state))
+        {
+            return BadRequest();
         }
 
-        [HttpPost]
-        [HttpGet]
-        public IActionResult BroadcasterCode(
-            [FromServices] API.Twitch.IBroadcasterTokenValidator broadcasterTokenValidator,
-            [FromQuery(Name = "code")] string code,
-            [FromQuery(Name = "state")] string state)
-        {
-            if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state))
-            {
-                return BadRequest();
-            }
-
-            broadcasterTokenValidator.SetCode(code, state);
-            return Ok();
-        }
+        broadcasterTokenValidator.SetCode(code, state);
+        return Ok();
     }
 }

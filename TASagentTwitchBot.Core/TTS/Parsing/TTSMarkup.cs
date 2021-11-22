@@ -1,41 +1,40 @@
-﻿namespace TASagentTwitchBot.Core.TTS.Parsing
+﻿namespace TASagentTwitchBot.Core.TTS.Parsing;
+
+public enum TTSMarkup
 {
-    public enum TTSMarkup
-    {
-        Underscore = 0,
-        Tilde,
+    Underscore = 0,
+    Tilde,
 
-        Plus,
-        Minus,
-        Asterisk,
-        Slash,
-        Carrot,
+    Plus,
+    Minus,
+    Asterisk,
+    Slash,
+    Carrot,
 
-        Comma,
-        Period,
-        Bang,
-        QuestionMark,
+    Comma,
+    Period,
+    Bang,
+    QuestionMark,
 
-        Octothorpe,
-        DollarSign,
-        PercentSign,
-        Ampersand,
+    Octothorpe,
+    DollarSign,
+    PercentSign,
+    Ampersand,
 
-        DoubleQuote,
-        SingleQuote,
+    DoubleQuote,
+    SingleQuote,
 
-        OpenAngleBracket,
-        CloseAngleBracket,
+    OpenAngleBracket,
+    CloseAngleBracket,
 
-        OpenParen,
-        CloseParen,
+    OpenParen,
+    CloseParen,
 
-        OpenCurlyBoi,
-        CloseCurlyBoi,
+    OpenCurlyBoi,
+    CloseCurlyBoi,
 
-        OpenBracket,
-        CloseBracket,
+    OpenBracket,
+    CloseBracket,
 
-        MAX
-    }
+    MAX
 }

@@ -1,192 +1,194 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Channels;
-using System.Threading.Tasks;
+﻿using System.Threading.Channels;
 
-namespace TASagentTwitchBot.Core.View
+namespace TASagentTwitchBot.Core.View;
+
+public class BasicView : IConsoleOutput, IShutdownListener, IDisposable
 {
-    public class BasicView : IConsoleOutput, IDisposable
+    private readonly Config.BotConfiguration botConfig;
+    private readonly ICommunication communication;
+    private readonly ApplicationManagement applicationManagement;
+
+    private readonly CancellationTokenSource generalTokenSource = new CancellationTokenSource();
+    private Task? readHandlerTask;
+    private Task? keysHandlerTask;
+
+    private readonly ChannelWriter<ConsoleKeyInfo> consoleChannelWriter;
+    private readonly ChannelReader<ConsoleKeyInfo> consoleChannelReader;
+
+    private bool disposedValue = false;
+
+    public BasicView(
+        Config.BotConfiguration botConfig,
+        ICommunication communication,
+        ApplicationManagement applicationManagement)
     {
-        private readonly Config.BotConfiguration botConfig;
-        private readonly ICommunication communication;
-        private readonly ApplicationManagement applicationManagement;
+        this.botConfig = botConfig;
+        this.communication = communication;
+        this.applicationManagement = applicationManagement;
 
-        private readonly CancellationTokenSource generalTokenSource = new CancellationTokenSource();
-        private readonly CountdownEvent readers = new CountdownEvent(1);
+        Channel<ConsoleKeyInfo> consoleChannel = Channel.CreateUnbounded<ConsoleKeyInfo>();
+        consoleChannelWriter = consoleChannel.Writer;
+        consoleChannelReader = consoleChannel.Reader;
 
-        private readonly Channel<ConsoleKeyInfo> consoleChannel;
+        applicationManagement.RegisterShutdownListener(this);
 
-        private bool disposedValue = false;
-
-        public BasicView(
-            Config.BotConfiguration botConfig,
-            ICommunication communication,
-            ApplicationManagement applicationManagement)
+        if (botConfig.UseThreadedMonitors)
         {
-            this.botConfig = botConfig;
-            this.communication = communication;
-            this.applicationManagement = applicationManagement;
-
-            consoleChannel = Channel.CreateUnbounded<ConsoleKeyInfo>();
-
+            Task.Run(LaunchListeners);
+        }
+        else
+        {
             LaunchListeners();
-
-            communication.ReceivePendingNotificationHandlers += ReceivePendingNotification;
-            communication.ReceiveEventHandlers += ReceiveEventHandler;
-            communication.ReceiveMessageLoggers += ReceiveMessageHandler;
-            communication.SendMessageHandlers += SendPublicChatHandler;
-            communication.SendWhisperHandlers += SendWhisperHandler;
-            communication.DebugMessageHandlers += DebugMessageHandler;
-
-            communication.SendDebugMessage("BasicView Connected.  Listening for Ctrl+Q to quit gracefully.\n");
         }
 
-        private void ReceiveEventHandler(string message)
+        communication.ReceivePendingNotificationHandlers += ReceivePendingNotification;
+        communication.ReceiveEventHandlers += ReceiveEventHandler;
+        communication.ReceiveMessageLoggers += ReceiveMessageHandler;
+        communication.SendMessageHandlers += SendPublicChatHandler;
+        communication.SendWhisperHandlers += SendWhisperHandler;
+        communication.DebugMessageHandlers += DebugMessageHandler;
+
+        communication.SendDebugMessage("BasicView Connected.  Listening for Ctrl+Q to quit gracefully.\n");
+    }
+
+    private void ReceiveEventHandler(string message)
+    {
+        Console.WriteLine($"Event   {message}");
+    }
+
+    private void ReceivePendingNotification(int id, string message)
+    {
+        Console.WriteLine($"Notice  Pending Notification {id}: {message}");
+    }
+
+    private void DebugMessageHandler(string message, MessageType messageType)
+    {
+        switch (messageType)
         {
-            Console.WriteLine($"Event   {message}");
+            case MessageType.Debug:
+                Console.WriteLine(message);
+                break;
+
+            case MessageType.Warning:
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine(message);
+                Console.ForegroundColor = ConsoleColor.Gray;
+                break;
+
+            case MessageType.Error:
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine(message);
+                Console.ForegroundColor = ConsoleColor.Gray;
+                break;
+
+            default:
+                throw new NotSupportedException($"Unexpected messageType: {messageType}");
         }
+    }
 
-        private void ReceivePendingNotification(int id, string message)
-        {
-            Console.WriteLine($"Notice  Pending Notification {id}: {message}");
-        }
+    private void SendPublicChatHandler(string message)
+    {
+        Console.WriteLine($"Chat    {botConfig.BotName}: {message}");
+    }
 
-        private void DebugMessageHandler(string message, MessageType messageType)
-        {
-            switch (messageType)
-            {
-                case MessageType.Debug:
-                    Console.WriteLine(message);
-                    break;
+    private void SendWhisperHandler(string username, string message)
+    {
+        Console.WriteLine($"Chat    {botConfig.BotName} whispers {username}: {message}");
+    }
 
-                case MessageType.Warning:
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine(message);
-                    Console.ForegroundColor = ConsoleColor.Gray;
-                    break;
+    private void ReceiveMessageHandler(IRC.TwitchChatter chatter)
+    {
+        Console.WriteLine($"Chat    {chatter.User.TwitchUserName}: {chatter.Message}");
+    }
 
-                case MessageType.Error:
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(message);
-                    Console.ForegroundColor = ConsoleColor.Gray;
-                    break;
+    public void LaunchListeners()
+    {
+        readHandlerTask = ReadKeysHandler();
+        keysHandlerTask = HandleKeysLoop();
+    }
 
-                default:
-                    throw new NotSupportedException($"Unexpected messageType: {messageType}");
-            }
-        }
-
-        private void SendPublicChatHandler(string message)
-        {
-            Console.WriteLine($"Chat    {botConfig.BotName}: {message}");
-        }
-
-        private void SendWhisperHandler(string username, string message)
-        {
-            Console.WriteLine($"Chat    {botConfig.BotName} whispers {username}: {message}");
-        }
-
-        private void ReceiveMessageHandler(IRC.TwitchChatter chatter)
-        {
-            Console.WriteLine($"Chat    {chatter.User.TwitchUserName}: {chatter.Message}");
-        }
-
-        public void LaunchListeners()
-        {
-            ReadKeysHandler();
-            HandleKeysLoop();
-        }
-
-        private async Task<ConsoleKeyInfo> WaitForConsoleKeyInfo()
-        {
-            ConsoleKeyInfo keyInfo = default;
-            try
-            {
-                await Task.Run(() => keyInfo = Console.ReadKey(true));
-            }
-            catch (Exception ex)
-            {
-                communication.SendErrorMessage($"BasicView Exception: {ex}");
-            }
-
-            return keyInfo;
-        }
-
-        private async void ReadKeysHandler()
-        {
-            try
-            {
-                readers.AddCount();
-
-                while (true)
-                {
-                    ConsoleKeyInfo nextKey = await WaitForConsoleKeyInfo().WithCancellation(generalTokenSource.Token);
-
-                    //Bail if we're trying to quit
-                    if (generalTokenSource.IsCancellationRequested)
-                    {
-                        break;
-                    }
-
-                    await consoleChannel.Writer.WriteAsync(nextKey);
-                }
-            }
-            catch (TaskCanceledException) { /* swallow */}
-            catch (OperationCanceledException) { /* swallow */}
-            catch (Exception ex)
-            {
-                //Log Error
-                communication.SendErrorMessage($"BasicView Exception: {ex}");
-            }
-            finally
-            {
-                readers.Signal();
-            }
-        }
-
-        private async void HandleKeysLoop()
+    private async Task ReadKeysHandler()
+    {
+        try
         {
             while (true)
             {
-                Console.CursorVisible = false;
-                ConsoleKeyInfo input = await consoleChannel.Reader.ReadAsync();
+                ConsoleKeyInfo nextKey = default;
 
-                if (input.Key == ConsoleKey.Q && ((input.Modifiers & ConsoleModifiers.Control) != 0))
+                await Task.Run(() => nextKey = Console.ReadKey(true), generalTokenSource.Token);
+
+                //Bail if we're trying to quit
+                if (generalTokenSource.IsCancellationRequested)
                 {
-                    applicationManagement.TriggerExit();
+                    break;
                 }
+
+                await consoleChannelWriter.WriteAsync(nextKey);
             }
         }
-
-        protected virtual void Dispose(bool disposing)
+        catch (TaskCanceledException) { /* swallow */ }
+        catch (OperationCanceledException) { /* swallow */ }
+        catch (Exception ex)
         {
-            if (!disposedValue)
+            //Log Error
+            communication.SendErrorMessage($"BasicView Exception: {ex}");
+        }
+    }
+
+    private async Task HandleKeysLoop()
+    {
+        Console.CursorVisible = false;
+        await foreach (ConsoleKeyInfo input in consoleChannelReader.ReadAllAsync())
+        {
+            Console.CursorVisible = false;
+            if (input.Key == ConsoleKey.Q && ((input.Modifiers & ConsoleModifiers.Control) != 0))
             {
-                if (disposing)
-                {
-                    communication.ReceiveEventHandlers -= ReceiveEventHandler;
-                    communication.ReceiveMessageLoggers -= ReceiveMessageHandler;
-                    communication.SendMessageHandlers -= SendPublicChatHandler;
-                    communication.SendWhisperHandlers -= SendWhisperHandler;
-                    communication.DebugMessageHandlers -= DebugMessageHandler;
-
-                    generalTokenSource.Cancel();
-
-                    readers.Signal();
-                    readers.Wait();
-                    readers.Dispose();
-
-                    generalTokenSource.Dispose();
-                }
-
-                disposedValue = true;
+                applicationManagement.TriggerExit();
             }
         }
+    }
 
-        public void Dispose()
+    public void NotifyShuttingDown()
+    {
+        generalTokenSource.Cancel();
+
+        consoleChannelWriter.TryComplete();
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposedValue)
         {
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
+            if (disposing)
+            {
+                communication.ReceiveEventHandlers -= ReceiveEventHandler;
+                communication.ReceiveMessageLoggers -= ReceiveMessageHandler;
+                communication.SendMessageHandlers -= SendPublicChatHandler;
+                communication.SendWhisperHandlers -= SendWhisperHandler;
+                communication.DebugMessageHandlers -= DebugMessageHandler;
+
+                generalTokenSource.Cancel();
+
+                consoleChannelWriter.TryComplete();
+
+                readHandlerTask?.Wait(500);
+                readHandlerTask?.Dispose();
+                readHandlerTask = null;
+
+                keysHandlerTask?.Wait(500);
+                keysHandlerTask?.Dispose();
+                keysHandlerTask = null;
+
+                generalTokenSource.Dispose();
+            }
+
+            disposedValue = true;
         }
+    }
+
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

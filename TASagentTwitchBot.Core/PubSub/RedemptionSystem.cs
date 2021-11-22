@@ -1,72 +1,66 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Collections.Generic;
+﻿namespace TASagentTwitchBot.Core.PubSub;
 
-namespace TASagentTwitchBot.Core.PubSub
+public interface IRedemptionSystem
 {
-    public interface IRedemptionSystem
+    Task Initialize();
+    void HandleRedemption(ChannelPointMessageData.Datum redemption);
+}
+
+public class RedemptionSystem : IRedemptionSystem
+{
+    private readonly ICommunication communication;
+
+    private readonly IRedemptionContainer[] redemptionContainers;
+    private readonly Database.IUserHelper userHelper;
+
+    private readonly Dictionary<string, RedemptionHandler> redemptionHandlers = new Dictionary<string, RedemptionHandler>();
+
+    public RedemptionSystem(
+        ICommunication communication,
+        IEnumerable<IRedemptionContainer> redemptionContainers,
+        Database.IUserHelper userHelper)
     {
-        Task Initialize();
-        void HandleRedemption(ChannelPointMessageData.Datum redemption);
+        this.communication = communication;
+
+        this.userHelper = userHelper;
+
+        this.redemptionContainers = redemptionContainers.ToArray();
     }
 
-    public class RedemptionSystem : IRedemptionSystem
+    public async void HandleRedemption(ChannelPointMessageData.Datum redemption)
     {
-        private readonly ICommunication communication;
+        //Handle redemption
+        string rewardID = redemption.Redemption.Reward.Id;
 
-        private readonly IRedemptionContainer[] redemptionContainers;
-        private readonly Database.IUserHelper userHelper;
-
-        private readonly Dictionary<string, RedemptionHandler> redemptionHandlers = new Dictionary<string, RedemptionHandler>();
-
-        public RedemptionSystem(
-            ICommunication communication,
-            IEnumerable<IRedemptionContainer> redemptionContainers,
-            Database.IUserHelper userHelper)
+        if (!redemptionHandlers.TryGetValue(rewardID, out RedemptionHandler? redemptionHandler))
         {
-            this.communication = communication;
-
-            this.userHelper = userHelper;
-
-            this.redemptionContainers = redemptionContainers.ToArray();
+            communication.SendErrorMessage($"Redemption handler not found: {rewardID}");
+            return;
         }
 
-        public async void HandleRedemption(ChannelPointMessageData.Datum redemption)
+        Database.User? user = await userHelper.GetUserByTwitchId(redemption.Redemption.User.Id);
+
+        if (user is null)
         {
-            //Handle redemption
-            string rewardID = redemption.Redemption.Reward.Id;
-
-            if (!redemptionHandlers.TryGetValue(rewardID, out RedemptionHandler redemptionHandler))
-            {
-                communication.SendErrorMessage($"Redemption handler not found: {rewardID}");
-                return;
-            }
-
-            Database.User user = await userHelper.GetUserByTwitchId(redemption.Redemption.User.Id);
-
-            if (user is null)
-            {
-                communication.SendErrorMessage($"User not found: {redemption.Redemption.User.Id}");
-                return;
-            }
-
-            await redemptionHandler(user, redemption.Redemption);
+            communication.SendErrorMessage($"User not found: {redemption.Redemption.User.Id}");
+            return;
         }
 
-        public async Task Initialize()
-        {
-            foreach (IRedemptionContainer redemptionContainer in redemptionContainers)
-            {
-                await redemptionContainer.RegisterHandler(redemptionHandlers);
-            }
-        }
+        await redemptionHandler(user, redemption.Redemption);
     }
 
-    public delegate Task RedemptionHandler(Database.User user, ChannelPointMessageData.Datum.RedemptionData redemption);
-
-    public interface IRedemptionContainer
+    public async Task Initialize()
     {
-        Task RegisterHandler(Dictionary<string, RedemptionHandler> handlers);
+        foreach (IRedemptionContainer redemptionContainer in redemptionContainers)
+        {
+            await redemptionContainer.RegisterHandler(redemptionHandlers);
+        }
     }
+}
+
+public delegate Task RedemptionHandler(Database.User user, ChannelPointMessageData.Datum.RedemptionData redemption);
+
+public interface IRedemptionContainer
+{
+    Task RegisterHandler(Dictionary<string, RedemptionHandler> handlers);
 }

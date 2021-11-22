@@ -1,7 +1,6 @@
-﻿namespace TASagentTwitchBot.Core.Donations
+﻿namespace TASagentTwitchBot.Core.Donations;
+
+public interface IDonationHandler
 {
-    public interface IDonationHandler
-    {
-        void HandleDonation(string name, double amount, string message, bool approved);
-    }
+    void HandleDonation(string name, double amount, string message, bool approved);
 }

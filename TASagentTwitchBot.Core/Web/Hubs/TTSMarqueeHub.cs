@@ -1,14 +1,11 @@
-﻿using System;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.SignalR;
 
-namespace TASagentTwitchBot.Core.Web.Hubs
+namespace TASagentTwitchBot.Core.Web.Hubs;
+
+public class TTSMarqueeHub : Hub
 {
-    public class TTSMarqueeHub : Hub
-    {
-        //public async Task TriggerTTSNotification(string message)
-        //{
-        //    await Clients.All.SendAsync("ReceiveTTSNotification", message);
-        //}
-    }
+    //public async Task TriggerTTSNotification(string message)
+    //{
+    //    await Clients.All.SendAsync("ReceiveTTSNotification", message);
+    //}
 }

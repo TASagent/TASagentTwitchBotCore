@@ -1,7 +1,6 @@
-﻿namespace BGC.Audio.Synthesis
+﻿namespace BGC.Audio.Synthesis;
+
+public interface IADSR
 {
-    public interface IADSR
-    {
-        void TriggerRelease(bool immediate = false);
-    }
+    void TriggerRelease(bool immediate = false);
 }

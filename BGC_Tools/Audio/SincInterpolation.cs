@@ -1,12 +1,12 @@
 ﻿// Based on resampy https://github.com/bmcfee/resampy
 // ISC License
-   
+
 // Copyright (c) 2016, Brian McFee
-   
+
 // Permission to use, copy, modify, and/or distribute this software for any
 // purpose with or without fee is hereby granted, provided that the above
 // copyright notice and this permission notice appear in all copies.
-   
+
 // THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
 // WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
@@ -15,115 +15,112 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-using System;
-using System.Linq;
+namespace BGC.Audio;
 
-namespace BGC.Audio
+public static class SincInterpolation
 {
-    public static class SincInterpolation
+    public static short[] ResampleAndConvertTo16Bit(
+        float[] samples,
+        double oldSamplingRate,
+        double newSamplingRate,
+        int channels)
     {
-        public static short[] ResampleAndConvertTo16Bit(
-            float[] samples,
-            double oldSamplingRate,
-            double newSamplingRate,
-            int channels)
+        double sampleRatio = newSamplingRate / oldSamplingRate;
+        double[] interpWin = halfWindow;
+        if (sampleRatio < 1)
         {
-            double sampleRatio = newSamplingRate / oldSamplingRate;
-            double[] interpWin = halfWindow;
-            if (sampleRatio < 1)
+            interpWin = halfWindow.Select(x => x * sampleRatio).ToArray();
+        }
+        double[] interpDelta = new double[interpWin.Length];
+        for (int i = 0; i < interpWin.Length - 1; i++)
+        {
+            interpDelta[i] = interpWin[i + 1] - interpWin[i];
+        }
+        interpDelta[^1] = 0.0;
+
+        double[] samplesOut = new double[(int)((samples.Length / channels) * sampleRatio) * channels];
+
+        double scale = Math.Min(1.0, sampleRatio);
+        double timeIncrement = 1.0 / sampleRatio;
+        int indexStep = (int)(scale * precision);
+        double timeRegister = 0.0;
+
+        int n = 0;
+        double frac = 0.0;
+        double indexFrac = 0.0;
+        int offset = 0;
+        double eta = 0.0;
+        double weight = 0.0;
+
+        int nwin = interpWin.Length;
+        int origCount = samples.Length / channels;
+        int outCount = samplesOut.Length / channels;
+
+        for (int t = 0; t < outCount; t++)
+        {
+            // Grab the top bits as an index to the input buffer
+            n = (int)timeRegister;
+
+            // Grab the fractional component of the time index
+            frac = scale * (timeRegister - n);
+
+            // Offset into the filter
+            indexFrac = frac * precision;
+            offset = (int)indexFrac;
+
+            // Interpolation factor
+            eta = indexFrac - offset;
+
+            // Compute the left wing of the filter response
+            int windowCount = Math.Min(n + 1, (nwin - offset) / indexStep);
+            for (int i = 0; i < windowCount; i++)
             {
-                interpWin = halfWindow.Select(x => x * sampleRatio).ToArray();
-            }
-            double[] interpDelta = new double[interpWin.Length];
-            for (int i = 0; i < interpWin.Length - 1; i++)
-            {
-                interpDelta[i] = interpWin[i + 1] - interpWin[i];
-            }
-            interpDelta[interpDelta.Length - 1] = 0.0;
-
-            double[] samplesOut = new double[(int)((samples.Length / channels) * sampleRatio) * channels];
-
-            double scale = Math.Min(1.0, sampleRatio);
-            double timeIncrement = 1.0 / sampleRatio;
-            int indexStep = (int)(scale * precision);
-            double timeRegister = 0.0;
-
-            int n = 0;
-            double frac = 0.0;
-            double indexFrac = 0.0;
-            int offset = 0;
-            double eta = 0.0;
-            double weight = 0.0;
-
-            int nwin = interpWin.Length;
-            int origCount = samples.Length / channels;
-            int outCount = samplesOut.Length / channels;
-
-            for (int t = 0; t < outCount; t++)
-            {
-                // Grab the top bits as an index to the input buffer
-                n = (int)timeRegister;
-
-                // Grab the fractional component of the time index
-                frac = scale * (timeRegister - n);
-
-                // Offset into the filter
-                indexFrac = frac * precision;
-                offset = (int)indexFrac;
-
-                // Interpolation factor
-                eta = indexFrac - offset;
-
-                // Compute the left wing of the filter response
-                int windowCount = Math.Min(n + 1, (nwin - offset) / indexStep);
-                for (int i = 0; i < windowCount; i++)
+                weight = (interpWin[offset + i * indexStep] + eta * interpDelta[offset + i * indexStep]);
+                for (int j = 0; j < channels; j++)
                 {
-                    weight = (interpWin[offset + i * indexStep] + eta * interpDelta[offset + i * indexStep]);
-                    for (int j = 0; j < channels; j++)
-                    {
-                        samplesOut[t * channels + j] += weight * samples[(n - i) * channels + j];
-                    }
+                    samplesOut[t * channels + j] += weight * samples[(n - i) * channels + j];
                 }
-
-                // Invert P
-                frac = scale - frac;
-
-                // Offset into the filter
-                indexFrac = frac * precision;
-                offset = (int)indexFrac;
-
-                // Interpolation factor
-                eta = indexFrac - offset;
-
-                // Compute the right wing of the filter response
-                windowCount = Math.Min(origCount - n - 1, (nwin - offset) / indexStep);
-                for (int k = 0; k < windowCount; k++)
-                {
-                    weight = (interpWin[offset + k * indexStep] + eta * interpDelta[offset + k * indexStep]);
-                    for (int j = 0; j < channels; j++)
-                    {
-                        samplesOut[t * channels + j] += weight * samples[(n + k + 1) * channels + j];
-                    }
-                }
-
-                // Increment the time register
-                timeRegister += timeIncrement;
             }
 
-            short[] samplesOut16 = new short[samplesOut.Length];
-            for (int i = 0; i < samplesOut16.Length; i++)
+            // Invert P
+            frac = scale - frac;
+
+            // Offset into the filter
+            indexFrac = frac * precision;
+            offset = (int)indexFrac;
+
+            // Interpolation factor
+            eta = indexFrac - offset;
+
+            // Compute the right wing of the filter response
+            windowCount = Math.Min(origCount - n - 1, (nwin - offset) / indexStep);
+            for (int k = 0; k < windowCount; k++)
             {
-                samplesOut[i] = Math.Max(Math.Min(samplesOut[i], 1.0), -1.0);
-                samplesOut16[i] = (short)Math.Round(samplesOut[i] * short.MaxValue);
+                weight = (interpWin[offset + k * indexStep] + eta * interpDelta[offset + k * indexStep]);
+                for (int j = 0; j < channels; j++)
+                {
+                    samplesOut[t * channels + j] += weight * samples[(n + k + 1) * channels + j];
+                }
             }
-            return samplesOut16;
+
+            // Increment the time register
+            timeRegister += timeIncrement;
         }
 
-        // Resampy stores these values in data/kaiser_best.npz
-        // I have extracted the data and put it into these variables
-        private const long precision = 0x200;
-        private static readonly double[] halfWindow = new double[]
+        short[] samplesOut16 = new short[samplesOut.Length];
+        for (int i = 0; i < samplesOut16.Length; i++)
         {
+            samplesOut[i] = Math.Max(Math.Min(samplesOut[i], 1.0), -1.0);
+            samplesOut16[i] = (short)Math.Round(samplesOut[i] * short.MaxValue);
+        }
+        return samplesOut16;
+    }
+
+    // Resampy stores these values in data/kaiser_best.npz
+    // I have extracted the data and put it into these variables
+    private const long precision = 0x200;
+    private static readonly double[] halfWindow = new double[]
+    {
             0.85, 0.8499960955074435, 0.8499843820954507, 0.8499648599610655, 0.8499375294326802, 0.8499023909700402, 0.8498594451642257, 0.8498086927376495,
             0.849750134544034, 0.8496837715683944, 0.849609604927027, 0.8495276358674759, 0.8494378657685122, 0.8493402961401094, 0.8492349286234036, 0.8491217649906716,
             0.8490008071452855, 0.8488720571216786, 0.8487355170853006, 0.8485911893325772, 0.848439076290863, 0.8482791805183894, 0.8481115047042127, 0.8479360516681619,
@@ -1149,6 +1146,5 @@ namespace BGC.Audio
             -2.892182262411555E-05, -2.875820146909979E-05, -2.859440792610193E-05, -2.8430451871836218E-05, -2.826634314172128E-05, -2.8102091529593454E-05, -2.7937706787423327E-05, -2.7773198625034968E-05,
             -2.760857670982832E-05, -2.7443850666504256E-05, -2.727903007679286E-05, -2.711412447918442E-05, -2.694914336866343E-05, -2.6784096196445666E-05, -2.6618992369717933E-05, -2.645384125138103E-05,
             -2.628865215979547E-05
-        };
-    }
+    };
 }

@@ -1,261 +1,311 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Net.WebSockets;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Linq;
 using BGC.Collections.Generic;
 
-using TASagentTwitchBot.Core.API.Twitch;
 
-namespace TASagentTwitchBot.Core.PubSub
+namespace TASagentTwitchBot.Core.PubSub;
+
+public class PubSubClient : IShutdownListener, IDisposable
 {
-    public class PubSubClient : IDisposable
+    private readonly Config.BotConfiguration botConfig;
+    private readonly ErrorHandler errorHandler;
+
+    private readonly ICommunication communication;
+    private readonly IRedemptionSystem redemptionHandler;
+    private readonly API.Twitch.IBroadcasterTokenValidator broadcasterTokenValidator;
+
+    private readonly CancellationTokenSource generalTokenSource = new CancellationTokenSource();
+    private readonly CancellationTokenSource disconnectTokenSource = new CancellationTokenSource();
+    private CancellationTokenSource? readerTokenSource;
+
+    private ClientWebSocket? clientWebSocket;
+
+    private Task? connectionTask = null;
+    private Task? disconnectionTask = null;
+    private Task? handlePingsTask = null;
+    private Task? readMessagesTask = null;
+
+    private bool disposedValue = false;
+    private bool breakConnection = false;
+
+    private readonly Uri websocketServerURI = new Uri("wss://pubsub-edge.twitch.tv");
+    private readonly BasicPubSubMessage pingMessage = new BasicPubSubMessage("PING");
+    private readonly BasicPubSubMessage pongMessage = new BasicPubSubMessage("PONG");
+
+    private readonly TimeSpan pingWaitTime = new TimeSpan(hours: 0, minutes: 4, seconds: 00);
+
+    private readonly byte[] incomingData = new byte[4096];
+    private bool pongReceived = false;
+
+    private readonly RingBuffer<PubSubMessage> sentMessages = new RingBuffer<PubSubMessage>(20);
+
+    public PubSubClient(
+        Config.BotConfiguration botConfig,
+        ApplicationManagement applicationManagement,
+        ICommunication communication,
+        IRedemptionSystem redemptionHandler,
+        API.Twitch.IBroadcasterTokenValidator broadcasterTokenValidator,
+        ErrorHandler errorHandler)
     {
-        private readonly Config.BotConfiguration botConfig;
-        private readonly ICommunication communication;
-        private readonly ErrorHandler errorHandler;
-        private readonly IRedemptionSystem redemptionHandler;
+        this.botConfig = botConfig;
+        this.communication = communication;
+        this.redemptionHandler = redemptionHandler;
+        this.broadcasterTokenValidator = broadcasterTokenValidator;
+        this.errorHandler = errorHandler;
 
-        private bool disposedValue = false;
-        private bool breakConnection = false;
+        applicationManagement.RegisterShutdownListener(this);
 
-        private ClientWebSocket clientWebSocket;
-        private readonly CancellationTokenSource generalTokenSource = new CancellationTokenSource();
-        private readonly CountdownEvent readers = new CountdownEvent(1);
-
-        private CancellationTokenSource readerTokenSource;
-
-        private readonly object reconnectLock = new object();
-        private readonly CountdownEvent reconnections = new CountdownEvent(1);
-
-        private readonly Uri websocketServerURI = new Uri("wss://pubsub-edge.twitch.tv");
-        private readonly TimeSpan pingWaitTime = new TimeSpan(hours: 0, minutes: 4, seconds: 00);
-
-        private readonly BasicPubSubMessage pingMessage;
-        private readonly BasicPubSubMessage pongMessage;
-        private readonly byte[] incomingData = new byte[4096];
-        private bool pongReceived = false;
-
-        private readonly RingBuffer<PubSubMessage> sentMessages = new RingBuffer<PubSubMessage>(20);
-
-        public PubSubClient(
-            Config.BotConfiguration botConfig,
-            ICommunication communication,
-            IRedemptionSystem redemptionHandler,
-            ErrorHandler errorHandler)
+        if (botConfig.UseThreadedMonitors)
         {
-            this.botConfig = botConfig;
-            this.communication = communication;
-            this.errorHandler = errorHandler;
-            this.redemptionHandler = redemptionHandler;
+            Task.Run(Launch);
+        }
+        else
+        {
+            Launch();
+        }
+    }
 
-            pingMessage = new BasicPubSubMessage("PING");
-            pongMessage = new BasicPubSubMessage("PONG");
+    private async void Launch()
+    {
+        bool tokenValidated = await broadcasterTokenValidator.WaitForValidationAsync(generalTokenSource.Token);
+
+        if (!tokenValidated)
+        {
+            communication.SendErrorMessage("Unable to connect to PubSub - requires validated Broadcaster token. ABORTING.");
+            throw new Exception("Unable to connect to PubSub - requires validated Broadcaster token. ABORTING.");
         }
 
-        public async Task Launch()
+        await Connect();
+
+        handlePingsTask = HandlePings();
+        readMessagesTask = ReadMessages();
+
+        await redemptionHandler.Initialize();
+    }
+
+    private async Task Connect()
+    {
+        readerTokenSource = new CancellationTokenSource();
+        clientWebSocket = new ClientWebSocket();
+
+        await clientWebSocket.ConnectAsync(websocketServerURI, generalTokenSource.Token);
+
+        if (clientWebSocket.State != WebSocketState.Open)
         {
-            await Connect();
-
-            HandlePings();
-
-            ReadMessages();
-
-            await redemptionHandler.Initialize();
+            communication.SendErrorMessage("Unable to connect to PubSub. ABORTING.");
+            throw new Exception("Unable to connect to PubSub. ABORTING.");
         }
 
-        private async Task Connect()
+        ListenMessage listenMessage = new ListenMessage(
+            topics: new[] { $"channel-points-channel-v1.{botConfig.BroadcasterId}" },
+            authToken: botConfig.BroadcasterAccessToken);
+
+        await SendMessage(listenMessage);
+    }
+
+    private async Task HandleReconnect()
+    {
+        try
         {
-            readerTokenSource = new CancellationTokenSource();
-            clientWebSocket = new ClientWebSocket();
+            communication.SendDebugMessage("Attempting PubSub Reconnect");
 
-            await clientWebSocket.ConnectAsync(websocketServerURI, generalTokenSource.Token);
+            int timeout = 1000;
 
-            if (clientWebSocket.State != WebSocketState.Open)
+            while (true)
             {
-                communication.SendErrorMessage("Unable to connect to PubSub. ABORTING.");
-                throw new Exception($"Unable to connect to PubSub. ABORTING.");
-            }
-
-            ListenMessage listenMessage = new ListenMessage(
-                topics: new[] { $"channel-points-channel-v1.{botConfig.BroadcasterId}" },
-                authToken: botConfig.BroadcasterAccessToken);
-
-            await SendMessage(listenMessage);
-
-            reconnections.Signal();
-        }
-
-        private async Task HandleReconnect()
-        {
-            try
-            {
-                communication.SendDebugMessage("Attempting PubSub Reconnect");
-
-                readers.AddCount();
-                int timeout = 1000;
-
-                while (true)
+                if (generalTokenSource.IsCancellationRequested)
                 {
+                    //We are quitting, breakout
+                    return;
+                }
+
+                try
+                {
+                    //Ensure we are disconnected
+                    await Disconnect();
+                }
+                catch (Exception) { /* swallow */ }
+
+                try
+                {
+                    await Task.Delay(timeout, generalTokenSource.Token);
+
                     if (generalTokenSource.IsCancellationRequested)
                     {
                         //We are quitting, breakout
-                        break;
+                        return;
                     }
 
-                    try
-                    {
-                        //Ensure we are disconnected
-                        await Disconnect();
-                    }
-                    catch (Exception) { /* swallow */ }
+                    await Connect();
 
-                    try
-                    {
-                        await Task.Delay(timeout, generalTokenSource.Token);
-
-                        if (generalTokenSource.IsCancellationRequested)
-                        {
-                            //We are quitting, breakout
-                            break;
-                        }
-
-                        await Connect();
-
-                        //Successfully Reconnected?
-                        break;
-                    }
-                    catch (Exception ex)
-                    {
-                        errorHandler.LogSystemException(ex);
-                    }
-
-                    //Cap timeout at 2 minutes
-                    timeout = Math.Max(2 * timeout, 120_000);
+                    //Successfully Reconnected?
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    errorHandler.LogSystemException(ex);
                 }
 
-                communication.SendDebugMessage("PubSub Reconnect Success");
+                //Cap timeout at 2 minutes
+                timeout = Math.Max(2 * timeout, 120_000);
             }
-            catch (TaskCanceledException) { /* swallow */ }
-            catch (OperationCanceledException) { /* swallow */ }
-            catch (Exception ex)
-            {
-                errorHandler.LogSystemException(ex);
-            }
-            finally
-            {
-                readers.Signal();
-            }
+
+            communication.SendDebugMessage("PubSub Reconnect Success");
         }
-
-        private async Task Disconnect()
+        catch (TaskCanceledException) { /* swallow */ }
+        catch (OperationCanceledException) { /* swallow */ }
+        catch (Exception ex)
         {
-            reconnections.Reset(1);
+            errorHandler.LogSystemException(ex);
+        }
+    }
 
-            //Kill ongoing readers
-            readerTokenSource?.Cancel();
+    private async Task Disconnect()
+    {
+        //Kill ongoing readers
+        readerTokenSource?.Cancel();
 
-            //Make sure reader moves to await reconnect
-            await Task.Delay(250);
+        //Make sure readers move
+        await Task.Delay(250);
 
-            await clientWebSocket?.CloseAsync(WebSocketCloseStatus.NormalClosure, "Reconnecting", generalTokenSource.Token);
+        if (clientWebSocket is not null)
+        {
+            await clientWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnecting", disconnectTokenSource.Token);
 
-            //We are disconnected - try to reconnect
-            clientWebSocket?.Dispose();
+            clientWebSocket.Dispose();
             clientWebSocket = null;
-
-            readerTokenSource?.Dispose();
-            readerTokenSource = null;
         }
 
-        public async Task SendMessage<T>(T message)
-        {
-            if (message is PubSubMessage pubSubMessage)
-            {
-                sentMessages.Add(pubSubMessage);
-            }
+        readerTokenSource?.Dispose();
+        readerTokenSource = null;
+    }
 
+    public async Task SendMessage<T>(T message)
+    {
+        if (message is PubSubMessage pubSubMessage)
+        {
+            sentMessages.Add(pubSubMessage);
+        }
+
+        if (clientWebSocket is not null)
+        {
             await clientWebSocket.SendAsync(
                 buffer: Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message)),
                 messageType: WebSocketMessageType.Text,
                 endOfMessage: true,
                 cancellationToken: generalTokenSource.Token);
         }
-
-        private async void HandlePings()
+        else
         {
-            try
-            {
-                readers.AddCount();
+            communication.SendWarningMessage($"Tried to send PubSub message with no connection: {Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message))}");
+        }
+    }
 
-                while (true)
+    private async Task HandlePings()
+    {
+        try
+        {
+            while (true)
+            {
+                //Check if we're connected
+                await CheckConnectionOrWait();
+
+                //Reset pongReceived flag
+                pongReceived = false;
+
+                //Send the ping
+                await SendMessage(pingMessage);
+
+                //Wait 10 seconds
+                await Task.Delay(10 * 1000, generalTokenSource.Token);
+
+                //Bail if we're trying to quit
+                if (generalTokenSource.IsCancellationRequested)
                 {
-                    //Check if we're connected
-                    await CheckConnectionOrWait();
-
-                    //Reset pongReceived flag
-                    pongReceived = false;
-
-                    //Send the ping
-                    await SendMessage(pingMessage);
-
-                    //Wait 10 seconds
-                    await Task.Delay(10 * 1000, generalTokenSource.Token);
-
-                    //Bail if we're trying to quit
-                    if (generalTokenSource.IsCancellationRequested)
-                    {
-                        break;
-                    }
-
-                    if (!pongReceived)
-                    {
-                        communication.SendDebugMessage($"No PubSub Pong received in 10 seconds - Reconnecting");
-
-                        //Reconnect
-                        breakConnection = true;
-                        await CheckConnectionOrWait();
-                    }
-
-                    await Task.Delay(pingWaitTime, generalTokenSource.Token);
+                    break;
                 }
-            }
-            catch (TaskCanceledException) { /* swallow */ }
-            catch (ThreadAbortException) { /* swallow */ }
-            catch (ObjectDisposedException) { /* swallow */ }
-            catch (OperationCanceledException) { /* swallow */ }
-            catch (Exception ex)
-            {
-                communication.SendErrorMessage($"PubSub Server Pinger Exception: {ex.GetType().Name}");
-                errorHandler.LogMessageException(ex, "");
-            }
-            finally
-            {
-                readers.Signal();
+
+                if (!pongReceived)
+                {
+                    communication.SendDebugMessage($"No PubSub Pong received in 10 seconds - Reconnecting");
+
+                    //Reconnect
+                    breakConnection = true;
+                    await CheckConnectionOrWait();
+                }
+
+                await Task.Delay(pingWaitTime, generalTokenSource.Token);
             }
         }
-
-        private async void ReadMessages()
+        catch (TaskCanceledException) { /* swallow */ }
+        catch (ThreadAbortException) { /* swallow */ }
+        catch (ObjectDisposedException) { /* swallow */ }
+        catch (OperationCanceledException) { /* swallow */ }
+        catch (Exception ex)
         {
-            WebSocketReceiveResult webSocketReceiveResult = null;
-            string lastMessage = null;
+            communication.SendErrorMessage($"PubSub Server Pinger Exception: {ex.GetType().Name}");
+            errorHandler.LogMessageException(ex, "");
+        }
+    }
 
-            try
+    private async Task ReadMessages()
+    {
+        WebSocketReceiveResult? webSocketReceiveResult = null;
+        string? lastMessage = null;
+
+        try
+        {
+            while (true)
             {
-                readers.AddCount();
+                await CheckConnectionOrWait();
+                bool readCompleted = false;
 
-                while (true)
+                try
                 {
-                    await CheckConnectionOrWait();
-                    bool readCompleted = false;
+                    webSocketReceiveResult = await clientWebSocket!.ReceiveAsync(incomingData, readerTokenSource!.Token);
+                    readCompleted = true;
+                }
+                catch (TaskCanceledException) { /* swallow */ }
+                catch (ThreadAbortException) { /* swallow */ }
+                catch (ObjectDisposedException) { /* swallow */ }
+                catch (OperationCanceledException) { /* swallow */ }
+                catch (WebSocketException)
+                {
+                    communication.SendWarningMessage($"PubSub Websocket closed unexpectedly.");
+                }
+                catch (Exception ex)
+                {
+                    communication.SendErrorMessage($"PubSub Exception: {ex.GetType().Name}");
+                    errorHandler.LogMessageException(ex, "");
+                }
 
+                if (generalTokenSource.IsCancellationRequested)
+                {
+                    //We are quitting
+                    break;
+                }
+
+                if ((readerTokenSource?.IsCancellationRequested ?? true) || !readCompleted)
+                {
+                    //We are just restarting reader, since it was intercepted with an exception or the reader token source was cancelled
+                    continue;
+                }
+
+                if (webSocketReceiveResult!.Count < 1)
+                {
+                    await Task.Delay(100, generalTokenSource.Token);
+                    continue;
+                }
+
+                lastMessage = Encoding.UTF8.GetString(incomingData, 0, webSocketReceiveResult.Count);
+
+                while (!webSocketReceiveResult.EndOfMessage)
+                {
+                    readCompleted = false;
                     try
                     {
-                        webSocketReceiveResult = await clientWebSocket.ReceiveAsync(incomingData, readerTokenSource.Token);
+                        webSocketReceiveResult = await clientWebSocket!.ReceiveAsync(incomingData, readerTokenSource.Token);
                         readCompleted = true;
                     }
                     catch (TaskCanceledException) { /* swallow */ }
@@ -281,337 +331,227 @@ namespace TASagentTwitchBot.Core.PubSub
                     if ((readerTokenSource?.IsCancellationRequested ?? true) || !readCompleted)
                     {
                         //We are just restarting reader, since it was intercepted with an exception or the reader token source was cancelled
-                        continue;
+                        break;
                     }
 
                     if (webSocketReceiveResult.Count < 1)
                     {
-                        await Task.Delay(100, generalTokenSource.Token);
-                        continue;
-                    }
-
-                    lastMessage = Encoding.UTF8.GetString(incomingData, 0, webSocketReceiveResult.Count);
-
-                    while (!webSocketReceiveResult.EndOfMessage)
-                    {
-                        readCompleted = false;
-                        try
-                        {
-                            webSocketReceiveResult = await clientWebSocket.ReceiveAsync(incomingData, readerTokenSource.Token);
-                            readCompleted = true;
-                        }
-                        catch (TaskCanceledException) { /* swallow */ }
-                        catch (ThreadAbortException) { /* swallow */ }
-                        catch (ObjectDisposedException) { /* swallow */ }
-                        catch (OperationCanceledException) { /* swallow */ }
-                        catch (WebSocketException)
-                        {
-                            communication.SendWarningMessage($"PubSub Websocket closed unexpectedly.");
-                        }
-                        catch (Exception ex)
-                        {
-                            communication.SendErrorMessage($"PubSub Exception: {ex.GetType().Name}");
-                            errorHandler.LogMessageException(ex, "");
-                        }
-
-                        if (generalTokenSource.IsCancellationRequested)
-                        {
-                            //We are quitting
-                            break;
-                        }
-
-                        if ((readerTokenSource?.IsCancellationRequested ?? true) || !readCompleted)
-                        {
-                            //We are just restarting reader, since it was intercepted with an exception or the reader token source was cancelled
-                            break;
-                        }
-
-                        if (webSocketReceiveResult.Count < 1)
-                        {
-                            communication.SendWarningMessage($"WebSocketMessage returned no characters despite not being at end.  {lastMessage}");
-                            break;
-                        }
-
-                        lastMessage += Encoding.UTF8.GetString(incomingData, 0, webSocketReceiveResult.Count);
-                    }
-
-
-                    if (generalTokenSource.IsCancellationRequested)
-                    {
-                        //We are quitting
+                        communication.SendWarningMessage($"WebSocketMessage returned no characters despite not being at end.  {lastMessage}");
                         break;
                     }
 
-                    if ((readerTokenSource?.IsCancellationRequested ?? true) || !readCompleted)
-                    {
-                        //We are just restarting reader, since it was intercepted with an exception or the reader token source was cancelled
-                        continue;
-                    }
+                    lastMessage += Encoding.UTF8.GetString(incomingData, 0, webSocketReceiveResult.Count);
+                }
 
-                    BasicPubSubMessage message = JsonSerializer.Deserialize<BasicPubSubMessage>(lastMessage);
 
-                    switch (message.TypeString)
-                    {
-                        case "PONG":
-                            pongReceived = true;
-                            break;
+                if (generalTokenSource.IsCancellationRequested)
+                {
+                    //We are quitting
+                    break;
+                }
 
-                        case "PING":
-                            await SendMessage(pongMessage);
-                            break;
+                if ((readerTokenSource?.IsCancellationRequested ?? true) || !readCompleted)
+                {
+                    //We are just restarting reader, since it was intercepted with an exception or the reader token source was cancelled
+                    continue;
+                }
 
-                        case "RECONNECT":
-                            communication.SendDebugMessage($"PubSub Reconnect Message Received");
-                            breakConnection = true;
-                            break;
+                BasicPubSubMessage message = JsonSerializer.Deserialize<BasicPubSubMessage>(lastMessage)!;
 
-                        case "RESPONSE":
+                switch (message.TypeString)
+                {
+                    case "PONG":
+                        pongReceived = true;
+                        break;
+
+                    case "PING":
+                        await SendMessage(pongMessage);
+                        break;
+
+                    case "RECONNECT":
+                        communication.SendDebugMessage($"PubSub Reconnect Message Received");
+                        breakConnection = true;
+                        break;
+
+                    case "RESPONSE":
+                        {
+                            PubSubResponseMessage response = JsonSerializer.Deserialize<PubSubResponseMessage>(lastMessage)!;
+                            PubSubMessage? sentMessage = sentMessages.Where(x => x.Nonce == response.Nonce).FirstOrDefault();
+
+                            if (!string.IsNullOrEmpty(response.ErrorString))
                             {
-                                PubSubResponseMessage response = JsonSerializer.Deserialize<PubSubResponseMessage>(lastMessage);
-                                PubSubMessage sentMessage = sentMessages.Where(x => x.Nonce == response.Nonce).FirstOrDefault();
-
-                                if (!string.IsNullOrEmpty(response.ErrorString))
-                                {
-                                    if (sentMessage is not null)
-                                    {
-                                        communication.SendErrorMessage($"Error with message {JsonSerializer.Serialize(sentMessage)}: {response.ErrorString}");
-                                    }
-                                    else
-                                    {
-                                        communication.SendErrorMessage($"Error with message <Unable To Locate>: {response.ErrorString}");
-                                    }
-                                }
-
                                 if (sentMessage is not null)
                                 {
-                                    sentMessages.Remove(sentMessage);
+                                    communication.SendErrorMessage($"Error with message {JsonSerializer.Serialize(sentMessage)}: {response.ErrorString}");
                                 }
-                            }
-                            break;
-
-                        case "MESSAGE":
-                            {
-                                ListenResponse listenResponse = JsonSerializer.Deserialize<ListenResponse>(lastMessage);
-
-                                BaseMessageData messageData = JsonSerializer.Deserialize<BaseMessageData>(listenResponse.Data.Message);
-
-                                switch (messageData.TypeString)
+                                else
                                 {
-                                    case "reward-redeemed":
-                                        ChannelPointMessageData channelPointMessageData = JsonSerializer.Deserialize<ChannelPointMessageData>(listenResponse.Data.Message);
-                                        redemptionHandler.HandleRedemption(channelPointMessageData.Data);
-                                        break;
-
-                                    default:
-                                        communication.SendErrorMessage($"Unsupported PubSub Message: {messageData.TypeString} - {listenResponse.Data.Message}");
-                                        break;
+                                    communication.SendErrorMessage($"Error with message <Unable To Locate>: {response.ErrorString}");
                                 }
                             }
-                            break;
 
-                        default:
-                            communication.SendErrorMessage($"Unsupported PubSub Message Type: {message.TypeString} - {lastMessage}");
-                            break;
-                    }
-                }
-            }
-            catch (TaskCanceledException) { /* swallow */ }
-            catch (ThreadAbortException) { /* swallow */ }
-            catch (ObjectDisposedException) { /* swallow */ }
-            catch (OperationCanceledException) { /* swallow */ }
-            catch (Exception ex)
-            {
-                communication.SendErrorMessage($"PubSub Exception: {ex.GetType().Name}");
-                if (lastMessage is not null)
-                {
-                    communication.SendErrorMessage($"Last PubSub Message: {lastMessage}");
-                }
+                            if (sentMessage is not null)
+                            {
+                                sentMessages.Remove(sentMessage);
+                            }
+                        }
+                        break;
 
-                errorHandler.LogMessageException(ex, "");
-            }
-            finally
-            {
-                readers.Signal();
+                    case "MESSAGE":
+                        {
+                            ListenResponse listenResponse = JsonSerializer.Deserialize<ListenResponse>(lastMessage)!;
+
+                            BaseMessageData messageData = JsonSerializer.Deserialize<BaseMessageData>(listenResponse.Data.Message)!;
+
+                            switch (messageData.TypeString)
+                            {
+                                case "reward-redeemed":
+                                    ChannelPointMessageData channelPointMessageData = JsonSerializer.Deserialize<ChannelPointMessageData>(listenResponse.Data.Message)!;
+                                    redemptionHandler.HandleRedemption(channelPointMessageData.Data);
+                                    break;
+
+                                default:
+                                    communication.SendErrorMessage($"Unsupported PubSub Message: {messageData.TypeString} - {listenResponse.Data.Message}");
+                                    break;
+                            }
+                        }
+                        break;
+
+                    default:
+                        communication.SendErrorMessage($"Unsupported PubSub Message Type: {message.TypeString} - {lastMessage}");
+                        break;
+                }
             }
         }
-
-
-        private async Task CheckConnectionOrWait()
+        catch (TaskCanceledException) { /* swallow */ }
+        catch (ThreadAbortException) { /* swallow */ }
+        catch (ObjectDisposedException) { /* swallow */ }
+        catch (OperationCanceledException) { /* swallow */ }
+        catch (Exception ex)
         {
-            if (generalTokenSource.IsCancellationRequested)
+            communication.SendErrorMessage($"PubSub Exception: {ex.GetType().Name}");
+            if (lastMessage is not null)
             {
-                return;
+                communication.SendErrorMessage($"Last PubSub Message: {lastMessage}");
             }
 
-            if (!IsWebsocketOpen() || breakConnection || !reconnections.IsSet)
-            {
-                breakConnection = false;
+            errorHandler.LogMessageException(ex, "");
+        }
+    }
 
-                //Trigger a reconnect attempt if we're not currently
-                lock (reconnectLock)
-                {
-                    if (reconnections.IsSet)
-                    {
-                        reconnections.Reset(1);
-                        Task reconnect = Task.Run(HandleReconnect);
-                    }
-                }
 
-                await Task.Run(() => reconnections.Wait(), generalTokenSource.Token);
-            }
+    private async Task CheckConnectionOrWait()
+    {
+        if (generalTokenSource.IsCancellationRequested)
+        {
+            return;
         }
 
-        private bool IsWebsocketOpen()
+        if (connectionTask is not null)
         {
-            if (clientWebSocket is null)
-            {
+            await connectionTask;
+        }
+        else if (!IsWebsocketOpen() || breakConnection)
+        {
+            //Trigger a reconnect attempt if we're not currently
+            breakConnection = false;
+            connectionTask = HandleReconnect();
+
+            await connectionTask;
+
+            connectionTask = null;
+        }
+    }
+
+    private bool IsWebsocketOpen()
+    {
+        if (clientWebSocket is null)
+        {
+            return false;
+        }
+
+        switch (clientWebSocket.State)
+        {
+            case WebSocketState.Open:
+                return true;
+
+            case WebSocketState.Connecting:
+            case WebSocketState.None:
+            case WebSocketState.CloseSent:
+            case WebSocketState.CloseReceived:
+            case WebSocketState.Closed:
+            case WebSocketState.Aborted:
                 return false;
-            }
 
-            switch (clientWebSocket.State)
-            {
-                case WebSocketState.Open:
-                    return true;
-
-                case WebSocketState.Connecting:
-                case WebSocketState.None:
-                case WebSocketState.CloseSent:
-                case WebSocketState.CloseReceived:
-                case WebSocketState.Closed:
-                case WebSocketState.Aborted:
-                    return false;
-
-                default:
-                    communication.SendDebugMessage($"Unexpected clientWebSocket State: {clientWebSocket.State}");
-                    return false;
-            }
+            default:
+                communication.SendDebugMessage($"Unexpected clientWebSocket State: {clientWebSocket.State}");
+                return false;
         }
+    }
+
+    public void NotifyShuttingDown()
+    {
+        generalTokenSource.Cancel();
+
+        disconnectionTask = Disconnect();
+    }
 
 
-        #region IDisposable
+    #region IDisposable
 
-        protected virtual void Dispose(bool disposing)
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposedValue)
         {
-            if (!disposedValue)
+            if (disposing)
             {
-                if (disposing)
+                generalTokenSource.Cancel();
+                readerTokenSource?.Cancel();
+
+                if (disconnectionTask is null)
                 {
-                    generalTokenSource.Cancel();
-                    //Kill readers
-                    readerTokenSource?.Cancel();
-
-                    //Wait for readers
-                    readers.Signal();
-                    readers.Wait();
-                    readers.Dispose();
-
-                    generalTokenSource.Dispose();
-                    readerTokenSource?.Dispose();
-                    readerTokenSource = null;
-
-                    clientWebSocket?.Dispose();
-                    clientWebSocket = null;
+                    disconnectionTask = Disconnect();
                 }
 
-                disposedValue = true;
+                List<Task> tasks = new List<Task>() { disconnectionTask, handlePingsTask!, readMessagesTask!, connectionTask! };
+
+                Task.WaitAll(tasks.Where(x => x is not null).ToArray(), 1000);
+
+                disconnectTokenSource.Cancel();
+
+                handlePingsTask?.Dispose();
+                handlePingsTask = null;
+
+                readMessagesTask?.Dispose();
+                readMessagesTask = null;
+
+                connectionTask?.Dispose();
+                connectionTask = null;
+
+                disconnectionTask?.Dispose();
+                disconnectionTask = null;
+
+                generalTokenSource.Dispose();
+
+                readerTokenSource?.Dispose();
+                readerTokenSource = null;
+
+                disconnectTokenSource.Dispose();
+
+                clientWebSocket?.Dispose();
+                clientWebSocket = null;
             }
-        }
 
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
+            disposedValue = true;
         }
-
-        #endregion IDisposable
     }
 
-    public record BasicPubSubMessage(
-        [property: JsonPropertyName("type")] string TypeString);
-
-    public record PubSubMessage(
-        string TypeString,
-        [property: JsonPropertyName("nonce")] string Nonce) : BasicPubSubMessage(TypeString);
-
-    public record PubSubResponseMessage(
-        string TypeString,
-        [property: JsonPropertyName("error")] string ErrorString) : PubSubMessage(TypeString, Guid.NewGuid().ToString());
-
-    public record ListenResponse(
-        string TypeString,
-        [property: JsonPropertyName("data")] ListenResponse.Datum Data) : BasicPubSubMessage(TypeString)
+    public void Dispose()
     {
-        public record Datum(
-            [property: JsonPropertyName("topic")] string Topic,
-            [property: JsonPropertyName("message")] string Message);
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 
-    public record ListenMessage : PubSubMessage
-    {
-        public ListenMessage() : base("LISTEN", Guid.NewGuid().ToString()) { }
-
-        public ListenMessage(Datum data)
-            : base("LISTEN", Guid.NewGuid().ToString())
-        {
-            Data = data;
-        }
-
-        public ListenMessage(IEnumerable<string> topics, string authToken)
-            : base("LISTEN", Guid.NewGuid().ToString())
-        {
-            Data = new Datum(topics.ToList(), authToken);
-        }
-
-        [JsonPropertyName("data")]
-        public Datum Data { get; init; }
-
-        public record Datum(
-            [property: JsonPropertyName("topics")] List<string> Topics,
-            [property: JsonPropertyName("auth_token")] string AuthToken);
-    }
-
-    public record BaseMessageData(
-        [property: JsonPropertyName("type")] string TypeString);
-
-    public record ChannelPointMessageData(
-        [property: JsonPropertyName("data")] ChannelPointMessageData.Datum Data) : BaseMessageData("reward-redeemed")
-    {
-        public record Datum(
-            [property: JsonPropertyName("timestamp")] DateTime Timestamp,
-            [property: JsonPropertyName("redemption")] Datum.RedemptionData Redemption)
-        {
-            public record RedemptionData(
-                [property: JsonPropertyName("id")] string Id,
-                [property: JsonPropertyName("user")] RedemptionData.UserData User,
-                [property: JsonPropertyName("channel_id")] string ChannelId,
-                [property: JsonPropertyName("redeemed_at")] DateTime RedeemedAt,
-                [property: JsonPropertyName("reward")] RedemptionData.RewardData Reward,
-                [property: JsonPropertyName("user_input")] string UserInput,
-                [property: JsonPropertyName("status")] string Status)
-            {
-                public record UserData(
-                    [property: JsonPropertyName("id")] string Id,
-                    [property: JsonPropertyName("login")] string Login,
-                    [property: JsonPropertyName("display_name")] string DisplayName);
-
-                public record RewardData(
-                    [property: JsonPropertyName("id")] string Id,
-                    [property: JsonPropertyName("channel_id")] string ChannelId,
-                    [property: JsonPropertyName("title")] string Title,
-                    [property: JsonPropertyName("prompt")] string Prompt,
-                    [property: JsonPropertyName("cost")] int Cost,
-                    [property: JsonPropertyName("is_user_input_required")] bool IsUserInputRequired,
-                    [property: JsonPropertyName("is_sub_only")] bool IsSubOnly,
-                    [property: JsonPropertyName("image")] TwitchCustomReward.Datum.ImageData Image,
-                    [property: JsonPropertyName("default_image")] TwitchCustomReward.Datum.ImageData DefaultImage,
-                    [property: JsonPropertyName("background_color")] string BackgroundColor,
-                    [property: JsonPropertyName("is_enabled")] bool IsEnabled,
-                    [property: JsonPropertyName("is_paused")] bool IsPaused,
-                    [property: JsonPropertyName("is_in_stock")] bool IsInStock,
-                    [property: JsonPropertyName("max_per_stream")] TwitchCustomReward.Datum.StreamMax MaxPerStream,
-                    [property: JsonPropertyName("should_redemptions_skip_request_queue")] bool ShouldRedemptionsSkipRequestQueue);
-            }
-        }
-    }
+    #endregion IDisposable
 }

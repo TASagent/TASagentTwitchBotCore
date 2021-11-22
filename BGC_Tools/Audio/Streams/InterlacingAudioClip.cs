@@ -1,83 +1,80 @@
-﻿using System;
-using System.Collections.Generic;
-using BGC.Mathematics;
+﻿using BGC.Mathematics;
 
-namespace BGC.Audio
+namespace BGC.Audio;
+
+/// <summary>
+/// Stream that stores the left and right channels as separate arrays
+/// </summary>
+public class InterlacingAudioClip : BGCAudioClip
 {
+    public int Position { get; private set; } = 0;
+
     /// <summary>
-    /// Stream that stores the left and right channels as separate arrays
+    /// Simulated raw sample position
     /// </summary>
-    public class InterlacingAudioClip : BGCAudioClip
+    public int RawPosition
     {
-        public int Position { get; private set; } = 0;
+        get => Position * Channels;
+        set => Position = value / Channels;
+    }
 
-        /// <summary>
-        /// Simulated raw sample position
-        /// </summary>
-        public int RawPosition
+    public override int ChannelSamples => LSamples.Length;
+    public override int TotalSamples => Channels * LSamples.Length;
+
+    public float[] LSamples { get; }
+    public float[] RSamples { get; }
+
+    public override int Channels => 2;
+
+    private int RemainingChannelSamples => Math.Max(0, LSamples.Length - Position);
+    private int RemainingTotalSamples => Channels * RemainingChannelSamples;
+
+    public InterlacingAudioClip(float[] leftSamples, float[] rightSamples)
+    {
+        LSamples = leftSamples;
+        RSamples = rightSamples;
+    }
+
+    public override int Read(float[] data, int offset, int count)
+    {
+        int copyLength = Math.Min(RemainingTotalSamples, count);
+
+        for (int i = 0; i < copyLength / 2; i++)
         {
-            get => Position * Channels;
-            set => Position = value / Channels;
+            data[offset + 2 * i] = LSamples[Position + i];
+            data[offset + 2 * i + 1] = RSamples[Position + i];
         }
 
-        public override int ChannelSamples => LSamples.Length;
-        public override int TotalSamples => Channels * LSamples.Length;
+        RawPosition += copyLength;
 
-        public float[] LSamples { get; }
-        public float[] RSamples { get; }
+        return copyLength;
+    }
 
-        public override int Channels => 2;
+    public override void Seek(int position) =>
+        Position = GeneralMath.Clamp(position, 0, ChannelSamples);
 
-        private int RemainingChannelSamples => Math.Max(0, LSamples.Length - Position);
-        private int RemainingTotalSamples => Channels * RemainingChannelSamples;
+    public override void Reset() => Position = 0;
 
-        public InterlacingAudioClip(float[] leftSamples, float[] rightSamples)
+    private IEnumerable<double>? _channelRMS = null;
+    public override IEnumerable<double> GetChannelRMS()
+    {
+        if (_channelRMS is null)
         {
-            LSamples = leftSamples;
-            RSamples = rightSamples;
-        }
+            double rmsL = 0.0;
+            double rmsR = 0.0;
 
-        public override int Read(float[] data, int offset, int count)
-        {
-            int copyLength = Math.Min(RemainingTotalSamples, count);
-
-            for (int i = 0; i < copyLength / 2; i++)
+            for (int i = 0; i < ChannelSamples; i++)
             {
-                data[offset + 2 * i] = LSamples[Position + i];
-                data[offset + 2 * i + 1] = RSamples[Position + i];
+                rmsL += LSamples[i] * LSamples[i];
+                rmsR += RSamples[i] * RSamples[i];
             }
 
-            RawPosition += copyLength;
+            rmsL = Math.Sqrt(rmsL / ChannelSamples);
+            rmsR = Math.Sqrt(rmsR / ChannelSamples);
 
-            return copyLength;
+            _channelRMS = new double[2] { rmsL, rmsR };
         }
 
-        public override void Seek(int position) =>
-            Position = GeneralMath.Clamp(position, 0, ChannelSamples);
-
-        public override void Reset() => Position = 0;
-
-        private IEnumerable<double> _channelRMS = null;
-        public override IEnumerable<double> GetChannelRMS()
-        {
-            if (_channelRMS == null)
-            {
-                double rmsL = 0.0;
-                double rmsR = 0.0;
-
-                for (int i = 0; i < ChannelSamples; i++)
-                {
-                    rmsL += LSamples[i] * LSamples[i];
-                    rmsR += RSamples[i] * RSamples[i];
-                }
-
-                rmsL = Math.Sqrt(rmsL / ChannelSamples);
-                rmsR = Math.Sqrt(rmsR / ChannelSamples);
-
-                _channelRMS = new double[2] { rmsL, rmsR };
-            }
-
-            return _channelRMS;
-        }
+        return _channelRMS;
     }
 }

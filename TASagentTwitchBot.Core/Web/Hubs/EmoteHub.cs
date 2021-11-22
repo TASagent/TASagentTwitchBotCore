@@ -1,14 +1,11 @@
-﻿using System;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.SignalR;
 
-namespace TASagentTwitchBot.Core.Web.Hubs
+namespace TASagentTwitchBot.Core.Web.Hubs;
+
+public class EmoteHub : Hub
 {
-    public class EmoteHub : Hub
-    {
-        //public async Task TriggerEmote(List<string> emoteURLs)
-        //{
-        //    await Clients.All.SendAsync("ReceiveEmote", emoteURLs);
-        //}
-    }
+    //public async Task TriggerEmote(List<string> emoteURLs)
+    //{
+    //    await Clients.All.SendAsync("ReceiveEmote", emoteURLs);
+    //}
 }

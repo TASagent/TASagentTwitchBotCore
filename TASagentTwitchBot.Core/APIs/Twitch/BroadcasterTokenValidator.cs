@@ -1,61 +1,61 @@
-﻿using System;
-using System.Web;
+﻿using System.Web;
 
 using TASagentTwitchBot.Core.API.OAuth;
 
-namespace TASagentTwitchBot.Core.API.Twitch
+namespace TASagentTwitchBot.Core.API.Twitch;
+
+public interface IBroadcasterTokenValidator : ITokenValidator { }
+
+public class BroadcasterTokenValidator : TokenValidator, IBroadcasterTokenValidator
 {
-    public interface IBroadcasterTokenValidator : ITokenValidator { }
+    private readonly Config.BotConfiguration botConfig;
 
-    public class BroadcasterTokenValidator : TokenValidator, IBroadcasterTokenValidator
+    protected override string AccessToken
     {
-        private readonly Config.BotConfiguration botConfig;
+        get => botConfig.BroadcasterAccessToken;
+        set => botConfig.BroadcasterAccessToken = value;
+    }
 
-        protected override string AccessToken
-        {
-            get => botConfig.BroadcasterAccessToken;
-            set => botConfig.BroadcasterAccessToken = value;
-        }
+    protected override string RefreshToken
+    {
+        get => botConfig.BroadcasterRefreshToken;
+        set => botConfig.BroadcasterRefreshToken = value;
+    }
 
-        protected override string RefreshToken
-        {
-            get => botConfig.BroadcasterRefreshToken;
-            set => botConfig.BroadcasterRefreshToken = value;
-        }
+    protected override string RedirectURI => $"http://localhost:5000/TASagentBotAPI/OAuth/BroadcasterCode";
 
-        protected override string RedirectURI => $"http://localhost:5000/TASagentBotAPI/OAuth/BroadcasterCode";
+    public BroadcasterTokenValidator(
+        Config.BotConfiguration botConfig,
+        ApplicationManagement applicationManagement,
+        ICommunication communication,
+        HelixHelper helixHelper,
+        ErrorHandler errorHandler)
+        : base(applicationManagement, communication, helixHelper, errorHandler)
+    {
+        this.botConfig = botConfig;
+    }
 
-        public BroadcasterTokenValidator(
-            Config.BotConfiguration botConfig,
-            ICommunication communication,
-            HelixHelper helixHelper)
-            : base(communication, helixHelper)
-        {
-            this.botConfig = botConfig;
-        }
+    protected override void SaveChanges() =>
+        botConfig.Serialize();
 
-        protected override void SaveChanges() =>
-            botConfig.Serialize();
+    protected override void SendCodeRequest(string stateString)
+    {
+        const string scopes =
+            "channel:manage:broadcast " +
+            "channel:manage:extensions " +
+            "channel:manage:redemptions " +
+            "channel:moderate " +
+            "channel:read:redemptions " +
+            "channel:read:subscriptions";
 
-        protected override void SendCodeRequest(string stateString)
-        {
-            const string scopes =
-                "channel:manage:broadcast " +
-                "channel:manage:extensions " +
-                "channel:manage:redemptions " +
-                "channel:moderate " +
-                "channel:read:redemptions " +
-                "channel:read:subscriptions";
+        string url = $"https://id.twitch.tv/oauth2/authorize" +
+            $"?client_id={botConfig.TwitchClientId}" +
+            $"&client_secret={botConfig.TwitchClientSecret}" +
+            $"&redirect_uri={RedirectURI}" +
+            $"&response_type=code" +
+            $"&scope={scopes.Replace(" ", "+")}" +
+            $"&state={HttpUtility.UrlEncode(stateString)}";
 
-            string url = $"https://id.twitch.tv/oauth2/authorize" +
-                $"?client_id={botConfig.TwitchClientId}" +
-                $"&client_secret={botConfig.TwitchClientSecret}" +
-                $"&redirect_uri={RedirectURI}" +
-                $"&response_type=code" +
-                $"&scope={scopes.Replace(" ", "+")}" +
-                $"&state={HttpUtility.UrlEncode(stateString)}";
-
-            communication.SendDebugMessage($"Go to this url logged into Twitch as the Broadcaster:\n\n{url}\n\n");
-        }
+        communication.SendDebugMessage($"Go to this url logged into Twitch as the Broadcaster:\n\n{url}\n\n");
     }
 }

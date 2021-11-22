@@ -1,135 +1,130 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿namespace BGC.Audio.Envelopes;
 
-namespace BGC.Audio.Envelopes
+/// <summary>
+/// Creates an envelope that is the sample-wise sum of the internal envelopes
+/// </summary>
+public class EnvelopeAdder : BGCEnvelopeFilter
 {
-    /// <summary>
-    /// Creates an envelope that is the sample-wise sum of the internal envelopes
-    /// </summary>
-    public class EnvelopeAdder : BGCEnvelopeFilter
+    private readonly List<IBGCEnvelopeStream> streams = new List<IBGCEnvelopeStream>();
+    public override IEnumerable<IBGCEnvelopeStream> InternalStreams => streams;
+
+    private int _sampleCount = 0;
+    public override int Samples => _sampleCount;
+
+    private float _samplingRate;
+    public override float SamplingRate => _samplingRate;
+
+    private const int BUFFER_SIZE = 512;
+    private readonly float[] buffer = new float[BUFFER_SIZE];
+
+    public EnvelopeAdder()
     {
-        private readonly List<IBGCEnvelopeStream> streams = new List<IBGCEnvelopeStream>();
-        public override IEnumerable<IBGCEnvelopeStream> InternalStreams => streams;
+        UpdateStats();
+    }
 
-        private int _sampleCount = 0;
-        public override int Samples => _sampleCount;
+    public EnvelopeAdder(params IBGCEnvelopeStream[] streams)
+    {
+        AddStreams(streams);
+    }
 
-        private float _samplingRate;
-        public override float SamplingRate => _samplingRate;
+    public EnvelopeAdder(IEnumerable<IBGCEnvelopeStream> streams)
+    {
+        AddStreams(streams);
+    }
 
-        private const int BUFFER_SIZE = 512;
-        private readonly float[] buffer = new float[BUFFER_SIZE];
+    public void AddStream(IBGCEnvelopeStream stream)
+    {
+        streams.Add(stream);
+        UpdateStats();
+    }
 
-        public EnvelopeAdder()
+    public void AddStreams(IEnumerable<IBGCEnvelopeStream> streams)
+    {
+        this.streams.AddRange(streams);
+        UpdateStats();
+    }
+
+    public override void Reset() => streams.ForEach(x => x.Reset());
+
+    public override bool HasMoreSamples() => streams.All(x => x.HasMoreSamples());
+
+    public override float ReadNextSample()
+    {
+        if (HasMoreSamples())
         {
-            UpdateStats();
+            return streams.Select(x => x.ReadNextSample()).Sum();
         }
 
-        public EnvelopeAdder(params IBGCEnvelopeStream[] streams)
+        //Hit the end
+        return 0f;
+    }
+
+    public override int Read(float[] data, int offset, int count)
+    {
+        int maxRemainingSamples = 0;
+
+        Array.Clear(data, offset, count);
+
+        foreach (IBGCEnvelopeStream stream in streams)
         {
-            AddStreams(streams);
-        }
+            int streamRemainingSamples = count - maxRemainingSamples;
+            int streamOffset = offset;
 
-        public EnvelopeAdder(IEnumerable<IBGCEnvelopeStream> streams)
-        {
-            AddStreams(streams);
-        }
-
-        public void AddStream(IBGCEnvelopeStream stream)
-        {
-            streams.Add(stream);
-            UpdateStats();
-        }
-
-        public void AddStreams(IEnumerable<IBGCEnvelopeStream> streams)
-        {
-            this.streams.AddRange(streams);
-            UpdateStats();
-        }
-
-        public override void Reset() => streams.ForEach(x => x.Reset());
-
-        public override bool HasMoreSamples() => streams.All(x => x.HasMoreSamples());
-
-        public override float ReadNextSample()
-        {
-            if (HasMoreSamples())
+            while (streamRemainingSamples > 0)
             {
-                return streams.Select(x => x.ReadNextSample()).Sum();
-            }
+                int maxRead = Math.Min(BUFFER_SIZE, streamRemainingSamples);
+                int streamReadSamples = stream.Read(buffer, 0, maxRead);
 
-            //Hit the end
-            return 0f;
-        }
-
-        public override int Read(float[] data, int offset, int count)
-        {
-            int maxRemainingSamples = 0;
-
-            Array.Clear(data, offset, count);
-
-            foreach (IBGCEnvelopeStream stream in streams)
-            {
-                int streamRemainingSamples = count - maxRemainingSamples;
-                int streamOffset = offset;
-
-                while (streamRemainingSamples > 0)
+                if (streamReadSamples == 0)
                 {
-                    int maxRead = Math.Min(BUFFER_SIZE, streamRemainingSamples);
-                    int streamReadSamples = stream.Read(buffer, 0, maxRead);
-
-                    if (streamReadSamples == 0)
-                    {
-                        //Done with this stream
-                        break;
-                    }
-
-                    for (int i = 0; i < streamReadSamples; i++)
-                    {
-                        data[streamOffset + i] += buffer[i];
-                    }
-
-                    streamOffset += streamReadSamples;
-                    streamRemainingSamples -= streamReadSamples;
+                    //Done with this stream
+                    break;
                 }
 
-                maxRemainingSamples = Math.Max(maxRemainingSamples, streamRemainingSamples);
-            }
-
-            if (maxRemainingSamples == 0)
-            {
-                return count;
-            }
-
-            int readSamples = count - maxRemainingSamples;
-
-            Array.Clear(data, offset + readSamples, maxRemainingSamples);
-
-            return readSamples;
-        }
-
-        public override void Seek(int position) => streams.ForEach(x => x.Seek(position));
-
-        private void UpdateStats()
-        {
-            if (streams.Count > 0)
-            {
-                IEnumerable<float> samplingRates = streams.Select(x => x.SamplingRate);
-                _samplingRate = samplingRates.Max();
-
-                if (_samplingRate != samplingRates.Min())
+                for (int i = 0; i < streamReadSamples; i++)
                 {
-                    throw new StreamCompositionException("EnvelopeAdder requires all streams have the same samplingRate.");
+                    data[streamOffset + i] += buffer[i];
                 }
 
-                _sampleCount = streams.Select(x => x.Samples).Max();
+                streamOffset += streamReadSamples;
+                streamRemainingSamples -= streamReadSamples;
             }
-            else
+
+            maxRemainingSamples = Math.Max(maxRemainingSamples, streamRemainingSamples);
+        }
+
+        if (maxRemainingSamples == 0)
+        {
+            return count;
+        }
+
+        int readSamples = count - maxRemainingSamples;
+
+        Array.Clear(data, offset + readSamples, maxRemainingSamples);
+
+        return readSamples;
+    }
+
+    public override void Seek(int position) => streams.ForEach(x => x.Seek(position));
+
+    private void UpdateStats()
+    {
+        if (streams.Count > 0)
+        {
+            IEnumerable<float> samplingRates = streams.Select(x => x.SamplingRate);
+            _samplingRate = samplingRates.Max();
+
+            if (_samplingRate != samplingRates.Min())
             {
-                _sampleCount = 0;
-                _samplingRate = 44100f;
+                throw new StreamCompositionException("EnvelopeAdder requires all streams have the same samplingRate.");
             }
+
+            _sampleCount = streams.Select(x => x.Samples).Max();
+        }
+        else
+        {
+            _sampleCount = 0;
+            _samplingRate = 44100f;
         }
     }
 }

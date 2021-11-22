@@ -1,11 +1,10 @@
-﻿namespace TASagentTwitchBot.Core.Commands
+﻿namespace TASagentTwitchBot.Core.Commands;
+
+public enum AuthorizationLevel
 {
-    public enum AuthorizationLevel
-    {
-        Restricted = 0,
-        None,
-        Elevated,
-        Moderator,
-        Admin
-    }
+    Restricted = 0,
+    None,
+    Elevated,
+    Moderator,
+    Admin
 }

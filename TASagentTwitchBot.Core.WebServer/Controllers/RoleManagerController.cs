@@ -1,40 +1,35 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace TASagentTwitchBot.Core.WebServer.Controllers
+namespace TASagentTwitchBot.Core.WebServer.Controllers;
+
+[Authorize(Roles = "Admin")]
+public class RoleManagerController : Controller
 {
-    [Authorize(Roles = "Admin")]
-    public class RoleManagerController : Controller
+    private readonly RoleManager<IdentityRole> roleManager;
+
+    public RoleManagerController(RoleManager<IdentityRole> roleManager)
     {
-        private readonly RoleManager<IdentityRole> roleManager;
+        this.roleManager = roleManager;
+    }
 
-        public RoleManagerController(RoleManager<IdentityRole> roleManager)
-        {
-            this.roleManager = roleManager;
-        }
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Index()
+    {
+        List<IdentityRole> roles = await roleManager.Roles.ToListAsync();
+        return View(roles);
+    }
 
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Index()
+    [HttpPost]
+    [Authorize(Roles = "SuperAdmin")]
+    public async Task<IActionResult> AddRole(string roleName)
+    {
+        if (roleName is not null)
         {
-            List<IdentityRole> roles = await roleManager.Roles.ToListAsync();
-            return View(roles);
+            await roleManager.CreateAsync(new IdentityRole(roleName.Trim()));
         }
-
-        [HttpPost]
-        [Authorize(Roles = "SuperAdmin")]
-        public async Task<IActionResult> AddRole(string roleName)
-        {
-            if (roleName != null)
-            {
-                await roleManager.CreateAsync(new IdentityRole(roleName.Trim()));
-            }
-            return RedirectToAction("Index");
-        }
+        return RedirectToAction("Index");
     }
 }

@@ -1,77 +1,75 @@
-﻿using System;
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 
-namespace TASagentTwitchBot.Core.Chat
+namespace TASagentTwitchBot.Core.Chat;
+
+public class ChatLogger : IDisposable
 {
-    public class ChatLogger : IDisposable
+    private readonly Config.BotConfiguration botConfig;
+    private readonly Lazy<Logs.LocalLogger> chatLog;
+    private readonly Channel<string> lineChannel;
+    private bool disposedValue;
+
+    public ChatLogger(
+        Config.BotConfiguration botConfig,
+        ICommunication communication)
     {
-        private readonly Config.BotConfiguration botConfig;
-        private readonly Lazy<Logs.LocalLogger> chatLog;
-        private readonly Channel<string> lineChannel;
-        private bool disposedValue;
+        this.botConfig = botConfig;
 
-        public ChatLogger(
-            Config.BotConfiguration botConfig,
-            ICommunication communication)
+        lineChannel = Channel.CreateUnbounded<string>();
+        chatLog = new Lazy<Logs.LocalLogger>(() => new Logs.LocalLogger("ChatLogs", "chat"));
+
+        communication.SendMessageHandlers += WriteOutgoingMessage;
+        communication.SendWhisperHandlers += WriteOutgoingWhisper;
+        communication.ReceiveMessageLoggers += WriteIncomingMessage;
+
+        HandleLines();
+    }
+
+    private void WriteOutgoingMessage(string message)
+    {
+        lineChannel.Writer.TryWrite($"[{DateTime.Now:G}] {botConfig.BotName}: {message}");
+    }
+
+    private void WriteOutgoingWhisper(string username, string message)
+    {
+        lineChannel.Writer.TryWrite($"[{DateTime.Now:G}] {botConfig.BotName} /w {username} : {message}");
+    }
+
+    private void WriteIncomingMessage(IRC.TwitchChatter chatter)
+    {
+        lineChannel.Writer.TryWrite(chatter.ToLogString());
+    }
+
+    public async void HandleLines()
+    {
+        await foreach (string line in lineChannel.Reader.ReadAllAsync())
         {
-            this.botConfig = botConfig;
-
-            lineChannel = Channel.CreateUnbounded<string>();
-            chatLog = new Lazy<Logs.LocalLogger>(() => new Logs.LocalLogger("ChatLogs", "chat"));
-
-            communication.SendMessageHandlers += WriteOutgoingMessage;
-            communication.SendWhisperHandlers += WriteOutgoingWhisper;
-            communication.ReceiveMessageLoggers += WriteIncomingMessage;
-
-            HandleLines();
+            chatLog.Value.PushLine(line);
         }
+    }
 
-        private void WriteOutgoingMessage(string message)
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposedValue)
         {
-            lineChannel.Writer.TryWrite($"[{DateTime.Now:G}] {botConfig.BotName}: {message}");
-        }
-
-        private void WriteOutgoingWhisper(string username, string message)
-        {
-            lineChannel.Writer.TryWrite($"[{DateTime.Now:G}] {botConfig.BotName} /w {username} : {message}");
-        }
-
-        private void WriteIncomingMessage(IRC.TwitchChatter chatter)
-        {
-            lineChannel.Writer.TryWrite(chatter.ToLogString());
-        }
-
-        public async void HandleLines()
-        {
-            await foreach(string line in lineChannel.Reader.ReadAllAsync())
+            if (disposing)
             {
-                chatLog.Value.PushLine(line);
-            }
-        }
+                lineChannel.Writer.TryComplete();
 
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
+                if (chatLog.IsValueCreated)
                 {
-                    lineChannel.Writer.TryComplete();
-
-                    if (chatLog.IsValueCreated)
-                    {
-                        chatLog.Value.Dispose();
-                    }
+                    chatLog.Value.Dispose();
                 }
-
-                disposedValue = true;
             }
-        }
 
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
+            disposedValue = true;
         }
+    }
+
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

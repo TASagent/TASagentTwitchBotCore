@@ -1,46 +1,41 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
+﻿namespace TASagentTwitchBot.Core;
 
-namespace TASagentTwitchBot.Core
+public class StandardConfigurator : BaseConfigurator
 {
-    public class StandardConfigurator : BaseConfigurator
+    protected readonly API.Twitch.HelixHelper helixHelper;
+    protected readonly API.Twitch.IBotTokenValidator botTokenValidator;
+    protected readonly API.Twitch.IBroadcasterTokenValidator broadcasterTokenValidator;
+
+    public StandardConfigurator(
+        Config.BotConfiguration botConfig,
+        ICommunication communication,
+        ErrorHandler errorHandler,
+        API.Twitch.HelixHelper helixHelper,
+        API.Twitch.IBotTokenValidator botTokenValidator,
+        API.Twitch.IBroadcasterTokenValidator broadcasterTokenValidator)
+        : base(botConfig, communication, errorHandler)
     {
-        protected readonly API.Twitch.HelixHelper helixHelper;
-        protected readonly API.Twitch.IBotTokenValidator botTokenValidator;
-        protected readonly API.Twitch.IBroadcasterTokenValidator broadcasterTokenValidator;
+        this.helixHelper = helixHelper;
+        this.botTokenValidator = botTokenValidator;
+        this.broadcasterTokenValidator = broadcasterTokenValidator;
+    }
 
-        public StandardConfigurator(
-            Config.BotConfiguration botConfig,
-            ICommunication communication,
-            ErrorHandler errorHandler,
-            API.Twitch.HelixHelper helixHelper,
-            API.Twitch.IBotTokenValidator botTokenValidator,
-            API.Twitch.IBroadcasterTokenValidator broadcasterTokenValidator)
-            : base(botConfig, communication, errorHandler)
-        {
-            this.helixHelper = helixHelper;
-            this.botTokenValidator = botTokenValidator;
-            this.broadcasterTokenValidator = broadcasterTokenValidator;
-        }
+    public override async Task<bool> VerifyConfigured()
+    {
+        bool successful = true;
 
-        public override async Task<bool> VerifyConfigured()
-        {
-            bool successful = true;
+        //Client Information
+        successful |= ConfigureTwitchClient();
 
-            //Client Information
-            successful |= ConfigureTwitchClient();
+        //Check Accounts
+        successful |= await ConfigureBroadcasterAccount(broadcasterTokenValidator, helixHelper);
+        successful |= await ConfigureBotAccount(botTokenValidator);
 
-            //Check Accounts
-            successful |= await ConfigureBroadcasterAccount(broadcasterTokenValidator, helixHelper);
-            successful |= await ConfigureBotAccount(botTokenValidator);
+        successful |= ConfigurePasswords();
 
-            successful |= ConfigurePasswords();
+        successful |= ConfigureAudioOutputDevices();
+        successful |= ConfigureAudioInputDevices();
 
-            successful |= ConfigureAudioOutputDevices();
-            successful |= ConfigureAudioInputDevices();
-
-            return successful;
-        }
+        return successful;
     }
 }

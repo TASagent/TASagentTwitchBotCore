@@ -1,132 +1,128 @@
-﻿using System;
-using System.Collections.Generic;
+﻿namespace TASagentTwitchBot.Core.Audio.Effects;
 
-namespace TASagentTwitchBot.Core.Audio.Effects
+public interface IAudioEffectProvider
 {
-    public interface IAudioEffectProvider
+    void RegisterHandler(Dictionary<string, EffectConstructionHandler> handlers);
+}
+
+public abstract class AudioEffectProviderBase : IAudioEffectProvider
+{
+    public abstract void RegisterHandler(Dictionary<string, EffectConstructionHandler> handlers);
+
+    protected static int SafeParseAndVerifyInt(
+        string[] effectData,
+        int position,
+        int minValue,
+        int maxValue,
+        int defaultValue,
+        string parameterName)
     {
-        void RegisterHandler(Dictionary<string, EffectConstructionHandler> handlers);
+        if (position + 1 >= effectData.Length)
+        {
+            return defaultValue;
+        }
+
+        string parameterData = effectData[position + 1];
+
+        if (!int.TryParse(parameterData, out int value))
+        {
+            throw new EffectParsingException(
+                $"Unable to parse {parameterName}. Received: {parameterData}");
+        }
+
+        if (value < minValue || value > maxValue)
+        {
+            throw new EffectParsingException(
+                $"Invalid {parameterName}. Must be in the range [{minValue},{maxValue}]. Received: {parameterData}");
+        }
+
+        return value;
     }
 
-    public abstract class AudioEffectProviderBase : IAudioEffectProvider
+    protected static double SafeParseAndVerifyDouble(
+        string[] effectData,
+        int position,
+        double minValue,
+        double maxValue,
+        double defaultValue,
+        string parameterName)
     {
-        public abstract void RegisterHandler(Dictionary<string, EffectConstructionHandler> handlers);
-
-        protected static int SafeParseAndVerifyInt(
-            string[] effectData,
-            int position,
-            int minValue,
-            int maxValue,
-            int defaultValue,
-            string parameterName)
+        if (position + 1 >= effectData.Length)
         {
-            if (position + 1 >= effectData.Length)
-            {
-                return defaultValue;
-            }
-
-            string parameterData = effectData[position + 1];
-
-            if (!int.TryParse(parameterData, out int value))
-            {
-                throw new EffectParsingException(
-                    $"Unable to parse {parameterName}. Received: {parameterData}");
-            }
-
-            if (value < minValue || value > maxValue)
-            {
-                throw new EffectParsingException(
-                    $"Invalid {parameterName}. Must be in the range [{minValue},{maxValue}]. Received: {parameterData}");
-            }
-
-            return value;
+            return defaultValue;
         }
 
-        protected static double SafeParseAndVerifyDouble(
-            string[] effectData,
-            int position,
-            double minValue,
-            double maxValue,
-            double defaultValue,
-            string parameterName)
+        string parameterData = effectData[position + 1];
+
+        if (!double.TryParse(parameterData, out double value))
         {
-            if (position + 1 >= effectData.Length)
-            {
-                return defaultValue;
-            }
-
-            string parameterData = effectData[position + 1];
-
-            if (!double.TryParse(parameterData, out double value))
-            {
-                throw new EffectParsingException(
-                    $"Unable to parse {parameterName}. Received: {parameterData}");
-            }
-
-            if (value < minValue || value > maxValue)
-            {
-                throw new EffectParsingException(
-                    $"Invalid {parameterName}. Must be in the range [{minValue},{maxValue}]. Received: {parameterData}");
-            }
-
-            return value;
+            throw new EffectParsingException(
+                $"Unable to parse {parameterName}. Received: {parameterData}");
         }
 
-        protected static double SafeParseAndVerifyDouble(
-            string[] effectData,
-            int position,
-            Func<double, bool> isValidDelegate,
-            double defaultValue,
-            string notValidError,
-            string parameterName)
+        if (value < minValue || value > maxValue)
         {
-            if (position + 1 >= effectData.Length)
-            {
-                return defaultValue;
-            }
-
-            string parameterData = effectData[position + 1];
-
-            if (!double.TryParse(parameterData, out double value))
-            {
-                throw new EffectParsingException(
-                    $"Unable to parse {parameterName}. Received: {parameterData}");
-            }
-
-            if (!isValidDelegate(value))
-            {
-                throw new EffectParsingException(
-                    $"Invalid {parameterName}. {notValidError}. Received: {parameterData}");
-            }
-
-            return value;
+            throw new EffectParsingException(
+                $"Invalid {parameterName}. Must be in the range [{minValue},{maxValue}]. Received: {parameterData}");
         }
 
-        protected static T SafeParseAndVerifyEnum<T>(
-            string[] effectData,
-            int position,
-            Func<string, T> translationDelegate,
-            Func<T, bool> isValidDelegate,
-            T defaultValue,
-            string notValidError,
-            string parameterName)
+        return value;
+    }
+
+    protected static double SafeParseAndVerifyDouble(
+        string[] effectData,
+        int position,
+        Func<double, bool> isValidDelegate,
+        double defaultValue,
+        string notValidError,
+        string parameterName)
+    {
+        if (position + 1 >= effectData.Length)
         {
-            if (position + 1 >= effectData.Length)
-            {
-                return defaultValue;
-            }
-
-            string parameterData = effectData[position + 1];
-
-            T value = translationDelegate(parameterData);
-
-            if (!isValidDelegate(value))
-            {
-                throw new EffectParsingException(
-                    $"Invalid {parameterName}. {notValidError}. Received: {parameterData}");
-            }
-
-            return value;
+            return defaultValue;
         }
+
+        string parameterData = effectData[position + 1];
+
+        if (!double.TryParse(parameterData, out double value))
+        {
+            throw new EffectParsingException(
+                $"Unable to parse {parameterName}. Received: {parameterData}");
+        }
+
+        if (!isValidDelegate(value))
+        {
+            throw new EffectParsingException(
+                $"Invalid {parameterName}. {notValidError}. Received: {parameterData}");
+        }
+
+        return value;
+    }
+
+    protected static T SafeParseAndVerifyEnum<T>(
+        string[] effectData,
+        int position,
+        Func<string, T> translationDelegate,
+        Func<T, bool> isValidDelegate,
+        T defaultValue,
+        string notValidError,
+        string parameterName)
+    {
+        if (position + 1 >= effectData.Length)
+        {
+            return defaultValue;
+        }
+
+        string parameterData = effectData[position + 1];
+
+        T value = translationDelegate(parameterData);
+
+        if (!isValidDelegate(value))
+        {
+            throw new EffectParsingException(
+                $"Invalid {parameterName}. {notValidError}. Received: {parameterData}");
+        }
+
+        return value;
     }
 }

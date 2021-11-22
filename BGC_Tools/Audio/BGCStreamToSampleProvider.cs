@@ -1,6 +1,5 @@
 ﻿//#define AUDIO_PROFILING
 
-using System;
 using NAudio.Wave;
 using BGC.Mathematics;
 
@@ -11,31 +10,31 @@ using System.Diagnostics;
 using System.Linq;
 #endif
 
-namespace BGC.Audio
+namespace BGC.Audio;
+
+public sealed class BGCStreamToSampleProvider : ISampleProvider
 {
-    public sealed class BGCStreamToSampleProvider : ISampleProvider
+    private readonly IBGCStream internalStream;
+    public WaveFormat WaveFormat { get; }
+
+    private float[] internalBuffer = new float[512];
+
+    private int bufferIndex = 0;
+    private int bufferCount = 0;
+
+    public BGCStreamToSampleProvider(IBGCStream stream)
     {
-        private readonly IBGCStream internalStream;
-        public WaveFormat WaveFormat { get; }
-
-        private float[] internalBuffer = new float[512];
-
-        private int bufferIndex = 0;
-        private int bufferCount = 0;
-
-        public BGCStreamToSampleProvider(IBGCStream stream)
-        {
-            internalStream = stream;
-            WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat((int)stream.SamplingRate, stream.Channels);
-        }
+        internalStream = stream;
+        WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat((int)stream.SamplingRate, stream.Channels);
+    }
 
 #if AUDIO_PROFILING
         List<double> durations = new List<double>(100);
         List<int> sampleCounts = new List<int>(100);
 #endif
 
-        public int Read(float[] buffer, int offset, int count)
-        {
+    public int Read(float[] buffer, int offset, int count)
+    {
 #if AUDIO_PROFILING
             sampleCounts.Add(count);
 
@@ -43,26 +42,26 @@ namespace BGC.Audio
             sw.Start();
 #endif
 
-            int samplesWritten = ReadBody(buffer, offset, count);
+        int samplesWritten = ReadBody(buffer, offset, count);
 
-            if (samplesWritten < count)
+        if (samplesWritten < count)
+        {
+            if (internalBuffer.Length < count)
             {
-                if (internalBuffer.Length < count)
-                {
-                    //Resize buffer
-                    internalBuffer = new float[count.CeilingToPowerOfTwo()];
-                }
-
-                int read = internalStream.Read(internalBuffer, 0, internalBuffer.Length);
-
-                if (read > 0)
-                {
-                    bufferIndex = 0;
-                    bufferCount = read;
-
-                    samplesWritten += ReadBody(buffer, offset + samplesWritten, count - samplesWritten);
-                }
+                //Resize buffer
+                internalBuffer = new float[count.CeilingToPowerOfTwo()];
             }
+
+            int read = internalStream.Read(internalBuffer, 0, internalBuffer.Length);
+
+            if (read > 0)
+            {
+                bufferIndex = 0;
+                bufferCount = read;
+
+                samplesWritten += ReadBody(buffer, offset + samplesWritten, count - samplesWritten);
+            }
+        }
 
 #if AUDIO_PROFILING
             sw.Stop();
@@ -78,22 +77,21 @@ namespace BGC.Audio
             }
 #endif
 
-            return samplesWritten;
-        }
+        return samplesWritten;
+    }
 
-        private int ReadBody(float[] buffer, int offset, int count)
+    private int ReadBody(float[] buffer, int offset, int count)
+    {
+        int samplesWritten = Math.Max(0, Math.Min(count, bufferCount - bufferIndex));
+
+        //It seems that, sometimes, the float array buffer is just a wrapped byte buffer, and Array.Copy and Buffer.Copy fail.
+        for (int i = 0; i < samplesWritten; i++)
         {
-            int samplesWritten = Math.Max(0, Math.Min(count, bufferCount - bufferIndex));
-
-            //It seems that, sometimes, the float array buffer is just a wrapped byte buffer, and Array.Copy and Buffer.Copy fail.
-            for (int i = 0; i < samplesWritten; i++)
-            {
-                buffer[i + offset] = internalBuffer[i + bufferIndex];
-            }
-
-            bufferIndex += samplesWritten;
-
-            return samplesWritten;
+            buffer[i + offset] = internalBuffer[i + bufferIndex];
         }
+
+        bufferIndex += samplesWritten;
+
+        return samplesWritten;
     }
 }

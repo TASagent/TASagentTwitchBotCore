@@ -1,140 +1,137 @@
-﻿using System;
-using System.Collections.Generic;
-using BGC.Mathematics;
+﻿using BGC.Mathematics;
 
-namespace BGC.Audio.Synthesis
+namespace BGC.Audio.Synthesis;
+
+/// <summary>
+/// Continuous, linear tone sweep from starting to ending frequency over 
+/// specified duration.
+/// </summary>
+public class SweepAudioClip : BGCAudioClip
 {
-    /// <summary>
-    /// Continuous, linear tone sweep from starting to ending frequency over 
-    /// specified duration.
-    /// </summary>
-    public class SweepAudioClip : BGCAudioClip
+    public enum SweepDirection
     {
-        public enum SweepDirection
+        Up = 0,
+        Down,
+        MAX
+    }
+
+    public override int Channels => 1;
+
+    public override int TotalSamples => ChannelSamples;
+
+    private readonly int _channelSamples;
+    public override int ChannelSamples => _channelSamples;
+
+    private readonly Random randomizer;
+
+    public readonly SweepDirection sweepDirection;
+    private readonly double freqLB;
+    private readonly double freqUB;
+    private float[]? samples = null;
+
+    private int position = 0;
+
+    public SweepAudioClip(
+        double duration,
+        double freqLB,
+        double freqUB,
+        SweepDirection sweepDirection,
+        Random? randomizer = null)
+    {
+        if (randomizer is null)
         {
-            Up = 0,
-            Down,
-            MAX
+            randomizer = new Random(CustomRandom.Next());
         }
+        this.randomizer = randomizer;
 
-        public override int Channels => 1;
+        this.freqLB = freqLB;
+        this.freqUB = freqUB;
+        this.sweepDirection = sweepDirection;
 
-        public override int TotalSamples => ChannelSamples;
+        _channelSamples = (int)Math.Ceiling(duration * SamplingRate);
+    }
 
-        private readonly int _channelSamples;
-        public override int ChannelSamples => _channelSamples;
+    protected override void _Initialize()
+    {
+        samples = new float[_channelSamples];
 
-        private readonly Random randomizer;
+        double startingPhase = 2.0 * Math.PI * randomizer.NextDouble();
 
-        public readonly SweepDirection sweepDirection;
-        private readonly double freqLB;
-        private readonly double freqUB;
-        private float[] samples = null;
+        double startingFreq;
+        double endingFreq;
 
-        private int position = 0;
-
-        public SweepAudioClip(
-            double duration,
-            double freqLB,
-            double freqUB,
-            SweepDirection sweepDirection,
-            Random randomizer = null)
+        switch (sweepDirection)
         {
-            if (randomizer == null)
-            {
-                randomizer = new Random(CustomRandom.Next());
-            }
-            this.randomizer = randomizer;
+            case SweepDirection.Up:
+                startingFreq = freqLB;
+                endingFreq = freqUB;
+                break;
 
-            this.freqLB = freqLB;
-            this.freqUB = freqUB;
-            this.sweepDirection = sweepDirection;
+            case SweepDirection.Down:
+                startingFreq = freqUB;
+                endingFreq = freqLB;
+                break;
 
-            _channelSamples = (int)Math.Ceiling(duration * SamplingRate);
-        }
-
-        protected override void _Initialize()
-        {
-            samples = new float[_channelSamples];
-
-            double startingPhase = 2.0 * Math.PI * randomizer.NextDouble();
-
-            double startingFreq;
-            double endingFreq;
-
-            switch (sweepDirection)
-            {
-                case SweepDirection.Up:
-                    startingFreq = freqLB;
-                    endingFreq = freqUB;
-                    break;
-
-                case SweepDirection.Down:
-                    startingFreq = freqUB;
-                    endingFreq = freqLB;
-                    break;
-
-                default:
-                    Debug.LogError($"Unexpected SweepDirection: {sweepDirection}");
-                    return;
-            }
-
-            double freqRatio = endingFreq / startingFreq;
-            double freqTerm = 2.0 * Math.PI * startingFreq * samples.Length / (SamplingRate * Math.Log(freqRatio));
-
-            //Intercept 0 change
-            if (startingFreq == endingFreq)
-            {
-                freqTerm = 2.0 * Math.PI * startingFreq / SamplingRate;
-
-                for (int i = 0; i < samples.Length; i++)
-                {
-                    samples[i] = (float)Math.Sin(startingPhase + freqTerm * i);
-                }
-
+            default:
+                Debug.LogError($"Unexpected SweepDirection: {sweepDirection}");
                 return;
-            }
+        }
 
-            //General Case
+        double freqRatio = endingFreq / startingFreq;
+        double freqTerm = 2.0 * Math.PI * startingFreq * samples.Length / (SamplingRate * Math.Log(freqRatio));
+
+        //Intercept 0 change
+        if (startingFreq == endingFreq)
+        {
+            freqTerm = 2.0 * Math.PI * startingFreq / SamplingRate;
+
             for (int i = 0; i < samples.Length; i++)
             {
-                samples[i] = (float)Math.Sin(startingPhase +
-                    freqTerm * (Math.Pow(freqRatio, i / (double)samples.Length) - 1.0));
+                samples[i] = (float)Math.Sin(startingPhase + freqTerm * i);
             }
+
+            return;
         }
 
-
-        public override int Read(float[] data, int offset, int count)
+        //General Case
+        for (int i = 0; i < samples.Length; i++)
         {
-            if (!initialized)
-            {
-                Initialize();
-            }
+            samples[i] = (float)Math.Sin(startingPhase +
+                freqTerm * (Math.Pow(freqRatio, i / (double)samples.Length) - 1.0));
+        }
+    }
 
-            //Read...
 
-            int samplesToRead = Math.Min(count, _channelSamples - position);
-
-            Array.Copy(
-                sourceArray: samples,
-                sourceIndex: position,
-                destinationArray: data,
-                destinationIndex: offset,
-                length: samplesToRead);
-
-            position += samplesToRead;
-
-            return samplesToRead;
+    public override int Read(float[] data, int offset, int count)
+    {
+        if (!initialized)
+        {
+            Initialize();
         }
 
-        public override void Reset() => position = 0;
+        //Read...
 
-        public override void Seek(int position) =>
-            this.position = GeneralMath.Clamp(position, 0, _channelSamples);
+        int samplesToRead = Math.Min(count, _channelSamples - position);
 
+        Array.Copy(
+            sourceArray: samples!,
+            sourceIndex: position,
+            destinationArray: data,
+            destinationIndex: offset,
+            length: samplesToRead);
 
-        private readonly IEnumerable<double> _rms = new double[] { Math.Sqrt(0.5) };
-        public override IEnumerable<double> GetChannelRMS() => _rms;
+        position += samplesToRead;
 
+        return samplesToRead;
     }
+
+    public override void Reset() => position = 0;
+
+    public override void Seek(int position) =>
+        this.position = GeneralMath.Clamp(position, 0, _channelSamples);
+
+
+    private readonly IEnumerable<double> _rms = new double[] { Math.Sqrt(0.5) };
+    public override IEnumerable<double> GetChannelRMS() => _rms;
+
 }

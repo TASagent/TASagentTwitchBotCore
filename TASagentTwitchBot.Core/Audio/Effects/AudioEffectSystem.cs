@@ -1,129 +1,123 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿namespace TASagentTwitchBot.Core.Audio.Effects;
 
-namespace TASagentTwitchBot.Core.Audio.Effects
+public interface IAudioEffectSystem
 {
-    public interface IAudioEffectSystem
+    bool TryParse(string? effectsChain, out Effect effect, out string? errorMessage);
+    Effect SafeParse(string? effectsChain);
+}
+
+
+public class AudioEffectSystem : IAudioEffectSystem
+{
+    private readonly ICommunication communication;
+    private readonly IAudioEffectProvider[] effectProviders;
+    private readonly Dictionary<string, EffectConstructionHandler> effectHandlers = new Dictionary<string, EffectConstructionHandler>();
+
+    public AudioEffectSystem(
+        ICommunication communication,
+        IEnumerable<IAudioEffectProvider> effectProviders)
     {
-        bool TryParse(string effectsChain, out Effect effect, out string errorMessage);
-        Effect SafeParse(string effectsChain);
+        this.communication = communication;
+        this.effectProviders = effectProviders.ToArray();
+
+        foreach (IAudioEffectProvider effectProvider in this.effectProviders)
+        {
+            effectProvider.RegisterHandler(effectHandlers);
+        }
     }
 
-
-    public class AudioEffectSystem : IAudioEffectSystem
+    public Effect SafeParse(string? effectsChain)
     {
-        private readonly ICommunication communication;
-        private readonly IAudioEffectProvider[] effectProviders;
-        private readonly Dictionary<string, EffectConstructionHandler> effectHandlers = new Dictionary<string, EffectConstructionHandler>();
-
-        public AudioEffectSystem(
-            ICommunication communication,
-            IEnumerable<IAudioEffectProvider> effectProviders)
+        if (string.IsNullOrWhiteSpace(effectsChain))
         {
-            this.communication = communication;
-            this.effectProviders = effectProviders.ToArray();
-
-            foreach (IAudioEffectProvider effectProvider in this.effectProviders)
-            {
-                effectProvider.RegisterHandler(effectHandlers);
-            }
+            return new NoEffect();
         }
 
-        public Effect SafeParse(string effectsChain)
+        effectsChain = effectsChain.Trim().ToLowerInvariant();
+
+        Effect? lastEffect = null;
+
+        string[] splitChain = effectsChain.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+        if (splitChain.Length == 0 || (splitChain.Length == 1 && splitChain[0] == "none"))
         {
-            if (string.IsNullOrWhiteSpace(effectsChain))
-            {
-                return new NoEffect();
-            }
-
-            effectsChain = effectsChain.Trim().ToLowerInvariant();
-
-            Effect lastEffect = null;
-
-            string[] splitChain = effectsChain.Split(',', StringSplitOptions.RemoveEmptyEntries);
-
-            if (splitChain.Length == 0 || (splitChain.Length == 1 && splitChain[0] == "none"))
-            {
-                return new NoEffect();
-            }
-
-            try
-            {
-                foreach (string effectString in splitChain)
-                {
-                    string[] splitEffect = effectString.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-                    if (effectHandlers.TryGetValue(splitEffect[0], out EffectConstructionHandler matchingHandler))
-                    {
-                        lastEffect = matchingHandler(splitEffect, lastEffect);
-                    }
-                    else
-                    {
-                        throw new EffectParsingException($"Unexpected effect name: {splitEffect[0]}");
-                    }
-                }
-            }
-            catch (EffectParsingException effectParsingException)
-            {
-                communication.SendWarningMessage(effectParsingException.ErrorMessage);
-                return new NoEffect();
-            }
-
-            return lastEffect;
+            return new NoEffect();
         }
 
-        public bool TryParse(string effectsChain, out Effect effect, out string errorMessage)
+        try
         {
-            effect = null;
-            errorMessage = null;
-
-            if (string.IsNullOrWhiteSpace(effectsChain))
+            foreach (string effectString in splitChain)
             {
-                effect = new NoEffect();
-                return true;
-            }
+                string[] splitEffect = effectString.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-            effectsChain = effectsChain.Trim().ToLowerInvariant();
-
-            string[] splitChain = effectsChain.Split(',', StringSplitOptions.RemoveEmptyEntries);
-
-            if (splitChain.Length == 0 || (splitChain.Length == 1 && splitChain[0] == "none"))
-            {
-                effect = new NoEffect();
-                return true;
-            }
-
-            try
-            {
-                foreach (string effectString in splitChain)
+                if (effectHandlers.TryGetValue(splitEffect[0], out EffectConstructionHandler? matchingHandler))
                 {
-                    string[] splitEffect = effectString.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-                    if (effectHandlers.TryGetValue(splitEffect[0], out EffectConstructionHandler matchingHandler))
-                    {
-                        effect = matchingHandler(splitEffect, effect);
-                    }
-                    else
-                    {
-                        throw new EffectParsingException($"Unexpected effect name: {splitEffect[0]}");
-                    }
+                    lastEffect = matchingHandler(splitEffect, lastEffect);
+                }
+                else
+                {
+                    throw new EffectParsingException($"Unexpected effect name: {splitEffect[0]}");
                 }
             }
-            catch (EffectParsingException effectParsingException)
-            {
-                communication.SendWarningMessage(effectParsingException.ErrorMessage);
-                effect = new NoEffect();
-                errorMessage = effectParsingException.ErrorMessage;
+        }
+        catch (EffectParsingException effectParsingException)
+        {
+            communication.SendWarningMessage(effectParsingException.ErrorMessage);
+            return new NoEffect();
+        }
 
-                return false;
-            }
+        return lastEffect!;
+    }
 
+    public bool TryParse(string? effectsChain, out Effect effect, out string? errorMessage)
+    {
+        Effect? internalEffect = null;
+        errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(effectsChain))
+        {
+            effect = new NoEffect();
             return true;
         }
+
+        effectsChain = effectsChain.Trim().ToLowerInvariant();
+
+        string[] splitChain = effectsChain.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+        if (splitChain.Length == 0 || (splitChain.Length == 1 && splitChain[0] == "none"))
+        {
+            effect = new NoEffect();
+            return true;
+        }
+
+        try
+        {
+            foreach (string effectString in splitChain)
+            {
+                string[] splitEffect = effectString.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+                if (effectHandlers.TryGetValue(splitEffect[0], out EffectConstructionHandler? matchingHandler))
+                {
+                    internalEffect = matchingHandler(splitEffect, internalEffect);
+                }
+                else
+                {
+                    throw new EffectParsingException($"Unexpected effect name: {splitEffect[0]}");
+                }
+            }
+
+            effect = internalEffect!;
+            return true;
+        }
+        catch (EffectParsingException effectParsingException)
+        {
+            communication.SendWarningMessage(effectParsingException.ErrorMessage);
+            effect = new NoEffect();
+            errorMessage = effectParsingException.ErrorMessage;
+
+            return false;
+        }
     }
-
-    public delegate Effect EffectConstructionHandler(string[] effectArguments, Effect lastEffect);
-
 }
+
+public delegate Effect EffectConstructionHandler(string[] effectArguments, Effect? lastEffect);

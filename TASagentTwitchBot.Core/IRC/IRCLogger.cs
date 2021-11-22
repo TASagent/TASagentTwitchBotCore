@@ -1,62 +1,60 @@
-﻿using System;
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 
 using TASagentTwitchBot.Core.Logs;
 
-namespace TASagentTwitchBot.Core.IRC
+namespace TASagentTwitchBot.Core.IRC;
+
+public interface IIRCLogger
 {
-    public interface IIRCLogger
+    void WriteLine(string line);
+}
+
+public class IRCLogger : IIRCLogger, IDisposable
+{
+    private readonly Lazy<LocalLogger> ircLog;
+    private readonly Channel<string> lineChannel;
+    private bool disposedValue;
+
+    public IRCLogger()
     {
-        void WriteLine(string line);
+        lineChannel = Channel.CreateUnbounded<string>();
+        ircLog = new Lazy<LocalLogger>(() => new LocalLogger("IRCLogs", "irc"));
+
+        HandleLines();
     }
 
-    public class IRCLogger : IIRCLogger, IDisposable
+    public void WriteLine(string line) => lineChannel.Writer.TryWrite(line);
+
+    public async void HandleLines()
     {
-        private readonly Lazy<LocalLogger> ircLog;
-        private readonly Channel<string> lineChannel;
-        private bool disposedValue;
-
-        public IRCLogger()
+        await foreach (string line in lineChannel.Reader.ReadAllAsync())
         {
-            lineChannel = Channel.CreateUnbounded<string>();
-            ircLog = new Lazy<LocalLogger>(() => new LocalLogger("IRCLogs", "irc"));
-
-            HandleLines();
+            ircLog.Value.PushLine(line);
         }
+    }
 
-        public void WriteLine(string line) => lineChannel.Writer.TryWrite(line);
-
-        public async void HandleLines()
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposedValue)
         {
-            await foreach (string line in lineChannel.Reader.ReadAllAsync())
+            if (disposing)
             {
-                ircLog.Value.PushLine(line);
-            }
-        }
+                lineChannel.Writer.TryComplete();
 
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
+                if (ircLog.IsValueCreated)
                 {
-                    lineChannel.Writer.TryComplete();
-
-                    if (ircLog.IsValueCreated)
-                    {
-                        ircLog.Value.Dispose();
-                    }
+                    ircLog.Value.Dispose();
                 }
-
-                disposedValue = true;
             }
-        }
 
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
+            disposedValue = true;
         }
+    }
+
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

@@ -1,10 +1,6 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿namespace TASagentTwitchBot.Core;
 
-namespace TASagentTwitchBot.Core
+public interface IConfigurator
 {
-    public interface IConfigurator
-    {
-        Task<bool> VerifyConfigured();
-    }
+    Task<bool> VerifyConfigured();
 }

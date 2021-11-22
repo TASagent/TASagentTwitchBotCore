@@ -1,52 +1,50 @@
-﻿using System;
-using NAudio.Wave;
+﻿using NAudio.Wave;
 
-namespace BGC.Audio.NAudio
+namespace BGC.Audio.NAudio;
+
+public class DisposableWaveProvider : IWaveProvider, IDisposable
 {
-    public class DisposableWaveProvider : IWaveProvider, IDisposable
+    private readonly IWaveProvider waveProvider;
+    private bool disposedValue;
+
+    public DisposableWaveProvider(IWaveProvider waveProvider) => this.waveProvider = waveProvider;
+
+    public WaveFormat WaveFormat => waveProvider.WaveFormat;
+
+    public int Read(byte[] buffer, int offset, int count) => waveProvider.Read(buffer, offset, count);
+
+    public long Seek(long offset, SeekOrigin origin)
     {
-        private readonly IWaveProvider waveProvider;
-        private bool disposedValue;
-
-        public DisposableWaveProvider(IWaveProvider waveProvider) => this.waveProvider = waveProvider;
-
-        public WaveFormat WaveFormat => waveProvider.WaveFormat;
-
-        public int Read(byte[] buffer, int offset, int count) => waveProvider.Read(buffer, offset, count);
-
-        public long Seek(long offset, System.IO.SeekOrigin origin)
+        if (waveProvider is WaveStream waveStream)
         {
-            if (waveProvider is WaveStream waveStream)
-            {
-                return waveStream.Seek(offset, System.IO.SeekOrigin.Begin);
-            }
-            else
-            {
-                throw new NotSupportedException();
-            }
+            return waveStream.Seek(offset, SeekOrigin.Begin);
         }
-
-        protected virtual void Dispose(bool disposing)
+        else
         {
-            if (!disposedValue)
+            throw new NotSupportedException();
+        }
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposedValue)
+        {
+            if (disposing)
             {
-                if (disposing)
+                if (waveProvider is IDisposable disposableProvider)
                 {
-                    if (waveProvider is IDisposable disposableProvider)
-                    {
-                        disposableProvider.Dispose();
-                    }
+                    disposableProvider.Dispose();
                 }
-
-                disposedValue = true;
             }
-        }
 
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
+            disposedValue = true;
         }
+    }
+
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

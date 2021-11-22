@@ -1,268 +1,264 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using BGC.Mathematics;
+﻿using BGC.Mathematics;
 
-namespace BGC.Audio.Filters
+namespace BGC.Audio.Filters;
+
+/// <summary>
+/// Pads underlying stream
+/// </summary>
+public class StreamPadder : SimpleBGCFilter
 {
-    /// <summary>
-    /// Pads underlying stream
-    /// </summary>
-    public class StreamPadder : SimpleBGCFilter
+    public enum StimulusPlacement
     {
-        public enum StimulusPlacement
+        Front = 0,
+        Center,
+        Back
+    }
+
+    public override int Channels => stream.Channels;
+
+    public override int TotalSamples { get; }
+    public override int ChannelSamples { get; }
+
+    private readonly int prependedSamples;
+    private readonly int appendedSamples;
+
+    private readonly int appendStartSample;
+
+    private readonly TransformRMSBehavior rmsBehavior;
+
+    public int Position { get; private set; }
+
+    public StreamPadder(
+        IBGCStream stream,
+        double totalDuration,
+        StimulusPlacement stimPlacement,
+        TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
+        : base(stream)
+    {
+        if (stream.ChannelSamples == int.MaxValue)
         {
-            Front = 0,
-            Center,
-            Back
+            throw new StreamCompositionException("Cannot pad infinite stream using stimPlacement");
         }
 
-        public override int Channels => stream.Channels;
+        int requestedSamples = (int)Math.Round(totalDuration * SamplingRate);
+        int paddingSamples = requestedSamples - stream.ChannelSamples;
 
-        public override int TotalSamples { get; }
-        public override int ChannelSamples { get; }
+        this.rmsBehavior = rmsBehavior;
 
-        private readonly int prependedSamples;
-        private readonly int appendedSamples;
-
-        private readonly int appendStartSample;
-
-        private readonly TransformRMSBehavior rmsBehavior;
-
-        public int Position { get; private set; }
-
-        public StreamPadder(
-            IBGCStream stream,
-            double totalDuration,
-            StimulusPlacement stimPlacement,
-            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
-            : base(stream)
+        if (paddingSamples < 0)
         {
-            if (stream.ChannelSamples == int.MaxValue)
+            throw new StreamCompositionException("Stimulus exceeds targeted padding length");
+        }
+
+        switch (stimPlacement)
+        {
+            case StimulusPlacement.Front:
+                appendedSamples = 0;
+                prependedSamples = paddingSamples;
+                break;
+
+            case StimulusPlacement.Center:
+                //Putting our extra sample in front
+                appendedSamples = paddingSamples / 2;
+                prependedSamples = paddingSamples - appendedSamples;
+                break;
+
+            case StimulusPlacement.Back:
+                appendedSamples = paddingSamples;
+                prependedSamples = 0;
+                break;
+
+            default:
+                throw new NotSupportedException($"Stimulus Placement not supported: {stimPlacement}");
+        }
+
+        appendStartSample = stream.ChannelSamples + prependedSamples;
+        ChannelSamples = requestedSamples;
+        TotalSamples = Channels * ChannelSamples;
+
+        Reset();
+    }
+
+    public StreamPadder(
+        IBGCStream stream,
+        double prependDuration,
+        double appendDuration,
+        TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
+        : base(stream)
+    {
+        if (prependDuration < 0.0)
+        {
+            throw new StreamCompositionException("Cannot prepend negative durations");
+        }
+
+        if (appendDuration < 0.0)
+        {
+            throw new StreamCompositionException("Cannot append negative durations");
+        }
+
+        prependedSamples = (int)Math.Round(prependDuration * stream.SamplingRate);
+        appendedSamples = (int)Math.Round(appendDuration * stream.SamplingRate);
+
+        this.rmsBehavior = rmsBehavior;
+
+        if (stream.ChannelSamples == int.MaxValue)
+        {
+            if (appendedSamples != 0)
             {
-                throw new StreamCompositionException("Cannot pad infinite stream using stimPlacement");
+                throw new StreamCompositionException("Cannot append padding to an infinite stream");
             }
 
-            int requestedSamples = (int)Math.Round(totalDuration * SamplingRate);
-            int paddingSamples = requestedSamples - stream.ChannelSamples;
+            appendStartSample = int.MaxValue;
+            ChannelSamples = int.MaxValue;
+            TotalSamples = int.MaxValue;
+        }
+        else
+        {
+            appendStartSample = stream.ChannelSamples + prependedSamples;
+            ChannelSamples = stream.ChannelSamples + prependedSamples + appendedSamples;
+            TotalSamples = stream.Channels * ChannelSamples;
+        }
 
-            this.rmsBehavior = rmsBehavior;
+        Reset();
+    }
 
-            if (paddingSamples < 0)
+    public StreamPadder(
+        IBGCStream stream,
+        int prependSamples,
+        int appendSamples,
+        TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
+        : base(stream)
+    {
+        if (prependSamples < 0)
+        {
+            throw new StreamCompositionException("Cannot prepend negative durations");
+        }
+
+        if (appendSamples < 0)
+        {
+            throw new StreamCompositionException("Cannot append negative durations");
+        }
+
+        this.rmsBehavior = rmsBehavior;
+
+        if (stream.ChannelSamples == int.MaxValue)
+        {
+            if (appendedSamples != 0)
             {
-                throw new StreamCompositionException("Stimulus exceeds targeted padding length");
+                throw new StreamCompositionException("Cannot append padding to an infinite stream");
             }
 
-            switch (stimPlacement)
+            appendStartSample = int.MaxValue;
+            ChannelSamples = int.MaxValue;
+            TotalSamples = int.MaxValue;
+        }
+        else
+        {
+            appendStartSample = stream.ChannelSamples + prependedSamples;
+            ChannelSamples = stream.ChannelSamples + prependedSamples + appendedSamples;
+            TotalSamples = stream.Channels * ChannelSamples;
+        }
+
+        Reset();
+    }
+
+    public override void Reset()
+    {
+        Position = 0;
+        stream.Reset();
+    }
+
+    public override void Seek(int position)
+    {
+        Position = GeneralMath.Clamp(position, 0, ChannelSamples);
+        stream.Seek(Math.Max(0, Position - prependedSamples));
+    }
+
+    public override int Read(float[] data, int offset, int count)
+    {
+        if (ChannelSamples != int.MaxValue)
+        {
+            count = Math.Min(count, Channels * (ChannelSamples - Position));
+        }
+
+        int remainingSamples = count;
+
+        while (remainingSamples > 0)
+        {
+            if (Position < prependedSamples)
             {
-                case StimulusPlacement.Front:
-                    appendedSamples = 0;
-                    prependedSamples = paddingSamples;
+                int copySamples = Math.Min(remainingSamples, Channels * (prependedSamples - Position));
+
+                Array.Clear(data, offset, copySamples);
+
+                Position += copySamples / Channels;
+                offset += copySamples;
+                remainingSamples -= copySamples;
+            }
+            else if (Position < appendStartSample)
+            {
+                //Not worried about int overflow here - we're protected by the limits of absurdity
+                int samplesToCopy = Math.Min(remainingSamples, Channels * (appendStartSample - Position));
+
+                int copySamples = stream.Read(data, offset, samplesToCopy);
+
+                if (copySamples == 0)
+                {
+                    Debug.LogWarning("Didn't finish reading expected samples and hit the end.");
+                    break;
+                }
+
+                Position += copySamples / Channels;
+                offset += copySamples;
+                remainingSamples -= copySamples;
+            }
+            else
+            {
+                //Not worried about int overflow here - we're protected by the limits of absurdity
+                int copySamples = Math.Min(remainingSamples, Channels * (ChannelSamples - Position));
+
+                if (copySamples == 0)
+                {
+                    Debug.LogWarning("Didn't finish reading expected samples and hit the end.");
+                    break;
+                }
+
+                Array.Clear(data, offset, copySamples);
+
+                Position += copySamples / Channels;
+                offset += copySamples;
+                remainingSamples -= copySamples;
+            }
+        }
+
+        return count - remainingSamples;
+    }
+
+    private IEnumerable<double>? _channelRMS = null;
+    public override IEnumerable<double> GetChannelRMS()
+    {
+        if (_channelRMS is null)
+        {
+            switch (rmsBehavior)
+            {
+                case TransformRMSBehavior.Recalculate:
+                    _channelRMS = this.CalculateRMS();
                     break;
 
-                case StimulusPlacement.Center:
-                    //Putting our extra sample in front
-                    appendedSamples = paddingSamples / 2;
-                    prependedSamples = paddingSamples - appendedSamples;
-                    break;
+                case TransformRMSBehavior.Passthrough:
+                    _channelRMS = stream.GetChannelRMS();
 
-                case StimulusPlacement.Back:
-                    appendedSamples = paddingSamples;
-                    prependedSamples = 0;
+                    if (_channelRMS.Any(double.IsNaN) && ChannelSamples != int.MaxValue)
+                    {
+                        goto case TransformRMSBehavior.Recalculate;
+                    }
                     break;
 
                 default:
-                    throw new NotSupportedException($"Stimulus Placement not supported: {stimPlacement}");
+                    throw new Exception($"Unexpected rmsBehavior: {rmsBehavior}");
             }
-
-            appendStartSample = stream.ChannelSamples + prependedSamples;
-            ChannelSamples = requestedSamples;
-            TotalSamples = Channels * ChannelSamples;
-
-            Reset();
         }
 
-        public StreamPadder(
-            IBGCStream stream,
-            double prependDuration,
-            double appendDuration,
-            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
-            : base(stream)
-        {
-            if (prependDuration < 0.0)
-            {
-                throw new StreamCompositionException("Cannot prepend negative durations");
-            }
-
-            if (appendDuration < 0.0)
-            {
-                throw new StreamCompositionException("Cannot append negative durations");
-            }
-
-            prependedSamples = (int)Math.Round(prependDuration * stream.SamplingRate);
-            appendedSamples = (int)Math.Round(appendDuration * stream.SamplingRate);
-
-            this.rmsBehavior = rmsBehavior;
-
-            if (stream.ChannelSamples == int.MaxValue)
-            {
-                if (appendedSamples != 0)
-                {
-                    throw new StreamCompositionException("Cannot append padding to an infinite stream");
-                }
-
-                appendStartSample = int.MaxValue;
-                ChannelSamples = int.MaxValue;
-                TotalSamples = int.MaxValue;
-            }
-            else
-            {
-                appendStartSample = stream.ChannelSamples + prependedSamples;
-                ChannelSamples = stream.ChannelSamples + prependedSamples + appendedSamples;
-                TotalSamples = stream.Channels * ChannelSamples;
-            }
-
-            Reset();
-        }
-
-        public StreamPadder(
-            IBGCStream stream,
-            int prependSamples,
-            int appendSamples,
-            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
-            : base(stream)
-        {
-            if (prependSamples < 0)
-            {
-                throw new StreamCompositionException("Cannot prepend negative durations");
-            }
-
-            if (appendSamples < 0)
-            {
-                throw new StreamCompositionException("Cannot append negative durations");
-            }
-
-            this.rmsBehavior = rmsBehavior;
-
-            if (stream.ChannelSamples == int.MaxValue)
-            {
-                if (appendedSamples != 0)
-                {
-                    throw new StreamCompositionException("Cannot append padding to an infinite stream");
-                }
-
-                appendStartSample = int.MaxValue;
-                ChannelSamples = int.MaxValue;
-                TotalSamples = int.MaxValue;
-            }
-            else
-            {
-                appendStartSample = stream.ChannelSamples + prependedSamples;
-                ChannelSamples = stream.ChannelSamples + prependedSamples + appendedSamples;
-                TotalSamples = stream.Channels * ChannelSamples;
-            }
-
-            Reset();
-        }
-
-        public override void Reset()
-        {
-            Position = 0;
-            stream.Reset();
-        }
-
-        public override void Seek(int position)
-        {
-            Position = GeneralMath.Clamp(position, 0, ChannelSamples);
-            stream.Seek(Math.Max(0, Position - prependedSamples));
-        }
-
-        public override int Read(float[] data, int offset, int count)
-        {
-            if (ChannelSamples != int.MaxValue)
-            {
-                count = Math.Min(count, Channels * (ChannelSamples - Position));
-            }
-
-            int remainingSamples = count;
-
-            while (remainingSamples > 0)
-            {
-                if (Position < prependedSamples)
-                {
-                    int copySamples = Math.Min(remainingSamples, Channels * (prependedSamples - Position));
-
-                    Array.Clear(data, offset, copySamples);
-
-                    Position += copySamples / Channels;
-                    offset += copySamples;
-                    remainingSamples -= copySamples;
-                }
-                else if (Position < appendStartSample)
-                {
-                    //Not worried about int overflow here - we're protected by the limits of absurdity
-                    int samplesToCopy = Math.Min(remainingSamples, Channels * (appendStartSample - Position));
-
-                    int copySamples = stream.Read(data, offset, samplesToCopy);
-
-                    if (copySamples == 0)
-                    {
-                        Debug.LogWarning("Didn't finish reading expected samples and hit the end.");
-                        break;
-                    }
-
-                    Position += copySamples / Channels;
-                    offset += copySamples;
-                    remainingSamples -= copySamples;
-                }
-                else
-                {
-                    //Not worried about int overflow here - we're protected by the limits of absurdity
-                    int copySamples = Math.Min(remainingSamples, Channels * (ChannelSamples - Position));
-
-                    if (copySamples == 0)
-                    {
-                        Debug.LogWarning("Didn't finish reading expected samples and hit the end.");
-                        break;
-                    }
-
-                    Array.Clear(data, offset, copySamples);
-
-                    Position += copySamples / Channels;
-                    offset += copySamples;
-                    remainingSamples -= copySamples;
-                }
-            }
-
-            return count - remainingSamples;
-        }
-
-        private IEnumerable<double> _channelRMS = null;
-        public override IEnumerable<double> GetChannelRMS()
-        {
-            if (_channelRMS == null)
-            {
-                switch (rmsBehavior)
-                {
-                    case TransformRMSBehavior.Recalculate:
-                        _channelRMS = this.CalculateRMS();
-                        break;
-
-                    case TransformRMSBehavior.Passthrough:
-                        _channelRMS = stream.GetChannelRMS();
-
-                        if (_channelRMS.Any(double.IsNaN) && ChannelSamples != int.MaxValue)
-                        {
-                            goto case TransformRMSBehavior.Recalculate;
-                        }
-                        break;
-
-                    default:
-                        throw new Exception($"Unexpected rmsBehavior: {rmsBehavior}");
-                }
-            }
-
-            return _channelRMS;
-        }
+        return _channelRMS;
     }
 }

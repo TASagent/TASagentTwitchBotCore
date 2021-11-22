@@ -1,67 +1,64 @@
-﻿using System;
-using System.Collections.Generic;
-using BGC.Mathematics;
+﻿using BGC.Mathematics;
 
-namespace BGC.Audio.AnalyticStreams
+namespace BGC.Audio.AnalyticStreams;
+
+public sealed class BGCStreamConverter : IBGCStream
 {
-    public sealed class BGCStreamConverter : IBGCStream
+    private readonly IAnalyticStream stream;
+
+    public int Channels => 1;
+
+    public int TotalSamples => stream.Samples;
+
+    public int ChannelSamples => stream.Samples;
+
+    public float SamplingRate => (float)stream.SamplingRate;
+
+    private IEnumerable<double>? _channelRMS = null;
+    public IEnumerable<double> GetChannelRMS() => _channelRMS ??= new double[] { stream.GetRMS() };
+
+    private const int BUFFER_SIZE = 512;
+    private readonly Complex64[] buffer = new Complex64[BUFFER_SIZE];
+
+    public BGCStreamConverter(IAnalyticStream stream)
     {
-        private readonly IAnalyticStream stream;
+        this.stream = stream;
+    }
 
-        public int Channels => 1;
+    void IBGCStream.Initialize() => stream.Initialize();
 
-        public int TotalSamples => stream.Samples;
+    public int Read(float[] data, int offset, int count)
+    {
+        int samplesRemaining = count;
 
-        public int ChannelSamples => stream.Samples;
-
-        public float SamplingRate => (float)stream.SamplingRate;
-
-        private IEnumerable<double> _channelRMS = null;
-        public IEnumerable<double> GetChannelRMS() => _channelRMS ??= new double[] { stream.GetRMS() };
-
-        private const int BUFFER_SIZE = 512;
-        private readonly Complex64[] buffer = new Complex64[BUFFER_SIZE];
-
-        public BGCStreamConverter(IAnalyticStream stream)
+        while (samplesRemaining > 0)
         {
-            this.stream = stream;
-        }
+            int samplesRequested = Math.Min(BUFFER_SIZE, samplesRemaining);
+            int samplesRead = stream.Read(buffer, 0, samplesRequested);
 
-        void IBGCStream.Initialize() => stream.Initialize();
-
-        public int Read(float[] data, int offset, int count)
-        {
-            int samplesRemaining = count;
-
-            while (samplesRemaining > 0)
+            if (samplesRead <= 0)
             {
-                int samplesRequested = Math.Min(BUFFER_SIZE, samplesRemaining);
-                int samplesRead = stream.Read(buffer, 0, samplesRequested);
-
-                if (samplesRead <= 0)
-                {
-                    break;
-                }
-
-                for (int i = 0; i < samplesRead; i++)
-                {
-                    data[offset + i] = (float)buffer[i].Real;
-                }
-
-                samplesRemaining -= samplesRead;
-                offset += samplesRead;
+                break;
             }
 
-            return count - samplesRemaining;
+            for (int i = 0; i < samplesRead; i++)
+            {
+                data[offset + i] = (float)buffer[i].Real;
+            }
+
+            samplesRemaining -= samplesRead;
+            offset += samplesRead;
         }
 
-        public void Reset() => stream.Reset();
+        return count - samplesRemaining;
+    }
 
-        public void Seek(int position) => stream.Seek(position);
+    public void Reset() => stream.Reset();
 
-        public void Dispose()
-        {
-            stream?.Dispose();
-        }
+    public void Seek(int position) => stream.Seek(position);
+
+    public void Dispose()
+    {
+        stream?.Dispose();
     }
 }

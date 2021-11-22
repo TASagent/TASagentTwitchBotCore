@@ -1,49 +1,46 @@
-﻿using System;
-using System.Collections.Generic;
-using NAudio.Wave;
+﻿using NAudio.Wave;
 
 
-namespace BGC.Audio.NAudio
+namespace BGC.Audio.NAudio;
+
+public sealed class SampleProviderToBGCStream : IBGCStream
 {
-    public sealed class SampleProviderToBGCStream : IBGCStream
+    private readonly ISampleProvider internalStream;
+
+    public int Channels => internalStream.WaveFormat.Channels;
+
+    public int TotalSamples { get; }
+    public int ChannelSamples { get; }
+
+    public float SamplingRate => internalStream.WaveFormat.SampleRate;
+
+    public SampleProviderToBGCStream(
+        ISampleProvider stream,
+        int channelSamples = int.MaxValue)
     {
-        private readonly ISampleProvider internalStream;
+        internalStream = stream;
 
-        public int Channels => internalStream.WaveFormat.Channels;
+        ChannelSamples = channelSamples;
 
-        public int TotalSamples { get; }
-        public int ChannelSamples { get; }
-
-        public float SamplingRate => internalStream.WaveFormat.SampleRate;
-
-        public SampleProviderToBGCStream(
-            ISampleProvider stream,
-            int channelSamples = int.MaxValue)
+        if (channelSamples == int.MaxValue)
         {
-            internalStream = stream;
-
-            ChannelSamples = channelSamples;
-
-            if (channelSamples == int.MaxValue)
-            {
-                TotalSamples = int.MaxValue;
-            }
-            else
-            {
-                TotalSamples = Channels * channelSamples;
-            }
+            TotalSamples = int.MaxValue;
         }
-
-        public int Read(float[] buffer, int offset, int count) => internalStream.Read(buffer, offset, count);
-
-        public void Initialize() { }
-
-        public void Reset() => throw new NotSupportedException();
-
-        public void Seek(int position) => throw new NotSupportedException();
-
-        public IEnumerable<double> GetChannelRMS() => throw new NotSupportedException();
-
-        public void Dispose() { }
+        else
+        {
+            TotalSamples = Channels * channelSamples;
+        }
     }
+
+    public int Read(float[] buffer, int offset, int count) => internalStream.Read(buffer, offset, count);
+
+    public void Initialize() { }
+
+    public void Reset() => throw new NotSupportedException();
+
+    public void Seek(int position) => throw new NotSupportedException();
+
+    public IEnumerable<double> GetChannelRMS() => throw new NotSupportedException();
+
+    public void Dispose() { }
 }

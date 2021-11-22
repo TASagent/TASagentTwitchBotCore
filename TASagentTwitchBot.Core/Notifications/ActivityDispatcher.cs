@@ -1,162 +1,165 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Channels;
-using System.Threading.Tasks;
+﻿using System.Threading.Channels;
 
 using TASagentTwitchBot.Core.Audio;
 
-namespace TASagentTwitchBot.Core.Notifications
+namespace TASagentTwitchBot.Core.Notifications;
+
+public interface IActivityDispatcher
 {
-    public interface IActivityDispatcher
+    bool ReplayNotification(int index);
+    void QueueActivity(ActivityRequest activity, bool approved);
+    bool UpdatePendingRequest(int index, bool approved);
+
+    void Skip();
+
+}
+
+/// <summary>
+/// Coordinates different requested display features so they don't collide
+/// </summary>
+public class ActivityDispatcher : IActivityDispatcher, IDisposable
+{
+    private readonly ICommunication communication;
+    private readonly IAudioPlayer audioPlayer;
+
+    private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+    private readonly ChannelWriter<ActivityRequest> activityWriter;
+    private readonly ChannelReader<ActivityRequest> activityReader;
+
+    private readonly Dictionary<int, ActivityRequest> activityDict = new Dictionary<int, ActivityRequest>();
+    private readonly Dictionary<int, ActivityRequest> pendingActivityRequests = new Dictionary<int, ActivityRequest>();
+
+    private int nextActivityID = 0;
+    private bool disposedValue;
+    private ActivityRequest? lastFinishedRequest = null;
+
+    public ActivityDispatcher(
+        Config.BotConfiguration botConfig,
+        ICommunication communication,
+        IAudioPlayer audioPlayer)
     {
-        bool ReplayNotification(int index);
-        void QueueActivity(ActivityRequest activity, bool approved);
-        bool UpdatePendingRequest(int index, bool approved);
+        this.communication = communication;
+        this.audioPlayer = audioPlayer;
 
-        void Skip();
+        Channel<ActivityRequest> channel = Channel.CreateUnbounded<ActivityRequest>();
+        activityWriter = channel.Writer;
+        activityReader = channel.Reader;
 
-    }
-
-    /// <summary>
-    /// Coordinates different requested display features so they don't collide
-    /// </summary>
-    public class ActivityDispatcher : IActivityDispatcher, IDisposable
-    {
-        private readonly ICommunication communication;
-        private readonly IAudioPlayer audioPlayer;
-
-        private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-        private readonly ChannelWriter<ActivityRequest> activityWriter;
-        private readonly ChannelReader<ActivityRequest> activityReader;
-
-        private readonly Dictionary<int, ActivityRequest> activityDict = new Dictionary<int, ActivityRequest>();
-        private readonly Dictionary<int, ActivityRequest> pendingActivityRequests = new Dictionary<int, ActivityRequest>();
-
-        private int nextActivityID = 0;
-        private bool disposedValue;
-        private ActivityRequest lastFinishedRequest = null;
-
-        public ActivityDispatcher(
-            ICommunication communication,
-            IAudioPlayer audioPlayer)
+        if (botConfig.UseThreadedMonitors)
         {
-            this.communication = communication;
-            this.audioPlayer = audioPlayer;
-
-            Channel<ActivityRequest> channel = Channel.CreateUnbounded<ActivityRequest>();
-            activityWriter = channel.Writer;
-            activityReader = channel.Reader;
-
+            Task.Run(ListenForActivity);
+        }
+        else
+        {
             ListenForActivity();
         }
+    }
 
-        public async void ListenForActivity()
+    public async void ListenForActivity()
+    {
+        List<Task> taskList = new List<Task>();
+
+        await foreach (ActivityRequest activityRequest in activityReader.ReadAllAsync())
         {
-            List<Task> taskList = new List<Task>();
-
-            await foreach (ActivityRequest activityRequest in activityReader.ReadAllAsync())
+            if (activityRequest.Played)
             {
-                if (activityRequest.Played)
-                {
-                    communication.SendDebugMessage($"Replaying Notification {activityRequest.Id}: {activityRequest}");
-                }
-                else
-                {
-                    activityRequest.Played = true;
-                    communication.SendDebugMessage($"Playing Notification {activityRequest.Id}: {activityRequest}");
-                }
-
-                await activityRequest.Execute().WithCancellation(cancellationTokenSource.Token);
-
-                lastFinishedRequest = activityRequest;
-
-                taskList.Clear();
-
-                //2 second delay between notifications
-                await Task.Delay(2000, cancellationTokenSource.Token);
+                communication.SendDebugMessage($"Replaying Notification {activityRequest.Id}: {activityRequest}");
             }
+            else
+            {
+                activityRequest.Played = true;
+                communication.SendDebugMessage($"Playing Notification {activityRequest.Id}: {activityRequest}");
+            }
+
+            await activityRequest.Execute().WithCancellation(cancellationTokenSource.Token);
+
+            lastFinishedRequest = activityRequest;
+
+            taskList.Clear();
+
+            //2 second delay between notifications
+            await Task.Delay(2000, cancellationTokenSource.Token);
+        }
+    }
+
+    public bool ReplayNotification(int index)
+    {
+        if (index == -1 && lastFinishedRequest is not null)
+        {
+            index = lastFinishedRequest.Id;
         }
 
-        public bool ReplayNotification(int index)
+        if (activityDict.TryGetValue(index, out ActivityRequest? activityRequest))
         {
-            if (index == -1 && lastFinishedRequest != null)
-            {
-                index = lastFinishedRequest.Id;
-            }
+            return activityWriter.TryWrite(activityRequest);
+        }
 
-            if (activityDict.TryGetValue(index, out ActivityRequest activityRequest))
-            {
-                return activityWriter.TryWrite(activityRequest);
-            }
+        return false;
+    }
 
+    public void Skip() => audioPlayer.RequestCancel();
+
+
+    public void QueueActivity(ActivityRequest activity, bool approved)
+    {
+        activity.Id = nextActivityID++;
+
+        if (!approved)
+        {
+            //Submit as request instead
+            pendingActivityRequests.Add(activity.Id, activity);
+            communication.NotifyPendingNotification(activity.Id, activity.ToString()!);
+            return;
+        }
+
+        activityDict.Add(activity.Id, activity);
+        communication.NotifyNotification(activity.Id, activity.ToString()!);
+        activityWriter.TryWrite(activity);
+    }
+
+    public bool UpdatePendingRequest(int index, bool approve)
+    {
+        if (!pendingActivityRequests.TryGetValue(index, out ActivityRequest? activity))
+        {
             return false;
         }
 
-        public void Skip() => audioPlayer.RequestCancel();
+        pendingActivityRequests.Remove(index);
 
-
-        public void QueueActivity(ActivityRequest activity, bool approved)
+        if (approve)
         {
-            activity.Id = nextActivityID++;
-
-            if (!approved)
-            {
-                //Submit as request instead
-                pendingActivityRequests.Add(activity.Id, activity);
-                communication.NotifyPendingNotification(activity.Id, activity.ToString());
-                return;
-            }
-
+            //Queue approved activity
             activityDict.Add(activity.Id, activity);
-            communication.NotifyNotification(activity.Id, activity.ToString());
+            communication.NotifyNotification(activity.Id, activity.ToString()!);
             activityWriter.TryWrite(activity);
         }
 
-        public bool UpdatePendingRequest(int index, bool approve)
+        return true;
+    }
+
+    public void DemandPlayAudioImmediate(AudioRequest audioRequest) =>
+        audioPlayer.DemandPlayAudioImmediate(audioRequest);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposedValue)
         {
-            if (!pendingActivityRequests.TryGetValue(index, out ActivityRequest activity))
+            if (disposing)
             {
-                return false;
+                activityWriter.TryComplete();
+
+                cancellationTokenSource.Cancel();
+                cancellationTokenSource.Dispose();
             }
 
-            pendingActivityRequests.Remove(index);
-
-            if (approve)
-            {
-                //Queue approved activity
-                activityDict.Add(activity.Id, activity);
-                communication.NotifyNotification(activity.Id, activity.ToString());
-                activityWriter.TryWrite(activity);
-            }
-
-            return true;
+            disposedValue = true;
         }
+    }
 
-        public void DemandPlayAudioImmediate(AudioRequest audioRequest) =>
-            audioPlayer.DemandPlayAudioImmediate(audioRequest);
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    activityWriter.TryComplete();
-
-                    cancellationTokenSource.Cancel();
-                    cancellationTokenSource.Dispose();
-                }
-
-                disposedValue = true;
-            }
-        }
-
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

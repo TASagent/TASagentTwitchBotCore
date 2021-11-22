@@ -1,116 +1,113 @@
-using System;
-using System.Collections.Generic;
 using BGC.Mathematics;
 
 using static System.Math;
 
-namespace BGC.Audio.AnalyticStreams
+namespace BGC.Audio.AnalyticStreams;
+
+public sealed class AnalyticWave : IAnalyticStream
 {
-    public sealed class AnalyticWave : IAnalyticStream
+    public double SamplingRate => 44100.0;
+
+    int IAnalyticStream.Samples => int.MaxValue;
+
+    private readonly double frequency;
+    private readonly double amplitude;
+    private readonly double phase;
+
+    private Complex64 partial;
+    private readonly double cyclePartial;
+    private readonly Complex64[] samples;
+    private int position = 0;
+    private int cycles = 0;
+
+    public AnalyticWave(double amplitude, double frequency, double phase = 0.0)
     {
-        public double SamplingRate => 44100.0;
+        this.amplitude = amplitude;
+        this.frequency = frequency;
+        this.phase = phase;
 
-        int IAnalyticStream.Samples => int.MaxValue;
+        double sampleCount = SamplingRate / this.frequency;
+        int intSampleCount = (int)Ceiling(sampleCount) - 1;
 
-        private readonly double frequency;
-        private readonly double amplitude;
-        private readonly double phase;
+        cyclePartial = (2 * PI * this.frequency / SamplingRate) * (intSampleCount - sampleCount);
 
-        private Complex64 partial;
-        private readonly double cyclePartial;
-        private readonly Complex64[] samples;
-        private int position = 0;
-        private int cycles = 0;
+        cycles = 0;
+        partial = Complex64.FromPolarCoordinates(
+            magnitude: 1.0,
+            phase: cycles * cyclePartial);
 
-        public AnalyticWave(double amplitude, double frequency, double phase = 0.0)
+        samples = new Complex64[intSampleCount];
+
+        for (int i = 0; i < samples.Length; i++)
         {
-            this.amplitude = amplitude;
-            this.frequency = frequency;
-            this.phase = phase;
+            samples[i] = Complex64.FromPolarCoordinates(
+                magnitude: this.amplitude,
+                phase: this.phase + 2 * PI * i / sampleCount);
+        }
+    }
 
-            double sampleCount = SamplingRate / this.frequency;
-            int intSampleCount = (int)Ceiling(sampleCount) - 1;
+    void IAnalyticStream.Initialize() { }
 
-            cyclePartial = (2 * PI * this.frequency / SamplingRate ) * (intSampleCount - sampleCount);
+    public int Read(Complex64[] data, int offset, int count)
+    {
+        int samplesToRead = count;
 
-            cycles = 0;
-            partial = Complex64.FromPolarCoordinates(
-                magnitude: 1.0,
-                phase: cycles * cyclePartial);
+        while (samplesToRead > 0)
+        {
+            int readingSamples = Min(samplesToRead, samples.Length - position);
 
-            samples = new Complex64[intSampleCount];
-
-            for (int i = 0; i < samples.Length; i++)
+            for (int i = 0; i < readingSamples; i++)
             {
-                samples[i] = Complex64.FromPolarCoordinates(
-                    magnitude: this.amplitude,
-                    phase: this.phase + 2 * PI * i / sampleCount);
+                data[offset + i] = samples[position + i] * partial;
+            }
+
+            samplesToRead -= readingSamples;
+            offset += readingSamples;
+            position += readingSamples;
+
+            if (position == samples.Length)
+            {
+                position = 0;
+                cycles++;
+                partial = Complex64.FromPolarCoordinates(
+                    magnitude: 1.0,
+                    phase: cycles * cyclePartial);
             }
         }
 
-        void IAnalyticStream.Initialize() { }
+        return count;
+    }
 
-        public int Read(Complex64[] data, int offset, int count)
+    public void Reset()
+    {
+        position = 0;
+        cycles = 0;
+        partial = Complex64.FromPolarCoordinates(
+            magnitude: 1.0,
+            phase: cycles * cyclePartial);
+    }
+
+    public void Seek(int position)
+    {
+        if (position >= 0)
         {
-            int samplesToRead = count;
-
-            while (samplesToRead > 0)
-            {
-                int readingSamples = Min(samplesToRead, samples.Length - position);
-
-                for (int i = 0; i < readingSamples; i++)
-                {
-                    data[offset + i] = samples[position + i] * partial;
-                }
-
-                samplesToRead -= readingSamples;
-                offset += readingSamples;
-                position += readingSamples;
-
-                if (position == samples.Length)
-                {
-                    position = 0;
-                    cycles++;
-                    partial = Complex64.FromPolarCoordinates(
-                        magnitude: 1.0,
-                        phase: cycles * cyclePartial);
-                }
-            }
-
-            return count;
+            cycles = position / samples.Length;
+        }
+        else
+        {
+            cycles = (position - samples.Length + 1) / samples.Length;
         }
 
-        public void Reset()
-        {
-            position = 0;
-            cycles = 0;
-            partial = Complex64.FromPolarCoordinates(
-                magnitude: 1.0,
-                phase: cycles * cyclePartial);
-        }
+        this.position = position - cycles * samples.Length;
 
-        public void Seek(int position)
-        {
-            if (position >= 0)
-            {
-                cycles = position / samples.Length;
-            }
-            else
-            {
-                cycles = (position - samples.Length + 1) / samples.Length;
-            }
+        partial = Complex64.FromPolarCoordinates(
+            magnitude: 1.0,
+            phase: cycles * cyclePartial);
+    }
 
-            this.position = position - cycles * samples.Length;
+    public double GetRMS() => amplitude * Sqrt(0.5);
 
-            partial = Complex64.FromPolarCoordinates(
-                magnitude: 1.0,
-                phase: cycles * cyclePartial);
-        }
-
-        public double GetRMS() => amplitude * Sqrt(0.5);
-
-        public void Dispose()
-        {
-        }
+    public void Dispose()
+    {
     }
 }

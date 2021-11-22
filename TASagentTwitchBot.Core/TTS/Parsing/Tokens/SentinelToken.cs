@@ -1,14 +1,12 @@
-﻿namespace TASagentTwitchBot.Core.TTS.Parsing.Tokens
+﻿namespace TASagentTwitchBot.Core.TTS.Parsing.Tokens;
+
+public class SentinelToken : ParsingUnit
 {
-    public class SentinelToken : ParsingUnit
+    public SentinelToken(int position)
+        : base(position)
     {
-        public SentinelToken(int position)
-            : base(position)
-        {
 
-        }
-
-        public override string ToString() => "$";
     }
 
+    public override string ToString() => "$";
 }

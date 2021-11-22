@@ -1,9 +1,8 @@
-﻿namespace BGC.Audio
+﻿namespace BGC.Audio;
+
+public enum AudioChannel
 {
-    public enum AudioChannel
-    {
-        Left = 0,
-        Right,
-        Both
-    }
+    Left = 0,
+    Right,
+    Both
 }

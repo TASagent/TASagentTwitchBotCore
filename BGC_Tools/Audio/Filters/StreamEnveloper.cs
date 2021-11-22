@@ -1,142 +1,138 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using BGC.Mathematics;
+﻿using BGC.Mathematics;
 using BGC.Audio.Envelopes;
 
-namespace BGC.Audio.Filters
+namespace BGC.Audio.Filters;
+
+/// <summary>
+/// Applies the specified envelope to the underlying stream.
+/// </summary>
+public class StreamEnveloper : SimpleBGCFilter
 {
-    /// <summary>
-    /// Applies the specified envelope to the underlying stream.
-    /// </summary>
-    public class StreamEnveloper : SimpleBGCFilter
+    public override int Channels => stream.Channels;
+
+    public override int TotalSamples { get; }
+    public override int ChannelSamples { get; }
+
+    private readonly IBGCEnvelopeStream envelopeStream;
+
+    private readonly TransformRMSBehavior rmsBehavior;
+    private int position = 0;
+
+    private const int BUFFER_SIZE = 512;
+    private readonly float[] buffer = new float[BUFFER_SIZE];
+
+    public StreamEnveloper(
+        IBGCStream stream,
+        IBGCEnvelopeStream envelopeStream,
+        TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
+        : base(stream)
     {
-        public override int Channels => stream.Channels;
+        this.rmsBehavior = rmsBehavior;
+        this.envelopeStream = envelopeStream;
 
-        public override int TotalSamples { get; }
-        public override int ChannelSamples { get; }
+        ChannelSamples = Math.Min(envelopeStream.Samples, stream.ChannelSamples);
 
-        private readonly IBGCEnvelopeStream envelopeStream;
-
-        private readonly TransformRMSBehavior rmsBehavior;
-        private int position = 0;
-
-        private const int BUFFER_SIZE = 512;
-        private readonly float[] buffer = new float[BUFFER_SIZE];
-
-        public StreamEnveloper(
-            IBGCStream stream,
-            IBGCEnvelopeStream envelopeStream,
-            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
-            : base(stream)
+        if (ChannelSamples == int.MaxValue)
         {
-            this.rmsBehavior = rmsBehavior;
-            this.envelopeStream = envelopeStream;
+            TotalSamples = int.MaxValue;
+        }
+        else
+        {
+            TotalSamples = Channels * ChannelSamples;
+        }
+    }
 
-            ChannelSamples = Math.Min(envelopeStream.Samples, stream.ChannelSamples);
+    public override void Reset()
+    {
+        position = 0;
+        stream.Reset();
+        envelopeStream.Reset();
+    }
 
-            if (ChannelSamples == int.MaxValue)
-            {
-                TotalSamples = int.MaxValue;
-            }
-            else
-            {
-                TotalSamples = Channels * ChannelSamples;
-            }
+    public override void Seek(int position)
+    {
+        position = GeneralMath.Clamp(position, 0, ChannelSamples);
+
+        this.position = position;
+        stream.Seek(position);
+        envelopeStream.Seek(position);
+    }
+
+    public override int Read(float[] data, int offset, int count)
+    {
+        int samplesToRead = Math.Min(
+            ChannelSamples - position,
+            count / Channels);
+
+        int readSamples = stream.Read(data, offset, Channels * samplesToRead);
+
+        if (readSamples == 0)
+        {
+            //No more stream samples
+            return 0;
         }
 
-        public override void Reset()
+        int envelopeSamplesRemaining = readSamples / Channels;
+
+        while (envelopeSamplesRemaining > 0)
         {
-            position = 0;
-            stream.Reset();
-            envelopeStream.Reset();
-        }
+            int envelopeSamplesToRead = Math.Min(BUFFER_SIZE, envelopeSamplesRemaining);
 
-        public override void Seek(int position)
-        {
-            position = GeneralMath.Clamp(position, 0, ChannelSamples);
+            int envelopeSamplesRead = envelopeStream.Read(buffer, 0, envelopeSamplesToRead);
 
-            this.position = position;
-            stream.Seek(position);
-            envelopeStream.Seek(position);
-        }
-
-        public override int Read(float[] data, int offset, int count)
-        {
-            int samplesToRead = Math.Min(
-                ChannelSamples - position,
-                count / Channels);
-
-            int readSamples = stream.Read(data, offset, Channels * samplesToRead);
-
-            if (readSamples == 0)
+            if (envelopeSamplesRead == 0)
             {
-                //No more stream samples
-                return 0;
+                //No more envelope samples
+                return readSamples - Channels * envelopeSamplesRemaining;
             }
 
-            int envelopeSamplesRemaining = readSamples / Channels;
-
-            while (envelopeSamplesRemaining > 0)
+            for (int i = 0; i < envelopeSamplesRead; i++)
             {
-                int envelopeSamplesToRead = Math.Min(BUFFER_SIZE, envelopeSamplesRemaining);
-
-                int envelopeSamplesRead = envelopeStream.Read(buffer, 0, envelopeSamplesToRead);
-
-                if (envelopeSamplesRead == 0)
+                for (int chan = 0; chan < Channels; chan++)
                 {
-                    //No more envelope samples
-                    return readSamples - Channels * envelopeSamplesRemaining;
+                    data[offset + Channels * i + chan] *= buffer[i];
                 }
+            }
 
-                for (int i = 0; i < envelopeSamplesRead; i++)
-                {
-                    for (int chan = 0; chan < Channels; chan++)
+            envelopeSamplesRemaining -= envelopeSamplesRead;
+            offset += Channels * envelopeSamplesRead;
+            position += envelopeSamplesRead;
+        }
+
+
+        return readSamples;
+    }
+
+    protected override void _Initialize()
+    {
+        envelopeStream.Initialize();
+    }
+
+    private IEnumerable<double>? _channelRMS = null;
+    public override IEnumerable<double> GetChannelRMS()
+    {
+        if (_channelRMS is null)
+        {
+            switch (rmsBehavior)
+            {
+                case TransformRMSBehavior.Recalculate:
+                    _channelRMS = this.CalculateRMS();
+                    break;
+
+                case TransformRMSBehavior.Passthrough:
+                    _channelRMS = stream.GetChannelRMS();
+
+                    if (_channelRMS.Any(double.IsNaN) && ChannelSamples != int.MaxValue)
                     {
-                        data[offset + Channels * i + chan] *= buffer[i];
+                        goto case TransformRMSBehavior.Recalculate;
                     }
-                }
+                    break;
 
-                envelopeSamplesRemaining -= envelopeSamplesRead;
-                offset += Channels * envelopeSamplesRead;
-                position += envelopeSamplesRead;
+                default:
+                    throw new Exception($"Unexpected rmsBehavior: {rmsBehavior}");
             }
-
-
-            return readSamples;
         }
 
-        protected override void _Initialize()
-        {
-            envelopeStream.Initialize();
-        }
-
-        private IEnumerable<double> _channelRMS = null;
-        public override IEnumerable<double> GetChannelRMS()
-        {
-            if (_channelRMS == null)
-            {
-                switch (rmsBehavior)
-                {
-                    case TransformRMSBehavior.Recalculate:
-                        _channelRMS = this.CalculateRMS();
-                        break;
-
-                    case TransformRMSBehavior.Passthrough:
-                        _channelRMS = stream.GetChannelRMS();
-
-                        if (_channelRMS.Any(double.IsNaN) && ChannelSamples != int.MaxValue)
-                        {
-                            goto case TransformRMSBehavior.Recalculate;
-                        }
-                        break;
-
-                    default:
-                        throw new Exception($"Unexpected rmsBehavior: {rmsBehavior}");
-                }
-            }
-
-            return _channelRMS;
-        }
+        return _channelRMS;
     }
 }

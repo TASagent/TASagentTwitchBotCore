@@ -1,168 +1,163 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿namespace BGC.Audio.Filters;
 
-namespace BGC.Audio.Filters
+/// <summary>
+/// Takes multiple streams and applies each to a different channel in the output
+/// </summary>
+public class StreamMergeFilter : BGCFilter
 {
-    /// <summary>
-    /// Takes multiple streams and applies each to a different channel in the output
-    /// </summary>
-    public class StreamMergeFilter : BGCFilter
+    private readonly List<IBGCStream> streams = new List<IBGCStream>();
+    public override IEnumerable<IBGCStream> InternalStreams => streams;
+
+    public override int Channels => streams.Count;
+
+
+    private int _totalSampleCount = 0;
+    public override int TotalSamples => _totalSampleCount;
+
+    private int _channelSampleCount = 0;
+    public override int ChannelSamples => _channelSampleCount;
+
+    private float _samplingRate;
+    public override float SamplingRate => _samplingRate;
+
+    private const int BUFFER_SIZE = 512;
+    private readonly float[] buffer = new float[BUFFER_SIZE];
+
+    public StreamMergeFilter()
     {
-        private readonly List<IBGCStream> streams = new List<IBGCStream>();
-        public override IEnumerable<IBGCStream> InternalStreams => streams;
+        UpdateStats();
+    }
 
-        public override int Channels => streams.Count;
+    public StreamMergeFilter(params IBGCStream[] streams)
+    {
+        AddStreams(streams);
+    }
 
+    public StreamMergeFilter(IEnumerable<IBGCStream> streams)
+    {
+        AddStreams(streams);
+    }
 
-        private int _totalSampleCount = 0;
-        public override int TotalSamples => _totalSampleCount;
+    public void AddStream(IBGCStream stream)
+    {
+        streams.Add(stream);
+        UpdateStats();
+    }
 
-        private int _channelSampleCount = 0;
-        public override int ChannelSamples => _channelSampleCount;
+    public void AddStreams(IEnumerable<IBGCStream> streams)
+    {
+        this.streams.AddRange(streams);
+        UpdateStats();
+    }
 
-        private float _samplingRate;
-        public override float SamplingRate => _samplingRate;
+    public override int Read(float[] data, int offset, int count)
+    {
+        int samplesRemaining = count;
 
-        private const int BUFFER_SIZE = 512;
-        private readonly float[] buffer = new float[BUFFER_SIZE];
-
-        public StreamMergeFilter()
+        do
         {
-            UpdateStats();
-        }
+            int channelSamples = samplesRemaining / Channels;
+            int copySamples = Math.Min(BUFFER_SIZE, channelSamples);
+            int maxReadChannelSamples = 0;
 
-        public StreamMergeFilter(params IBGCStream[] streams)
-        {
-            AddStreams(streams);
-        }
-
-        public StreamMergeFilter(IEnumerable<IBGCStream> streams)
-        {
-            AddStreams(streams);
-        }
-
-        public void AddStream(IBGCStream stream)
-        {
-            streams.Add(stream);
-            UpdateStats();
-        }
-
-        public void AddStreams(IEnumerable<IBGCStream> streams)
-        {
-            this.streams.AddRange(streams);
-            UpdateStats();
-        }
-
-        public override int Read(float[] data, int offset, int count)
-        {
-            int samplesRemaining = count;
-
-            do
+            for (int i = 0; i < Channels; i++)
             {
-                int channelSamples = samplesRemaining / Channels;
-                int copySamples = Math.Min(BUFFER_SIZE, channelSamples);
-                int maxReadChannelSamples = 0;
+                int readChannelSamples = streams[i].Read(buffer, 0, copySamples);
+                maxReadChannelSamples = Math.Max(maxReadChannelSamples, readChannelSamples);
 
-                for (int i = 0; i < Channels; i++)
+                for (int j = 0; j < readChannelSamples; j++)
                 {
-                    int readChannelSamples = streams[i].Read(buffer, 0, copySamples);
-                    maxReadChannelSamples = Math.Max(maxReadChannelSamples, readChannelSamples);
-
-                    for (int j = 0; j < readChannelSamples; j++)
-                    {
-                        data[offset + Channels * j + i] = buffer[j];
-                    }
+                    data[offset + Channels * j + i] = buffer[j];
                 }
-
-                offset += maxReadChannelSamples * Channels;
-                samplesRemaining -= maxReadChannelSamples * Channels;
-
-                if (maxReadChannelSamples < copySamples)
-                {
-                    break;
-                }
-
             }
-            while (samplesRemaining > 0);
 
-            return count - samplesRemaining;
-        }
+            offset += maxReadChannelSamples * Channels;
+            samplesRemaining -= maxReadChannelSamples * Channels;
 
-        public override void Reset() => streams.ForEach(x => x.Reset());
-
-        public override void Seek(int position) => streams.ForEach(x => x.Seek(position));
-
-        private void UpdateStats()
-        {
-            if (streams.Count > 0)
+            if (maxReadChannelSamples < copySamples)
             {
-                if (streams.Select(x => x.Channels).Max() != 1)
-                {
-                    throw new StreamCompositionException("StreamMergeFilter requires all streams have one channel each.");
-                }
+                break;
+            }
 
-                IEnumerable<float> samplingRates = streams.Select(x => x.SamplingRate);
-                _samplingRate = samplingRates.Max();
+        }
+        while (samplesRemaining > 0);
 
-                if (_samplingRate != samplingRates.Min())
-                {
-                    throw new StreamCompositionException("StreamMergeFilter requires all streams have the same samplingRate.");
-                }
+        return count - samplesRemaining;
+    }
 
-                IEnumerable<int> channelSampleCounts = streams.Select(x => x.ChannelSamples);
-                _channelSampleCount = channelSampleCounts.Max();
-                if (_channelSampleCount != channelSampleCounts.Min())
-                {
-                    throw new StreamCompositionException("StreamMergeFilter requires all streams have the same number of samples.");
-                }
+    public override void Reset() => streams.ForEach(x => x.Reset());
 
-                if (_channelSampleCount == int.MaxValue)
-                {
-                    _totalSampleCount = int.MaxValue;
-                }
-                else
-                {
-                    _totalSampleCount = Channels * _channelSampleCount;
-                }
+    public override void Seek(int position) => streams.ForEach(x => x.Seek(position));
 
-                _channelRMS = null;
+    private void UpdateStats()
+    {
+        if (streams.Count > 0)
+        {
+            if (streams.Select(x => x.Channels).Max() != 1)
+            {
+                throw new StreamCompositionException("StreamMergeFilter requires all streams have one channel each.");
+            }
+
+            IEnumerable<float> samplingRates = streams.Select(x => x.SamplingRate);
+            _samplingRate = samplingRates.Max();
+
+            if (_samplingRate != samplingRates.Min())
+            {
+                throw new StreamCompositionException("StreamMergeFilter requires all streams have the same samplingRate.");
+            }
+
+            IEnumerable<int> channelSampleCounts = streams.Select(x => x.ChannelSamples);
+            _channelSampleCount = channelSampleCounts.Max();
+            if (_channelSampleCount != channelSampleCounts.Min())
+            {
+                throw new StreamCompositionException("StreamMergeFilter requires all streams have the same number of samples.");
+            }
+
+            if (_channelSampleCount == int.MaxValue)
+            {
+                _totalSampleCount = int.MaxValue;
             }
             else
             {
-                _channelSampleCount = 0;
-                _totalSampleCount = 0;
-                _samplingRate = 44100f;
-                _channelRMS = null;
+                _totalSampleCount = Channels * _channelSampleCount;
             }
+
+            _channelRMS = null;
         }
-
-        public static StreamMergeFilter SafeMerge(params IBGCStream[] streams) =>
-            SafeMerge(streams as IEnumerable<IBGCStream>);
-
-        public static StreamMergeFilter SafeMerge(IEnumerable<IBGCStream> streams)
+        else
         {
-            IEnumerable<int> channelSamples = streams.Select(x => x.ChannelSamples);
-            int maxChannelSampleCount = channelSamples.Max();
-            if (maxChannelSampleCount == channelSamples.Min())
-            {
-                return new StreamMergeFilter(streams);
-            }
-
-            IEnumerable<IBGCStream> inputStreams = streams.Select(x => new StreamCenterer(x, 0, maxChannelSampleCount - x.ChannelSamples));
-            return new StreamMergeFilter(inputStreams);
+            _channelSampleCount = 0;
+            _totalSampleCount = 0;
+            _samplingRate = 44100f;
+            _channelRMS = null;
         }
+    }
 
+    public static StreamMergeFilter SafeMerge(params IBGCStream[] streams) =>
+        SafeMerge(streams as IEnumerable<IBGCStream>);
 
-        private IEnumerable<double> _channelRMS = null;
-        public override IEnumerable<double> GetChannelRMS()
+    public static StreamMergeFilter SafeMerge(IEnumerable<IBGCStream> streams)
+    {
+        IEnumerable<int> channelSamples = streams.Select(x => x.ChannelSamples);
+        int maxChannelSampleCount = channelSamples.Max();
+        if (maxChannelSampleCount == channelSamples.Min())
         {
-            if (_channelRMS == null)
-            {
-                _channelRMS = streams.Select(x => x.GetChannelRMS().First());
-            }
-
-            return _channelRMS;
+            return new StreamMergeFilter(streams);
         }
+
+        IEnumerable<IBGCStream> inputStreams = streams.Select(x => new StreamCenterer(x, 0, maxChannelSampleCount - x.ChannelSamples));
+        return new StreamMergeFilter(inputStreams);
+    }
+
+
+    private IEnumerable<double>? _channelRMS = null;
+    public override IEnumerable<double> GetChannelRMS()
+    {
+        if (_channelRMS is null)
+        {
+            _channelRMS = streams.Select(x => x.GetChannelRMS().First());
+        }
+
+        return _channelRMS;
     }
 }

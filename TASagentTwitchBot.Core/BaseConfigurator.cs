@@ -1,422 +1,342 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using NAudio.CoreAudioApi;
+﻿using NAudio.CoreAudioApi;
 
-namespace TASagentTwitchBot.Core
+namespace TASagentTwitchBot.Core;
+
+public abstract class BaseConfigurator : IConfigurator
 {
-    public abstract class BaseConfigurator : IConfigurator
+    protected readonly Config.BotConfiguration botConfig;
+
+    public BaseConfigurator(
+        Config.BotConfiguration botConfig,
+        ICommunication communication,
+        ErrorHandler errorHandler)
     {
-        protected readonly Config.BotConfiguration botConfig;
+        this.botConfig = botConfig;
 
-        public BaseConfigurator(
-            Config.BotConfiguration botConfig,
-            ICommunication communication,
-            ErrorHandler errorHandler)
+        //Assign library log handlers
+        BGC.Debug.ExceptionCallback += errorHandler.LogExternalException;
+
+        BGC.Debug.LogCallback += communication.SendDebugMessage;
+        BGC.Debug.LogWarningCallback += communication.SendWarningMessage;
+        BGC.Debug.LogErrorCallback += communication.SendErrorMessage;
+    }
+
+    public abstract Task<bool> VerifyConfigured();
+
+    protected void WriteError(string message)
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine($"\nERROR:   {message}\n");
+        Console.ForegroundColor = ConsoleColor.Gray;
+    }
+
+    protected void WriteWarning(string message)
+    {
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine($"\nWARNING: {message}\n");
+        Console.ForegroundColor = ConsoleColor.Gray;
+    }
+
+    protected void WritePrompt(string message)
+    {
+        Console.Write($"Enter {message}:\n    > ");
+    }
+
+    protected void WriteMessage(string message)
+    {
+        Console.WriteLine(message);
+    }
+
+    protected bool ConfigureTwitchClient()
+    {
+        bool successful = false;
+
+        if (string.IsNullOrEmpty(botConfig.TwitchClientId))
         {
-            this.botConfig = botConfig;
+            WritePrompt("Twitch Client ID received from https://dev.twitch.tv/console/apps ");
 
-            //Assign library log handlers
-            BGC.Debug.ExceptionCallback += errorHandler.LogExternalException;
+            string clientID = Console.ReadLine()!.Trim();
 
-            BGC.Debug.LogCallback += communication.SendDebugMessage;
-            BGC.Debug.LogWarningCallback += communication.SendWarningMessage;
-            BGC.Debug.LogErrorCallback += communication.SendErrorMessage;
-        }
-
-        public abstract Task<bool> VerifyConfigured();
-
-        protected void WriteError(string message)
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"\nERROR:   {message}\n");
-            Console.ForegroundColor = ConsoleColor.Gray;
-        }
-
-        protected void WriteWarning(string message)
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"\nWARNING: {message}\n");
-            Console.ForegroundColor = ConsoleColor.Gray;
-        }
-
-        protected void WritePrompt(string message)
-        {
-            Console.Write($"Enter {message}:\n    > ");
-        }
-
-        protected void WriteMessage(string message)
-        {
-            Console.WriteLine(message);
-        }
-
-        protected bool ConfigureTwitchClient()
-        {
-            bool successful = false;
-
-            if (string.IsNullOrEmpty(botConfig.TwitchClientId))
+            if (!string.IsNullOrEmpty(clientID))
             {
-                WritePrompt("Twitch Client ID received from https://dev.twitch.tv/console/apps ");
-
-                string clientID = Console.ReadLine()?.Trim();
-
-                if (!string.IsNullOrEmpty(clientID))
-                {
-                    botConfig.TwitchClientId = clientID;
-                    botConfig.Serialize();
-                }
-                else
-                {
-                    WriteError("Empty Twitch ClientID received.");
-                    successful = false;
-                }
+                botConfig.TwitchClientId = clientID;
+                botConfig.Serialize();
             }
-
-            if (string.IsNullOrEmpty(botConfig.TwitchClientSecret))
+            else
             {
-                WritePrompt("Twitch Client Secret received from https://dev.twitch.tv/console/apps ");
-                string clientSecret = Console.ReadLine()?.Trim();
-
-                if (!string.IsNullOrEmpty(clientSecret))
-                {
-                    botConfig.TwitchClientSecret = clientSecret;
-                    botConfig.Serialize();
-                }
-                else
-                {
-                    WriteError("Empty Twitch Client Secret received.");
-                    successful = false;
-                }
+                WriteError("Empty Twitch ClientID received.");
+                successful = false;
             }
-
-            return successful;
         }
 
-        protected async Task<bool> ConfigureBroadcasterAccount(
-            API.Twitch.IBroadcasterTokenValidator broadcasterTokenValidator,
-            API.Twitch.HelixHelper helixHelper)
+        if (string.IsNullOrEmpty(botConfig.TwitchClientSecret))
         {
-            bool successful = true;
+            WritePrompt("Twitch Client Secret received from https://dev.twitch.tv/console/apps ");
+            string clientSecret = Console.ReadLine()!.Trim();
 
-            if (string.IsNullOrEmpty(botConfig.Broadcaster))
+            if (!string.IsNullOrEmpty(clientSecret))
             {
-                WritePrompt("Broadcaster Username");
-
-                string inputUserName = Console.ReadLine()?.Trim();
-
-                if (!string.IsNullOrEmpty(inputUserName))
-                {
-                    botConfig.Broadcaster = inputUserName;
-                    botConfig.Serialize();
-                }
-                else
-                {
-                    WriteError("No Broadcaster Username received.");
-                    successful = false;
-                }
+                botConfig.TwitchClientSecret = clientSecret;
+                botConfig.Serialize();
             }
-
-            if (!string.IsNullOrEmpty(botConfig.TwitchClientId) &&
-                !string.IsNullOrEmpty(botConfig.TwitchClientSecret) &&
-                !string.IsNullOrEmpty(botConfig.Broadcaster))
+            else
             {
-                if (await broadcasterTokenValidator.TryToConnect())
+                WriteError("Empty Twitch Client Secret received.");
+                successful = false;
+            }
+        }
+
+        return successful;
+    }
+
+    protected async Task<bool> ConfigureBroadcasterAccount(
+        API.Twitch.IBroadcasterTokenValidator broadcasterTokenValidator,
+        API.Twitch.HelixHelper helixHelper)
+    {
+        bool successful = true;
+
+        if (string.IsNullOrEmpty(botConfig.Broadcaster))
+        {
+            WritePrompt("Broadcaster Username");
+
+            string inputUserName = Console.ReadLine()!.Trim();
+
+            if (!string.IsNullOrEmpty(inputUserName))
+            {
+                botConfig.Broadcaster = inputUserName;
+                botConfig.Serialize();
+            }
+            else
+            {
+                WriteError("No Broadcaster Username received.");
+                successful = false;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(botConfig.TwitchClientId) &&
+            !string.IsNullOrEmpty(botConfig.TwitchClientSecret) &&
+            !string.IsNullOrEmpty(botConfig.Broadcaster))
+        {
+            if (await broadcasterTokenValidator.TryToConnect())
+            {
+                //Set broadcasterID if it's not set
+                if (string.IsNullOrEmpty(botConfig.BroadcasterId))
                 {
-                    //Set broadcasterID if it's not set
-                    if (string.IsNullOrEmpty(botConfig.BroadcasterId))
+                    //Fetch the Broadcaster ID
+                    API.Twitch.TwitchUsers? userData = await helixHelper.GetUsers(null, new List<string>() { botConfig.Broadcaster }) ??
+                        throw new Exception("Unable to get User Data");
+
+                    if (userData.Data is not null && userData.Data.Count > 0)
                     {
-                        //Fetch the Broadcaster ID
-                        API.Twitch.TwitchUsers userData = await helixHelper.GetUsers(null, new List<string>() { botConfig.Broadcaster });
-
-                        if (userData.Data is not null && userData.Data.Count > 0)
-                        {
-                            botConfig.BroadcasterId = userData.Data[0].ID;
-                            botConfig.Serialize();
-                        }
-                        else
-                        {
-                            WriteError("Unable to fetch BroadcasterId.  Please check broadcaster credentials and try again.");
-                            successful = false;
-                        }
+                        botConfig.BroadcasterId = userData.Data[0].ID;
+                        botConfig.Serialize();
+                    }
+                    else
+                    {
+                        WriteError("Unable to fetch BroadcasterId.  Please check broadcaster credentials and try again.");
+                        successful = false;
                     }
                 }
-                else
-                {
-                    WriteError("Unable to connect to Twitch.  Please check broadcaster credentials and try again.");
-                    successful = false;
-                }
             }
             else
             {
-                WriteWarning("Unable to fetch Broadcaster access tokens without ClientId, ClientSecret, and BroadcasterName. Skipping");
+                WriteError("Unable to connect to Twitch.  Please check broadcaster credentials and try again.");
                 successful = false;
             }
-
-            return successful;
+        }
+        else
+        {
+            WriteWarning("Unable to fetch Broadcaster access tokens without ClientId, ClientSecret, and BroadcasterName. Skipping");
+            successful = false;
         }
 
-        protected async Task<bool> ConfigureBotAccount(API.Twitch.IBotTokenValidator botTokenValidator)
+        return successful;
+    }
+
+    protected async Task<bool> ConfigureBotAccount(API.Twitch.IBotTokenValidator botTokenValidator)
+    {
+        bool successful = true;
+
+        if (string.IsNullOrEmpty(botConfig.BotName))
         {
-            bool successful = true;
+            WritePrompt("Bot Username");
 
-            if (string.IsNullOrEmpty(botConfig.BotName))
+            string inputUserName = Console.ReadLine()!.Trim();
+
+            if (!string.IsNullOrEmpty(inputUserName))
             {
-                WritePrompt("Bot Username");
-
-                string inputUserName = Console.ReadLine()?.Trim();
-
-                if (!string.IsNullOrEmpty(inputUserName))
-                {
-                    botConfig.BotName = inputUserName;
-                    botConfig.Serialize();
-                }
-                else
-                {
-                    WriteError("Empty Bot Username received.");
-                    successful = false;
-                }
-            }
-
-            if (!string.IsNullOrEmpty(botConfig.TwitchClientId) &&
-                !string.IsNullOrEmpty(botConfig.TwitchClientSecret) &&
-                !string.IsNullOrEmpty(botConfig.BotName))
-            {
-                if (await botTokenValidator.TryToConnect())
-                {
-                    //Success
-                }
-                else
-                {
-                    WriteError("Unable to connect to Twitch.  Please check bot credentials and try again.");
-                    successful = false;
-                }
+                botConfig.BotName = inputUserName;
+                botConfig.Serialize();
             }
             else
             {
-                WriteWarning("Unable to fetch bot access tokens without ClientId, ClientSecret, and BotName. Skipping.");
+                WriteError("Empty Bot Username received.");
                 successful = false;
             }
-
-            return successful;
         }
 
-
-        protected bool ConfigurePasswords()
+        if (!string.IsNullOrEmpty(botConfig.TwitchClientId) &&
+            !string.IsNullOrEmpty(botConfig.TwitchClientSecret) &&
+            !string.IsNullOrEmpty(botConfig.BotName))
         {
+            if (await botTokenValidator.TryToConnect())
+            {
+                //Success
+            }
+            else
+            {
+                WriteError("Unable to connect to Twitch.  Please check bot credentials and try again.");
+                successful = false;
+            }
+        }
+        else
+        {
+            WriteWarning("Unable to fetch bot access tokens without ClientId, ClientSecret, and BotName. Skipping.");
+            successful = false;
+        }
+
+        return successful;
+    }
+
+
+    protected bool ConfigurePasswords()
+    {
 #pragma warning disable CS0618 // Type or member is obsolete - Conversion of old Password field
 
-            bool successful = true;
-            if (string.IsNullOrEmpty(botConfig.AuthConfiguration.Admin.PasswordHash))
+        bool successful = true;
+        if (string.IsNullOrEmpty(botConfig.AuthConfiguration.Admin.PasswordHash))
+        {
+            //Check obsolete field
+            if (!string.IsNullOrEmpty(botConfig.AuthConfiguration.Admin.Password))
             {
-                //Check obsolete field
-                if (!string.IsNullOrEmpty(botConfig.AuthConfiguration.Admin.Password))
-                {
-                    //Convert the obsolete field
-                    botConfig.AuthConfiguration.Admin.PasswordHash = Cryptography.HashPassword(botConfig.AuthConfiguration.Admin.Password);
-                    botConfig.AuthConfiguration.Admin.Password = null;
-                    botConfig.Serialize();
+                //Convert the obsolete field
+                botConfig.AuthConfiguration.Admin.PasswordHash = Cryptography.HashPassword(botConfig.AuthConfiguration.Admin.Password);
+                botConfig.AuthConfiguration.Admin.Password = "";
+                botConfig.Serialize();
 
-                    WriteMessage("Converted Old Admin Password");
+                WriteMessage("Converted Old Admin Password");
+            }
+            else
+            {
+                WritePrompt("Admin password for bot control");
+
+                string pass = Console.ReadLine()!.Trim();
+
+                if (!string.IsNullOrEmpty(pass))
+                {
+                    botConfig.AuthConfiguration.Admin.PasswordHash = Cryptography.HashPassword(pass);
+                    botConfig.Serialize();
                 }
                 else
                 {
-                    WritePrompt("Admin password for bot control");
-
-                    string pass = Console.ReadLine()?.Trim();
-
-                    if (!string.IsNullOrEmpty(pass))
-                    {
-                        botConfig.AuthConfiguration.Admin.PasswordHash = Cryptography.HashPassword(pass);
-                        botConfig.Serialize();
-                    }
-                    else
-                    {
-                        WriteError("Empty Admin Password received.");
-                        successful = false;
-                    }
+                    WriteError("Empty Admin Password received.");
+                    successful = false;
                 }
             }
+        }
 
-            if (string.IsNullOrEmpty(botConfig.AuthConfiguration.Privileged.PasswordHash))
+        if (string.IsNullOrEmpty(botConfig.AuthConfiguration.Privileged.PasswordHash))
+        {
+            //Check obsolete field
+            if (!string.IsNullOrEmpty(botConfig.AuthConfiguration.Privileged.Password))
             {
-                //Check obsolete field
-                if (!string.IsNullOrEmpty(botConfig.AuthConfiguration.Privileged.Password))
-                {
-                    //Convert the obsolete field
-                    botConfig.AuthConfiguration.Privileged.PasswordHash = Cryptography.HashPassword(botConfig.AuthConfiguration.Privileged.Password);
-                    botConfig.AuthConfiguration.Privileged.Password = null;
-                    botConfig.Serialize();
+                //Convert the obsolete field
+                botConfig.AuthConfiguration.Privileged.PasswordHash = Cryptography.HashPassword(botConfig.AuthConfiguration.Privileged.Password);
+                botConfig.AuthConfiguration.Privileged.Password = "";
+                botConfig.Serialize();
 
-                    WriteMessage("Converted Old Privileged Password");
+                WriteMessage("Converted Old Privileged Password");
+            }
+            else
+            {
+                WritePrompt("Moderator password for bot control");
+
+                string pass = Console.ReadLine()!.Trim();
+
+                if (!string.IsNullOrEmpty(pass))
+                {
+                    botConfig.AuthConfiguration.Privileged.PasswordHash = Cryptography.HashPassword(pass);
+                    botConfig.Serialize();
                 }
                 else
                 {
-                    WritePrompt("Moderator password for bot control");
-
-                    string pass = Console.ReadLine()?.Trim();
-
-                    if (!string.IsNullOrEmpty(pass))
-                    {
-                        botConfig.AuthConfiguration.Privileged.PasswordHash = Cryptography.HashPassword(pass);
-                        botConfig.Serialize();
-                    }
-                    else
-                    {
-                        WriteError("Empty Moderator Password received.");
-                        successful = false;
-                    }
+                    WriteError("Empty Moderator Password received.");
+                    successful = false;
                 }
             }
+        }
 
-            if (string.IsNullOrEmpty(botConfig.AuthConfiguration.User.PasswordHash))
+        if (string.IsNullOrEmpty(botConfig.AuthConfiguration.User.PasswordHash))
+        {
+            //Check obsolete field
+            if (!string.IsNullOrEmpty(botConfig.AuthConfiguration.User.Password))
             {
-                //Check obsolete field
-                if (!string.IsNullOrEmpty(botConfig.AuthConfiguration.User.Password))
-                {
-                    //Convert the obsolete field
-                    botConfig.AuthConfiguration.User.PasswordHash = Cryptography.HashPassword(botConfig.AuthConfiguration.User.Password);
-                    botConfig.AuthConfiguration.User.Password = null;
-                    botConfig.Serialize();
+                //Convert the obsolete field
+                botConfig.AuthConfiguration.User.PasswordHash = Cryptography.HashPassword(botConfig.AuthConfiguration.User.Password);
+                botConfig.AuthConfiguration.User.Password = "";
+                botConfig.Serialize();
 
-                    WriteMessage("Converted Old User Password");
+                WriteMessage("Converted Old User Password");
+            }
+            else
+            {
+                WritePrompt("User password for bot control");
+
+                string pass = Console.ReadLine()!.Trim();
+
+                if (!string.IsNullOrEmpty(pass))
+                {
+                    botConfig.AuthConfiguration.User.PasswordHash = Cryptography.HashPassword(pass);
+                    botConfig.Serialize();
                 }
                 else
                 {
-                    WritePrompt("User password for bot control");
-
-                    string pass = Console.ReadLine()?.Trim();
-
-                    if (!string.IsNullOrEmpty(pass))
-                    {
-                        botConfig.AuthConfiguration.User.PasswordHash = Cryptography.HashPassword(pass);
-                        botConfig.Serialize();
-                    }
-                    else
-                    {
-                        WriteError("Empty User Password received.");
-                        successful = false;
-                    }
+                    WriteError("Empty User Password received.");
+                    successful = false;
                 }
             }
+        }
 
 #pragma warning restore CS0618 // Type or member is obsolete
 
-            return successful;
-        }
+        return successful;
+    }
 
-        protected bool ConfigureAudioOutputDevices()
+    protected bool ConfigureAudioOutputDevices()
+    {
+        bool successful = true;
+
+        //Set Audio Devices
+        if (string.IsNullOrEmpty(botConfig.EffectOutputDevice) || string.IsNullOrEmpty(botConfig.VoiceOutputDevice))
         {
-            bool successful = true;
+            List<string> devices = GetAudioOutputDevicesList();
 
-            //Set Audio Devices
-            if (string.IsNullOrEmpty(botConfig.EffectOutputDevice) || string.IsNullOrEmpty(botConfig.VoiceOutputDevice))
+            Console.WriteLine($"Detected, Active Output devices:");
+
+            for (int i = 0; i < devices.Count; i++)
             {
-                List<string> devices = GetAudioOutputDevicesList();
-
-                Console.WriteLine($"Detected, Active Output devices:");
-
-                for (int i = 0; i < devices.Count; i++)
-                {
-                    Console.WriteLine($"  {i}) {devices[i]}");
-                }
-                Console.WriteLine();
-
-                if (string.IsNullOrEmpty(botConfig.EffectOutputDevice))
-                {
-                    WritePrompt($"Default Effect Output Device Number");
-                    string inputLine = Console.ReadLine();
-                    Console.WriteLine();
-
-                    if (int.TryParse(inputLine, out int value))
-                    {
-                        if (value >= 0 && value < devices.Count)
-                        {
-                            botConfig.EffectOutputDevice = devices[value];
-                            botConfig.Serialize();
-                        }
-                        else
-                        {
-                            WriteError("Value out of range.");
-                            successful = false;
-                        }
-                    }
-                    else
-                    {
-                        WriteError("Unable to parse value.");
-                        successful = false;
-                    }
-
-                    Console.WriteLine();
-                }
-
-                if (string.IsNullOrEmpty(botConfig.VoiceOutputDevice))
-                {
-                    WritePrompt($"Default Voice Output Device Number");
-                    string inputLine = Console.ReadLine();
-                    Console.WriteLine();
-
-                    if (int.TryParse(inputLine, out int value))
-                    {
-                        if (value >= 0 && value < devices.Count)
-                        {
-                            botConfig.VoiceOutputDevice = devices[value];
-                            botConfig.Serialize();
-                        }
-                        else
-                        {
-                            WriteError("Value out of range.");
-                            successful = false;
-                        }
-                    }
-                    else
-                    {
-                        WriteError("Unable to parse value.");
-                        successful = false;
-                    }
-
-                    Console.WriteLine();
-                }
-
-                Console.WriteLine();
+                Console.WriteLine($"  {i}) {devices[i]}");
             }
+            Console.WriteLine();
 
-            return successful;
-        }
-
-        protected bool ConfigureAudioInputDevices()
-        {
-            bool successful = true;
-
-            if (string.IsNullOrEmpty(botConfig.VoiceInputDevice))
+            if (string.IsNullOrEmpty(botConfig.EffectOutputDevice))
             {
-                List<string> devices = GetAudioInputDevicesList();
-
-                Console.WriteLine($"Detected, Active Input devices:");
-
-                for (int i = 0; i < devices.Count; i++)
-                {
-                    Console.WriteLine($"{i}) {devices[i]}");
-                }
-                Console.WriteLine();
-
-                WritePrompt("Default Voice Input Device Number");
-
-                string inputLine = Console.ReadLine();
+                WritePrompt($"Default Effect Output Device Number");
+                string inputLine = Console.ReadLine()!;
                 Console.WriteLine();
 
                 if (int.TryParse(inputLine, out int value))
                 {
                     if (value >= 0 && value < devices.Count)
                     {
-                        botConfig.VoiceInputDevice = devices[value];
+                        botConfig.EffectOutputDevice = devices[value];
                         botConfig.Serialize();
                     }
                     else
                     {
-                        Console.WriteLine("Value out of range.");
+                        WriteError("Value out of range.");
                         successful = false;
                     }
-
                 }
                 else
                 {
@@ -425,37 +345,114 @@ namespace TASagentTwitchBot.Core
                 }
 
                 Console.WriteLine();
+            }
+
+            if (string.IsNullOrEmpty(botConfig.VoiceOutputDevice))
+            {
+                WritePrompt($"Default Voice Output Device Number");
+                string inputLine = Console.ReadLine()!;
+                Console.WriteLine();
+
+                if (int.TryParse(inputLine, out int value))
+                {
+                    if (value >= 0 && value < devices.Count)
+                    {
+                        botConfig.VoiceOutputDevice = devices[value];
+                        botConfig.Serialize();
+                    }
+                    else
+                    {
+                        WriteError("Value out of range.");
+                        successful = false;
+                    }
+                }
+                else
+                {
+                    WriteError("Unable to parse value.");
+                    successful = false;
+                }
+
                 Console.WriteLine();
             }
 
-            return successful;
+            Console.WriteLine();
         }
 
-        protected static List<string> GetAudioOutputDevicesList()
-        {
-            List<string> audioDevices = new List<string>();
-            using MMDeviceEnumerator enumerator = new MMDeviceEnumerator();
-
-            foreach (MMDevice audioDevice in enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active))
-            {
-                audioDevices.Add(audioDevice.FriendlyName);
-            }
-
-            return audioDevices;
-        }
-
-        protected static List<string> GetAudioInputDevicesList()
-        {
-            List<string> audioDevices = new List<string>();
-            using MMDeviceEnumerator enumerator = new MMDeviceEnumerator();
-
-            foreach (MMDevice audioDevice in enumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active))
-            {
-                audioDevices.Add(audioDevice.FriendlyName);
-            }
-
-            return audioDevices;
-        }
-
+        return successful;
     }
+
+    protected bool ConfigureAudioInputDevices()
+    {
+        bool successful = true;
+
+        if (string.IsNullOrEmpty(botConfig.VoiceInputDevice))
+        {
+            List<string> devices = GetAudioInputDevicesList();
+
+            Console.WriteLine($"Detected, Active Input devices:");
+
+            for (int i = 0; i < devices.Count; i++)
+            {
+                Console.WriteLine($"{i}) {devices[i]}");
+            }
+            Console.WriteLine();
+
+            WritePrompt("Default Voice Input Device Number");
+
+            string inputLine = Console.ReadLine()!;
+            Console.WriteLine();
+
+            if (int.TryParse(inputLine, out int value))
+            {
+                if (value >= 0 && value < devices.Count)
+                {
+                    botConfig.VoiceInputDevice = devices[value];
+                    botConfig.Serialize();
+                }
+                else
+                {
+                    Console.WriteLine("Value out of range.");
+                    successful = false;
+                }
+
+            }
+            else
+            {
+                WriteError("Unable to parse value.");
+                successful = false;
+            }
+
+            Console.WriteLine();
+            Console.WriteLine();
+        }
+
+        return successful;
+    }
+
+    protected static List<string> GetAudioOutputDevicesList()
+    {
+        List<string> audioDevices = new List<string>();
+        using MMDeviceEnumerator enumerator = new MMDeviceEnumerator();
+
+        foreach (MMDevice audioDevice in enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active))
+        {
+            audioDevices.Add(audioDevice.FriendlyName);
+        }
+
+        return audioDevices;
+    }
+
+    protected static List<string> GetAudioInputDevicesList()
+    {
+        List<string> audioDevices = new List<string>();
+        using MMDeviceEnumerator enumerator = new MMDeviceEnumerator();
+
+        foreach (MMDevice audioDevice in enumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active))
+        {
+            audioDevices.Add(audioDevice.FriendlyName);
+        }
+
+        return audioDevices;
+    }
+
 }

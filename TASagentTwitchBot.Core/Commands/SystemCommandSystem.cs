@@ -1,48 +1,42 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Text;
+﻿namespace TASagentTwitchBot.Core.Commands;
 
-namespace TASagentTwitchBot.Core.Commands
+public class SystemCommandSystem : ICommandContainer
 {
-    public class SystemCommandSystem : ICommandContainer
+    private readonly ICommunication communication;
+    private readonly ApplicationManagement applicationManagement;
+
+    public SystemCommandSystem(
+        ICommunication communication,
+        ApplicationManagement applicationManagement)
     {
-        private readonly ICommunication communication;
-        private readonly ApplicationManagement applicationManagement;
+        this.communication = communication;
+        this.applicationManagement = applicationManagement;
+    }
 
-        public SystemCommandSystem(
-            ICommunication communication,
-            ApplicationManagement applicationManagement)
+    public void RegisterCommands(
+        Dictionary<string, CommandHandler> commands,
+        Dictionary<string, HelpFunction> helpFunctions,
+        Dictionary<string, SetFunction> setFunctions,
+        Dictionary<string, GetFunction> getFunctions)
+    {
+        commands.Add("quit", QuitHandler);
+    }
+
+    public IEnumerable<string> GetPublicCommands()
+    {
+        yield break;
+    }
+
+    private async Task QuitHandler(IRC.TwitchChatter chatter, string[] remainingCommand)
+    {
+        if (chatter.User.AuthorizationLevel < AuthorizationLevel.Admin)
         {
-            this.communication = communication;
-            this.applicationManagement = applicationManagement;
+            communication.SendPublicChatMessage($"You are not authorized to disconnect me, @{chatter.User.TwitchUserName}.");
+            return;
         }
 
-        public void RegisterCommands(
-            Dictionary<string, CommandHandler> commands,
-            Dictionary<string, HelpFunction> helpFunctions,
-            Dictionary<string, SetFunction> setFunctions,
-            Dictionary<string, GetFunction> getFunctions)
-        {
-            commands.Add("quit", QuitHandler);
-        }
-
-        public IEnumerable<string> GetPublicCommands()
-        {
-            yield break;
-        }
-
-        private async Task QuitHandler(IRC.TwitchChatter chatter, string[] remainingCommand)
-        {
-            if (chatter.User.AuthorizationLevel < AuthorizationLevel.Admin)
-            {
-                communication.SendPublicChatMessage($"You are not authorized to disconnect me, @{chatter.User.TwitchUserName}.");
-                return;
-            }
-
-            communication.SendPublicChatMessage($"Alright @{chatter.User.TwitchUserName}, I'm heading out. Goodbye!");
-            await Task.Delay(2000);
-            applicationManagement.TriggerExit();
-        }
+        communication.SendPublicChatMessage($"Alright @{chatter.User.TwitchUserName}, I'm heading out. Goodbye!");
+        await Task.Delay(2000);
+        applicationManagement.TriggerExit();
     }
 }

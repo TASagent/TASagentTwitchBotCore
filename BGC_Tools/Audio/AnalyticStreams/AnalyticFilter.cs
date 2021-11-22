@@ -1,44 +1,41 @@
-﻿using System;
-using System.Collections.Generic;
-using BGC.Mathematics;
+﻿using BGC.Mathematics;
 
-namespace BGC.Audio.AnalyticStreams
+namespace BGC.Audio.AnalyticStreams;
+
+/// <summary>
+/// Filters represent transformations of the AnalyticStream.
+/// </summary>
+public abstract class AnalyticFilter : IAnalyticStream
 {
-    /// <summary>
-    /// Filters represent transformations of the AnalyticStream.
-    /// </summary>
-    public abstract class AnalyticFilter : IAnalyticStream
+    public abstract int Samples { get; }
+
+    public abstract double SamplingRate { get; }
+
+    public abstract int Read(Complex64[] data, int offset, int count);
+    public abstract void Reset();
+    public abstract void Seek(int position);
+
+    public abstract double GetRMS();
+    public abstract IEnumerable<IAnalyticStream> InternalStreams { get; }
+
+    protected bool initialized = false;
+
+    protected virtual void _Initialize() { }
+
+    public void Initialize()
     {
-        public abstract int Samples { get; }
-
-        public abstract double SamplingRate { get; }
-
-        public abstract int Read(Complex64[] data, int offset, int count);
-        public abstract void Reset();
-        public abstract void Seek(int position);
-
-        public abstract double GetRMS();
-        public abstract IEnumerable<IAnalyticStream> InternalStreams { get; }
-
-        protected bool initialized = false;
-
-        protected virtual void _Initialize() { }
-
-        public void Initialize()
+        if (!initialized)
         {
-            if (!initialized)
+            initialized = true;
+
+            foreach (IAnalyticStream stream in InternalStreams)
             {
-                initialized = true;
-
-                foreach (IAnalyticStream stream in InternalStreams)
-                {
-                    stream.Initialize();
-                }
-
-                _Initialize();
+                stream.Initialize();
             }
-        }
 
-        public abstract void Dispose();
+            _Initialize();
+        }
     }
+
+    public abstract void Dispose();
 }

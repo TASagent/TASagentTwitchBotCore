@@ -1,44 +1,41 @@
-﻿using System;
-using System.Collections.Generic;
-using RestSharp;
+﻿using RestSharp;
 
-namespace TASagentTwitchBot.Core.Web.Extensions
+namespace TASagentTwitchBot.Core.Web.Extensions;
+
+public static class RestExtensions
 {
-    public static class RestExtensions
+    public static void AddOptionalParameter(this RestRequest request, string name, string? value)
     {
-        public static void AddOptionalParameter(this RestRequest request, string name, string value)
+        if (!string.IsNullOrEmpty(value))
         {
-            if (!string.IsNullOrEmpty(value))
+            request.AddParameter(name, value);
+        }
+    }
+
+    public static void AddOptionalParameter(this RestRequest request, string name, List<string>? values)
+    {
+        if (values is not null)
+        {
+            foreach (string value in values)
             {
                 request.AddParameter(name, value);
             }
         }
+    }
 
-        public static void AddOptionalParameter(this RestRequest request, string name, List<string> values)
+    public static void AddOptionalParameter(this RestRequest request, string name, bool? value)
+    {
+        if (value.HasValue)
         {
-            if (values != null)
-            {
-                foreach (string value in values)
-                {
-                    request.AddParameter(name, value);
-                }
-            }
+            request.AddParameter(name, value.Value);
         }
+    }
 
-        public static void AddOptionalParameter(this RestRequest request, string name, bool? value)
+    public static void AddOptionalParameter(this RestRequest request, string name, int? value)
+    {
+        if (value.HasValue)
         {
-            if (value.HasValue)
-            {
-                request.AddParameter(name, value.Value);
-            }
-        }
-
-        public static void AddOptionalParameter(this RestRequest request, string name, int? value)
-        {
-            if (value.HasValue)
-            {
-                request.AddParameter(name, value.Value);
-            }
+            request.AddParameter(name, value.Value);
         }
     }
 }

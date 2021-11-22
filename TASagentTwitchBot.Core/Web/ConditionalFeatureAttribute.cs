@@ -1,15 +1,12 @@
-﻿using System;
+﻿namespace TASagentTwitchBot.Core.Web;
 
-namespace TASagentTwitchBot.Core.Web
+[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
+public class ConditionalFeatureAttribute : Attribute
 {
-    [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-    public class ConditionalFeatureAttribute : Attribute
-    {
-        public string FeatureSet { get; }
+    public string FeatureSet { get; }
 
-        public ConditionalFeatureAttribute(string featureSet)
-        {
-            FeatureSet = featureSet;
-        }
+    public ConditionalFeatureAttribute(string featureSet)
+    {
+        FeatureSet = featureSet;
     }
 }

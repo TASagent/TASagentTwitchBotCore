@@ -1,183 +1,178 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Threading;
-using System.IO;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using System.Text.Json;
 
-namespace TASagentTwitchBot.Core.API.Tiltify
+namespace TASagentTwitchBot.Core.API.Tiltify;
+
+public class TiltifyCampaignMonitor : IDisposable
 {
-    public class TiltifyCampaignMonitor : IDisposable
+    private readonly TiltifyHelper tiltifyHelper;
+    private readonly TiltifyConfiguration tiltifyConfig;
+    private readonly ErrorHandler errorHandler;
+    private readonly ICommunication communication;
+    private readonly Donations.IDonationHandler donationHandler;
+
+    private readonly HandledDonationData handledDonationData;
+
+    private readonly CancellationTokenSource generalTokenSource = new CancellationTokenSource();
+    private readonly Task monitorTask;
+
+    private bool disposedValue;
+
+    public TiltifyCampaignMonitor(
+        TiltifyConfiguration tiltifyConfig,
+        Config.BotConfiguration botConfig,
+        TiltifyHelper tiltifyHelper,
+        ErrorHandler errorHandler,
+        ICommunication communication,
+        Donations.IDonationHandler donationHandler)
     {
-        private readonly TiltifyHelper tiltifyHelper;
-        private readonly TiltifyConfiguration tiltifyConfig;
-        private readonly ErrorHandler errorHandler;
-        private readonly ICommunication communication;
-        private readonly Donations.IDonationHandler donationHandler;
+        this.tiltifyConfig = tiltifyConfig;
+        this.tiltifyHelper = tiltifyHelper;
+        this.errorHandler = errorHandler;
+        this.communication = communication;
+        this.donationHandler = donationHandler;
 
-        private readonly HandledDonationData handledDonationData;
+        handledDonationData = HandledDonationData.GetData();
 
-        private readonly CancellationTokenSource generalTokenSource = new CancellationTokenSource();
-        private readonly CountdownEvent readers = new CountdownEvent(1);
-
-        private bool disposedValue;
-
-        public TiltifyCampaignMonitor(
-            TiltifyConfiguration tiltifyConfig,
-            TiltifyHelper tiltifyHelper,
-            ErrorHandler errorHandler,
-            ICommunication communication,
-            Donations.IDonationHandler donationHandler)
+        if (botConfig.UseThreadedMonitors)
         {
-            this.tiltifyConfig = tiltifyConfig;
-            this.tiltifyHelper = tiltifyHelper;
-            this.errorHandler = errorHandler;
-            this.communication = communication;
-            this.donationHandler = donationHandler;
+            monitorTask = Task.Run(MonitorCampaign);
+        }
+        else
+        {
+            monitorTask = MonitorCampaign();
+        }
+    }
 
-            handledDonationData = HandledDonationData.GetData();
-
-            MonitorCampaign();
+    private async Task MonitorCampaign()
+    {
+        if (tiltifyConfig.CampaignId == -1 || !tiltifyConfig.MonitorCampaign)
+        {
+            return;
         }
 
-        public async void MonitorCampaign()
+        try
         {
-            if (tiltifyConfig.CampaignId == -1 || !tiltifyConfig.MonitorCampaign)
+            while (true)
             {
-                return;
-            }
+                CampaignDonationRequest donations = await tiltifyHelper.GetCampaignDonations(tiltifyConfig.CampaignId) ??
+                    throw new Exception("Unable to Get Tiltify Campaign Donations.");
 
-            try
-            {
-                readers.AddCount();
-
-                while (true)
+                foreach (CampaignDonation donation in donations.CampaignDonations)
                 {
-                    CampaignDonationRequest donations = await tiltifyHelper.GetCampaignDonations(tiltifyConfig.CampaignId);
-
-                    foreach (CampaignDonation donation in donations.CampaignDonations)
+                    if (handledDonationData.Add(donation))
                     {
-                        if (handledDonationData.Add(donation))
-                        {
-                            //New Donation
-                            donationHandler.HandleDonation(
-                                name: donation.Name,
-                                amount: donation.Amount,
-                                message: donation.Comment,
-                                approved: true);
-                        }
-                        else
-                        {
-                            //Hit end of new donations
-                            break;
-                        }
+                        //New Donation
+                        donationHandler.HandleDonation(
+                            name: donation.Name,
+                            amount: donation.Amount,
+                            message: donation.Comment,
+                            approved: true);
                     }
-
-                    //Wait 60 seconds
-                    await Task.Delay(60 * 1000, generalTokenSource.Token);
-
-                    //Bail if we're trying to quit
-                    if (generalTokenSource.IsCancellationRequested)
+                    else
                     {
+                        //Hit end of new donations
                         break;
                     }
                 }
-            }
-            catch (TaskCanceledException) { /* swallow */ }
-            catch (ThreadAbortException) { /* swallow */ }
-            catch (ObjectDisposedException) { /* swallow */ }
-            catch (OperationCanceledException) { /* swallow */ }
-            catch (Exception ex)
-            {
-                communication.SendErrorMessage($"Tiltify Campaign Manager Pinger Exception: {ex.GetType().Name}");
-                errorHandler.LogMessageException(ex, "");
-            }
-            finally
-            {
-                readers.Signal();
+
+                //Wait 60 seconds
+                await Task.Delay(60 * 1000, generalTokenSource.Token);
+
+                //Bail if we're trying to quit
+                if (generalTokenSource.IsCancellationRequested)
+                {
+                    break;
+                }
             }
         }
-
-        protected virtual void Dispose(bool disposing)
+        catch (TaskCanceledException) { /* swallow */ }
+        catch (ThreadAbortException) { /* swallow */ }
+        catch (ObjectDisposedException) { /* swallow */ }
+        catch (OperationCanceledException) { /* swallow */ }
+        catch (Exception ex)
         {
-            if (!disposedValue)
+            communication.SendErrorMessage($"Tiltify Campaign Manager Pinger Exception: {ex.GetType().Name}");
+            errorHandler.LogMessageException(ex, "");
+        }
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposedValue)
+        {
+            if (disposing)
             {
-                if (disposing)
-                {
-                    generalTokenSource.Cancel();
+                generalTokenSource.Cancel();
 
-                    //Wait for readers
-                    readers.Signal();
-                    readers.Wait();
-                    readers.Dispose();
+                //Wait for monitor
+                monitorTask.Wait(1000);
+                monitorTask.Dispose();
 
-                    generalTokenSource.Dispose();
-                }
-
-                disposedValue = true;
+                generalTokenSource.Dispose();
             }
+
+            disposedValue = true;
+        }
+    }
+
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private class HandledDonationData
+    {
+        [JsonIgnore]
+        private static string FilePath => BGC.IO.DataManagement.PathForDataFile("Config", "Tiltify", "HandledTransactions.json");
+
+        [JsonIgnore]
+        private static readonly object _lock = new object();
+
+        public List<CampaignDonation> CampaignDonations { get; set; } = new List<CampaignDonation>();
+
+        [JsonIgnore]
+        public HashSet<int> donations = new HashSet<int>();
+
+        public static HandledDonationData GetData()
+        {
+            HandledDonationData data;
+
+            if (File.Exists(FilePath))
+            {
+                data = JsonSerializer.Deserialize<HandledDonationData>(File.ReadAllText(FilePath))!;
+
+                foreach (CampaignDonation donation in data.CampaignDonations)
+                {
+                    data.donations.Add(donation.Id);
+                }
+            }
+            else
+            {
+                data = new HandledDonationData();
+                File.WriteAllText(FilePath, JsonSerializer.Serialize(data));
+            }
+
+            return data;
         }
 
-        public void Dispose()
+        public bool Add(CampaignDonation donation)
         {
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
-
-        private class HandledDonationData
-        {
-            [JsonIgnore]
-            private static string FilePath => BGC.IO.DataManagement.PathForDataFile("Config", "Tiltify", "HandledTransactions.json");
-
-            [JsonIgnore]
-            private static readonly object _lock = new object();
-
-            public List<CampaignDonation> CampaignDonations { get; set; } = new List<CampaignDonation>();
-
-            [JsonIgnore]
-            public HashSet<int> donations = new HashSet<int>();
-
-            public static HandledDonationData GetData()
+            if (donations.Add(donation.Id))
             {
-                HandledDonationData data;
+                //Successfully added new donation
+                CampaignDonations.Add(donation);
 
-                if (File.Exists(FilePath))
+                lock (_lock)
                 {
-                    data = JsonSerializer.Deserialize<HandledDonationData>(File.ReadAllText(FilePath));
-
-                    foreach (CampaignDonation donation in data.CampaignDonations)
-                    {
-                        data.donations.Add(donation.Id);
-                    }
-                }
-                else
-                {
-                    data = new HandledDonationData();
-                    File.WriteAllText(FilePath, JsonSerializer.Serialize(data));
+                    File.WriteAllText(FilePath, JsonSerializer.Serialize(this));
                 }
 
-                return data;
+                return true;
             }
 
-            public bool Add(CampaignDonation donation)
-            {
-                if (donations.Add(donation.Id))
-                {
-                    //Successfully added new donation
-                    CampaignDonations.Add(donation);
-
-                    lock (_lock)
-                    {
-                        File.WriteAllText(FilePath, JsonSerializer.Serialize(this));
-                    }
-
-                    return true;
-                }
-
-                return false;
-            }
+            return false;
         }
     }
 }

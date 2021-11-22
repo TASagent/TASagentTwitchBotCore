@@ -1,22 +1,41 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+﻿namespace TASagentTwitchBot.Core;
 
-namespace TASagentTwitchBot.Core
+public class ApplicationManagement
 {
-    public class ApplicationManagement
-    {
-        private readonly TaskCompletionSource exitTrigger = new TaskCompletionSource();
+    private readonly ErrorHandler errorHandler;
+    private readonly TaskCompletionSource exitTrigger = new TaskCompletionSource();
+    private readonly List<IShutdownListener> shutdownListeners = new List<IShutdownListener>();
 
-        public ApplicationManagement()
+    public ApplicationManagement(ErrorHandler errorHandler)
+    {
+        this.errorHandler = errorHandler;
+    }
+
+    public void RegisterShutdownListener(IShutdownListener shutdownListener) => shutdownListeners.Add(shutdownListener);
+
+    public Task WaitForEndAsync() => exitTrigger.Task;
+
+    public void TriggerExit()
+    {
+        foreach (IShutdownListener listener in shutdownListeners)
         {
-            
+            try
+            {
+                listener.NotifyShuttingDown();
+            }
+            catch (Exception ex)
+            {
+                errorHandler.LogSystemException(ex);
+            }
         }
 
-        public Task WaitForEndAsync() => exitTrigger.Task;
+        shutdownListeners.Clear();
 
-        public void TriggerExit() => exitTrigger.TrySetResult();
+        exitTrigger.TrySetResult();
     }
+}
+
+public interface IShutdownListener
+{
+    void NotifyShuttingDown();
 }

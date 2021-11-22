@@ -30,7 +30,7 @@
 //                await Task.Delay(delayInMilliseconds);
 
 //                StateEventHandler controllerStateChanged = ControllerStateChanged;
-//                if (controllerStateChanged != null)
+//                if (controllerStateChanged is not null)
 //                {
 //                    controllerStateChanged(this, state);
 //                }

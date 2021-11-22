@@ -1,12 +1,9 @@
-﻿using System;
+﻿namespace BGC.Audio;
 
-namespace BGC.Audio
+public class StreamCompositionException : Exception
 {
-    public class StreamCompositionException : Exception
+    public StreamCompositionException(string message)
+        : base(message)
     {
-        public StreamCompositionException(string message)
-            : base(message)
-        {
-        }
     }
 }

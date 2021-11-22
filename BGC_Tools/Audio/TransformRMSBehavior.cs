@@ -1,8 +1,7 @@
-﻿namespace BGC.Audio
+﻿namespace BGC.Audio;
+
+public enum TransformRMSBehavior
 {
-    public enum TransformRMSBehavior
-    {
-        Recalculate,
-        Passthrough
-    }
+    Recalculate,
+    Passthrough
 }

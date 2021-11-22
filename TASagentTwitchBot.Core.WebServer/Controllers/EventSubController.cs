@@ -1,152 +1,145 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 using TASagentTwitchBot.Core.API.Twitch;
 using TASagentTwitchBot.Core.WebServer.Models;
 using TASagentTwitchBot.Core.WebServer.Web.Middleware;
 
-namespace TASagentTwitchBot.Core.WebServer.Controllers
-{
-    [ApiController]
-    [Route("/TASagentServerAPI/[controller]/[action]")]
-    public class EventSubController : Controller
-    {
-        private readonly UserManager<ApplicationUser> userManager;
-        private readonly EventSub.IServerEventSubHandler eventSubHandler;
-        private readonly ILogger<EventSubController> logger;
+namespace TASagentTwitchBot.Core.WebServer.Controllers;
 
-        public EventSubController(
-            UserManager<ApplicationUser> userManager,
-            EventSub.IServerEventSubHandler eventSubHandler,
-            ILogger<EventSubController> logger)
+[ApiController]
+[Route("/TASagentServerAPI/[controller]/[action]")]
+public class EventSubController : Controller
+{
+    private readonly UserManager<ApplicationUser> userManager;
+    private readonly EventSub.IServerEventSubHandler eventSubHandler;
+    private readonly ILogger<EventSubController> logger;
+
+    public EventSubController(
+        UserManager<ApplicationUser> userManager,
+        EventSub.IServerEventSubHandler eventSubHandler,
+        ILogger<EventSubController> logger)
+    {
+        this.userManager = userManager;
+        this.eventSubHandler = eventSubHandler;
+        this.logger = logger;
+    }
+
+    [RewindRequired]
+    [HttpPost("{userId}")]
+    public async Task<IActionResult> Event(
+        TwitchEventSubPayload payload,
+        string userId)
+    {
+        string messageId = Request.Headers["Twitch-Eventsub-Message-Id"];
+        string messageTimestamp = Request.Headers["Twitch-Eventsub-Message-Timestamp"];
+        string signature = Request.Headers["Twitch-Eventsub-Message-Signature"];
+        string messageType = Request.Headers["Twitch-Eventsub-Message-Type"];
+
+        if (string.IsNullOrEmpty(signature))
         {
-            this.userManager = userManager;
-            this.eventSubHandler = eventSubHandler;
-            this.logger = logger;
+            logger.LogWarning("Received EventCall without a signature.");
+            return BadRequest("No Signature in Header");
         }
 
-        [RewindRequired]
-        [HttpPost("{userId}")]
-        public async Task<IActionResult> Event(
-            TwitchEventSubPayload payload,
-            string userId)
+        if (string.IsNullOrEmpty(messageType))
         {
-            string messageId = Request.Headers["Twitch-Eventsub-Message-Id"];
-            string messageTimestamp = Request.Headers["Twitch-Eventsub-Message-Timestamp"];
-            string signature = Request.Headers["Twitch-Eventsub-Message-Signature"];
-            string messageType = Request.Headers["Twitch-Eventsub-Message-Type"];
+            logger.LogWarning("Received EventCall without a Message-Type.");
+            return BadRequest("No Message-Type in Header");
+        }
 
-            if (string.IsNullOrEmpty(signature))
+        if (string.IsNullOrEmpty(userId))
+        {
+            logger.LogWarning("Received EventCall without a userId.");
+            return BadRequest("Malformed URL");
+        }
+
+        if (payload is null)
+        {
+            logger.LogWarning("Received EventCall without a payload.");
+            return BadRequest();
+        }
+
+        ApplicationUser user = await userManager.FindByIdAsync(userId);
+
+        if (user is null)
+        {
+            //User not identified.
+            //Return Ok if it is a revocation anyway
+            if (messageType == "revocation")
             {
-                logger.LogWarning("Received EventCall without a signature.");
-                return BadRequest("No Signature in Header");
-            }
-
-            if (string.IsNullOrEmpty(messageType))
-            {
-                logger.LogWarning("Received EventCall without a Message-Type.");
-                return BadRequest("No Message-Type in Header");
-            }
-
-            if (string.IsNullOrEmpty(userId))
-            {
-                logger.LogWarning("Received EventCall without a userId.");
-                return BadRequest("Malformed URL");
-            }
-
-            if (payload is null)
-            {
-                logger.LogWarning("Received EventCall without a payload.");
-                return BadRequest();
-            }
-
-            ApplicationUser user = await userManager.FindByIdAsync(userId);
-
-            if (user is null)
-            {
-                //User not identified.
-                //Return Ok if it is a revocation anyway
-                if (messageType == "revocation")
+                logger.LogInformation($"Received revocation for unrecognized user: {userId}, {payload}");
+                if (eventSubHandler.HandleSubRevocation(payload.Subscription.Id))
                 {
-                    logger.LogInformation($"Received revocation for unrecognized user: {userId}, {payload}");
-                    if (eventSubHandler.HandleSubRevocation(payload.Subscription.Id))
-                    {
-                        return Ok();
-                    }
-
-                    logger.LogInformation($"Received unexpected webhook revocation: {payload}");
                     return Ok();
                 }
 
-                logger.LogInformation($"Received EventSub for unrecognized user: {userId}, {payload}");
-                return BadRequest();
+                logger.LogInformation($"Received unexpected webhook revocation: {payload}");
+                return Ok();
             }
 
-            Request.Body.Position = 0;
-            using StreamReader reader = new StreamReader(
-                stream: Request.Body,
-                encoding: Encoding.UTF8,
-                detectEncodingFromByteOrderMarks: false,
-                bufferSize: -1,
-                leaveOpen: true);
+            logger.LogInformation($"Received EventSub for unrecognized user: {userId}, {payload}");
+            return BadRequest();
+        }
 
-            string body = await reader.ReadToEndAsync();
+        Request.Body.Position = 0;
+        using StreamReader reader = new StreamReader(
+            stream: Request.Body,
+            encoding: Encoding.UTF8,
+            detectEncodingFromByteOrderMarks: false,
+            bufferSize: -1,
+            leaveOpen: true);
 
-            if (!eventSubHandler.VerifyEventSubMessage(
-                secret: user.SubscriptionSecret,
-                signature: signature,
-                message: $"{messageId}{messageTimestamp}{body}"))
-            {
-                logger.LogWarning("Received EventCall but the Signature failed.");
-                return Unauthorized("Signature failed");
-            }
+        string body = await reader.ReadToEndAsync();
 
-            switch (messageType)
-            {
-                case "webhook_callback_verification":
-                    //Handle Subscription Verification
-                    if (string.IsNullOrEmpty(payload.Challenge))
-                    {
-                        logger.LogWarning($"Received webhook_callback_verification without a Challenge payload: {body}");
-                        return BadRequest("No Challenge Payload found");
-                    }
+        if (!eventSubHandler.VerifyEventSubMessage(
+            secret: user.SubscriptionSecret,
+            signature: signature,
+            message: $"{messageId}{messageTimestamp}{body}"))
+        {
+            logger.LogWarning("Received EventCall but the Signature failed.");
+            return Unauthorized("Signature failed");
+        }
 
-                    if (eventSubHandler.HandleSubVerification(payload.Subscription.Id))
-                    {
-                        logger.LogInformation($"Confirmed Sub Payload, subscription verified.");
-                        return Ok(payload.Challenge);
-                    }
+        switch (messageType)
+        {
+            case "webhook_callback_verification":
+                //Handle Subscription Verification
+                if (string.IsNullOrEmpty(payload.Challenge))
+                {
+                    logger.LogWarning($"Received webhook_callback_verification without a Challenge payload: {body}");
+                    return BadRequest("No Challenge Payload found");
+                }
 
-                    logger.LogInformation($"Received unexpected webhook_callback_verification: {body}");
-                    return BadRequest("No match to pending subs");
+                if (eventSubHandler.HandleSubVerification(payload.Subscription.Id))
+                {
+                    logger.LogInformation($"Confirmed Sub Payload, subscription verified.");
+                    return Ok(payload.Challenge);
+                }
 
-                case "revocation":
-                    if (eventSubHandler.HandleSubRevocation(payload.Subscription.Id))
-                    {
-                        return Ok();
-                    }
+                logger.LogInformation($"Received unexpected webhook_callback_verification: {body}");
+                return BadRequest("No match to pending subs");
 
-                    logger.LogInformation($"Received unexpected webhook revocation: {body}");
+            case "revocation":
+                if (eventSubHandler.HandleSubRevocation(payload.Subscription.Id))
+                {
                     return Ok();
+                }
 
-                case "notification":
-                    //Handle event
-                    eventSubHandler.HandleEventPayload(user, payload);
-                    return Ok();
+                logger.LogInformation($"Received unexpected webhook revocation: {body}");
+                return Ok();
 
-                default:
-                    logger.LogInformation($"Received unexpected messageType: {messageType}, {body}");
-                    //Handle event anyway
-                    eventSubHandler.HandleEventPayload(user, payload);
-                    return Ok();
-            }
+            case "notification":
+                //Handle event
+                eventSubHandler.HandleEventPayload(user, payload);
+                return Ok();
+
+            default:
+                logger.LogInformation($"Received unexpected messageType: {messageType}, {body}");
+                //Handle event anyway
+                eventSubHandler.HandleEventPayload(user, payload);
+                return Ok();
         }
     }
 }

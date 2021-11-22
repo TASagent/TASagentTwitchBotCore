@@ -1,98 +1,95 @@
-﻿using System;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.SignalR;
 
 using TASagentTwitchBot.Core.Web.Middleware;
 
-namespace TASagentTwitchBot.Core.Web.Hubs
+namespace TASagentTwitchBot.Core.Web.Hubs;
+
+public class MonitorHub : Hub
 {
-    public class MonitorHub : Hub
+    private readonly Config.BotConfiguration botConfig;
+    private readonly IMessageAccumulator messsageAccumulator;
+
+    public MonitorHub(
+        Config.BotConfiguration botConfig,
+        IMessageAccumulator messsageAccumulator)
     {
-        private readonly Config.BotConfiguration botConfig;
-        private readonly IMessageAccumulator messsageAccumulator;
+        this.botConfig = botConfig;
+        this.messsageAccumulator = messsageAccumulator;
+    }
 
-        public MonitorHub(
-            Config.BotConfiguration botConfig,
-            IMessageAccumulator messsageAccumulator)
+    public async Task<bool> Authenticate(string token)
+    {
+        AuthDegree attemptedAuth = botConfig.AuthConfiguration.CheckAuthString(token);
+
+        if (!botConfig.AuthConfiguration.PublicAuthAllowed && attemptedAuth <= AuthDegree.Privileged)
         {
-            this.botConfig = botConfig;
-            this.messsageAccumulator = messsageAccumulator;
+            return false;
         }
 
-        public async Task<bool> Authenticate(string token)
+        if (attemptedAuth == AuthDegree.None)
         {
-            AuthDegree attemptedAuth = botConfig.AuthConfiguration.CheckAuthString(token);
-
-            if (!botConfig.AuthConfiguration.PublicAuthAllowed && attemptedAuth <= AuthDegree.Privileged)
-            {
-                return false;
-            }
-
-            if (attemptedAuth == AuthDegree.None)
-            {
-                return false;
-            }
-
-            messsageAccumulator.AddAuthenticatedUser(Context.ConnectionId);
-
-            await Groups.AddToGroupAsync(Context.ConnectionId, "Authenticated");
-
-            return true;
+            return false;
         }
 
-        public MessageBlock<SimpleMessage> RequestAllChats()
-        {
-            if (messsageAccumulator.IsAuthenticatedUser(Context.ConnectionId))
-            {
-                return messsageAccumulator.GetAllChats();
-            }
+        messsageAccumulator.AddAuthenticatedUser(Context.ConnectionId);
 
-            //Failed to authenticate
-            return new MessageBlock<SimpleMessage>(new System.Collections.Generic.List<SimpleMessage>());
+        await Groups.AddToGroupAsync(Context.ConnectionId, "Authenticated");
+
+        return true;
+    }
+
+    public MessageBlock<SimpleMessage> RequestAllChats()
+    {
+        if (messsageAccumulator.IsAuthenticatedUser(Context.ConnectionId))
+        {
+            return messsageAccumulator.GetAllChats();
         }
 
-        public MessageBlock<SimpleMessage> RequestAllEvents()
-        {
-            if (messsageAccumulator.IsAuthenticatedUser(Context.ConnectionId))
-            {
-                return messsageAccumulator.GetAllEvents();
-            }
+        //Failed to authenticate
+        return new MessageBlock<SimpleMessage>(new System.Collections.Generic.List<SimpleMessage>());
+    }
 
-            //Failed to authenticate
-            return new MessageBlock<SimpleMessage>(new System.Collections.Generic.List<SimpleMessage>());
+    public MessageBlock<SimpleMessage> RequestAllEvents()
+    {
+        if (messsageAccumulator.IsAuthenticatedUser(Context.ConnectionId))
+        {
+            return messsageAccumulator.GetAllEvents();
         }
 
-        public MessageBlock<SimpleMessage> RequestAllDebugs()
-        {
-            if (messsageAccumulator.IsAuthenticatedUser(Context.ConnectionId))
-            {
-                return messsageAccumulator.GetAllDebugs();
-            }
+        //Failed to authenticate
+        return new MessageBlock<SimpleMessage>(new System.Collections.Generic.List<SimpleMessage>());
+    }
 
-            //Failed to authenticate
-            return new MessageBlock<SimpleMessage>(new System.Collections.Generic.List<SimpleMessage>());
+    public MessageBlock<SimpleMessage> RequestAllDebugs()
+    {
+        if (messsageAccumulator.IsAuthenticatedUser(Context.ConnectionId))
+        {
+            return messsageAccumulator.GetAllDebugs();
         }
 
-        public MessageBlock<NotificationMessage> RequestAllNotifications()
-        {
-            if (messsageAccumulator.IsAuthenticatedUser(Context.ConnectionId))
-            {
-                return messsageAccumulator.GetAllNotifications();
-            }
+        //Failed to authenticate
+        return new MessageBlock<SimpleMessage>(new System.Collections.Generic.List<SimpleMessage>());
+    }
 
-            //Failed to authenticate
-            return new MessageBlock<NotificationMessage>(new System.Collections.Generic.List<NotificationMessage>());
+    public MessageBlock<NotificationMessage> RequestAllNotifications()
+    {
+        if (messsageAccumulator.IsAuthenticatedUser(Context.ConnectionId))
+        {
+            return messsageAccumulator.GetAllNotifications();
         }
 
-        public MessageBlock<NotificationMessage> RequestAllPendingNotifications()
-        {
-            if (messsageAccumulator.IsAuthenticatedUser(Context.ConnectionId))
-            {
-                return messsageAccumulator.GetAllPendingNotifications();
-            }
+        //Failed to authenticate
+        return new MessageBlock<NotificationMessage>(new System.Collections.Generic.List<NotificationMessage>());
+    }
 
-            //Failed to authenticate
-            return new MessageBlock<NotificationMessage>(new System.Collections.Generic.List<NotificationMessage>());
+    public MessageBlock<NotificationMessage> RequestAllPendingNotifications()
+    {
+        if (messsageAccumulator.IsAuthenticatedUser(Context.ConnectionId))
+        {
+            return messsageAccumulator.GetAllPendingNotifications();
         }
+
+        //Failed to authenticate
+        return new MessageBlock<NotificationMessage>(new System.Collections.Generic.List<NotificationMessage>());
     }
 }

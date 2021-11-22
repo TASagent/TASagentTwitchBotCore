@@ -1,97 +1,93 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿namespace BGC.Audio.Filters;
 
-namespace BGC.Audio.Filters
+/// <summary>
+/// Runs the initialization methods of the underlying streams in a parallel process.
+/// </summary>
+public class ParallelInitializer : IBGCStream
 {
-    /// <summary>
-    /// Runs the initialization methods of the underlying streams in a parallel process.
-    /// </summary>
-    public class ParallelInitializer : IBGCStream
+    private readonly IBGCStream stream;
+
+    public int Channels => stream.Channels;
+
+    public int TotalSamples => stream.TotalSamples;
+    public int ChannelSamples => stream.ChannelSamples;
+
+    public float SamplingRate => stream.SamplingRate;
+
+    private readonly object initLock = new object();
+    private Task? initializationTask = null;
+
+    private bool initializationStarted = false;
+    private bool initializationFinished = false;
+
+    public ParallelInitializer(IBGCStream stream)
     {
-        private readonly IBGCStream stream;
+        this.stream = stream;
+    }
 
-        public int Channels => stream.Channels;
+    public void Seek(int position) => stream.Seek(position);
 
-        public int TotalSamples => stream.TotalSamples;
-        public int ChannelSamples => stream.ChannelSamples;
+    public void Reset() => stream.Reset();
 
-        public float SamplingRate => stream.SamplingRate;
-
-        private readonly object initLock = new object();
-        private Task initializationTask = null;
-
-        private bool initializationStarted = false;
-        private bool initializationFinished = false;
-
-        public ParallelInitializer(IBGCStream stream)
+    public int Read(float[] data, int offset, int count)
+    {
+        if (!initializationFinished)
         {
-            this.stream = stream;
+            InitializeNow();
         }
 
-        public void Seek(int position) => stream.Seek(position);
+        return stream.Read(data, offset, count);
+    }
 
-        public void Reset() => stream.Reset();
+    public IEnumerable<double> GetChannelRMS() => stream.GetChannelRMS();
 
-        public int Read(float[] data, int offset, int count)
+    public void Initialize()
+    {
+        if (initializationStarted)
         {
-            if (!initializationFinished)
-            {
-                InitializeNow();
-            }
-
-            return stream.Read(data, offset, count);
+            return;
         }
 
-        public IEnumerable<double> GetChannelRMS() => stream.GetChannelRMS();
-
-        public void Initialize()
+        lock (initLock)
         {
-            if (initializationStarted)
+            if (!initializationStarted)
             {
-                return;
+                initializationStarted = true;
+                initializationTask = Task.Run(stream.Initialize);
+                initializationFinished = true;
             }
+        }
+    }
 
-            lock (initLock)
+    public void InitializeNow()
+    {
+        if (initializationFinished)
+        {
+            return;
+        }
+
+        if (initializationStarted && initializationTask is not null)
+        {
+            initializationTask.Wait();
+            return;
+        }
+
+        lock (initLock)
+        {
+            if (!initializationStarted)
             {
-                if (!initializationStarted)
-                {
-                    initializationStarted = true;
-                    initializationTask = Task.Run(stream.Initialize);
-                    initializationFinished = true;
-                }
+                initializationStarted = true;
+                initializationTask = Task.Run(stream.Initialize);
+                initializationFinished = true;
             }
         }
 
-        public void InitializeNow()
-        {
-            if (initializationFinished)
-            {
-                return;
-            }
+        initializationTask?.Wait();
+    }
 
-            if (initializationStarted && initializationTask != null)
-            {
-                initializationTask.Wait();
-                return;
-            }
-
-            lock (initLock)
-            {
-                if (!initializationStarted)
-                {
-                    initializationStarted = true;
-                    initializationTask = Task.Run(stream.Initialize);
-                    initializationFinished = true;
-                }
-            }
-
-            initializationTask?.Wait();
-        }
-
-        public void Dispose()
-        {
-            stream?.Dispose();
-        }
+    public void Dispose()
+    {
+        stream?.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

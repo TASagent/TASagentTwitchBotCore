@@ -1,8 +1,5 @@
-﻿using System;
+﻿namespace TASagentTwitchBot.Core.View;
 
-namespace TASagentTwitchBot.Core.View
+public interface IConsoleOutput
 {
-    public interface IConsoleOutput
-    {
-    }
 }

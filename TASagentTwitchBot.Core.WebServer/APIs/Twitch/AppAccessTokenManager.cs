@@ -1,93 +1,86 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-
+﻿
 using TASagentTwitchBot.Core.API.OAuth;
 
-namespace TASagentTwitchBot.Core.WebServer.API.Twitch
+namespace TASagentTwitchBot.Core.WebServer.API.Twitch;
+
+public class AppAccessTokenManager
 {
-    public class AppAccessTokenManager
+    private readonly Config.WebServerConfig webServerConfig;
+    private readonly HelixServerHelper helixServerHelper;
+    private readonly ILogger<AppAccessTokenManager> logger;
+
+    private DateTime nextValidation = DateTime.Now;
+    private static readonly SemaphoreSlim validationSemaphore = new SemaphoreSlim(1);
+
+    public AppAccessTokenManager(
+        Config.WebServerConfig webServerConfig,
+        HelixServerHelper helixServerHelper,
+        ILogger<AppAccessTokenManager> logger)
     {
-        private readonly Config.WebServerConfig webServerConfig;
-        private readonly HelixServerHelper helixServerHelper;
-        private readonly ILogger<AppAccessTokenManager> logger;
+        this.webServerConfig = webServerConfig;
+        this.helixServerHelper = helixServerHelper;
+        this.logger = logger;
+    }
 
-        private DateTime nextValidation = DateTime.Now;
-        private static readonly SemaphoreSlim validationSemaphore = new SemaphoreSlim(1);
-
-        public AppAccessTokenManager(
-            Config.WebServerConfig webServerConfig,
-            HelixServerHelper helixServerHelper,
-            ILogger<AppAccessTokenManager> logger)
+    public async Task<string> GetAppAccessToken()
+    {
+        //Initial Check
+        if (GetNeedsValidation())
         {
-            this.webServerConfig = webServerConfig;
-            this.helixServerHelper = helixServerHelper;
-            this.logger = logger;
-        }
-
-        public async Task<string> GetAppAccessToken()
-        {
-            //Initial Check
-            if (GetNeedsValidation())
+            //Threads queue up here
+            await validationSemaphore.WaitAsync();
+            try
             {
-                //Threads queue up here
-                await validationSemaphore.WaitAsync();
-                try
+                //Make sure it needs validation
+                if (GetNeedsValidation())
                 {
-                    //Make sure it needs validation
-                    if (GetNeedsValidation())
-                    {
-                        await ValidateAndUpdate();
-                    }
-                }
-                finally
-                {
-                    validationSemaphore.Release();
+                    await ValidateAndUpdate();
                 }
             }
-
-            return webServerConfig.AppAccessToken;
+            finally
+            {
+                validationSemaphore.Release();
+            }
         }
 
-        public void RequireRevalidation() => nextValidation = DateTime.Now;
+        return webServerConfig.AppAccessToken;
+    }
 
-        private bool GetNeedsValidation() => DateTime.Now >= nextValidation;
+    public void RequireRevalidation() => nextValidation = DateTime.Now;
 
-        private async Task ValidateAndUpdate()
+    private bool GetNeedsValidation() => DateTime.Now >= nextValidation;
+
+    private async Task ValidateAndUpdate()
+    {
+        if (!string.IsNullOrEmpty(webServerConfig.AppAccessToken))
         {
-            if (!string.IsNullOrEmpty(webServerConfig.AppAccessToken))
-            {
-                //Have token
-                TokenValidationRequest validationRequest = await helixServerHelper.ValidateToken(webServerConfig.AppAccessToken);
+            //Have token
+            TokenValidationRequest? validationRequest = await helixServerHelper.ValidateToken(webServerConfig.AppAccessToken);
 
-                if (validationRequest is null || validationRequest.ExpiresIn < 60 * 60)
-                {
-                    //App Access Token invalid
-                    webServerConfig.AppAccessToken = null;
-                }
-                else
-                {
-                    //App Access Token good
-                    nextValidation = DateTime.Now + TimeSpan.FromHours(1.0);
-                    return;
-                }
+            if (validationRequest is null || validationRequest.ExpiresIn < 60 * 60)
+            {
+                //App Access Token invalid
+                webServerConfig.AppAccessToken = "";
             }
-
-            //Need new token
-            TokenRequest tokenRequest = await helixServerHelper.GetAppAccessToken();
-
-            if (tokenRequest is null)
+            else
             {
-                logger.LogError("Failed to get App Access token.");
+                //App Access Token good
+                nextValidation = DateTime.Now + TimeSpan.FromHours(1.0);
                 return;
             }
-
-            nextValidation = DateTime.Now + TimeSpan.FromHours(1.0);
-            webServerConfig.AppAccessToken = tokenRequest.AccessToken;
-            webServerConfig.Serialize();
         }
+
+        //Need new token
+        TokenRequest? tokenRequest = await helixServerHelper.GetAppAccessToken();
+
+        if (tokenRequest is null)
+        {
+            logger.LogError("Failed to get App Access token.");
+            return;
+        }
+
+        nextValidation = DateTime.Now + TimeSpan.FromHours(1.0);
+        webServerConfig.AppAccessToken = tokenRequest.AccessToken;
+        webServerConfig.Serialize();
     }
 }

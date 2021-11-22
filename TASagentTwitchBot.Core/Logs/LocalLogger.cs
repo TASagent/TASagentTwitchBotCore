@@ -1,64 +1,59 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Reflection;
-using System.IO;
-using System.Threading.Tasks;
 
-namespace TASagentTwitchBot.Core.Logs
+namespace TASagentTwitchBot.Core.Logs;
+
+public class LocalLogger : IDisposable
 {
-    public class LocalLogger : IDisposable
+    private static string FileTimeStampA => DateTime.Now.ToString("yyyy-MM-dd");
+    private static string FileTimeStampB => DateTime.Now.ToString("HH-mm-ss");
+    private static string Header => $"%Version {VersionNumber}";
+
+    private static string VersionNumber => FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).ProductVersion!;
+
+    private readonly StreamWriter logWriter;
+    private bool disposedValue;
+
+    public LocalLogger(string subDir, string fileName)
     {
-        private string FileTimeStampA => DateTime.Now.ToString("yyyy-MM-dd");
-        private string FileTimeStampB => DateTime.Now.ToString("HH-mm-ss");
-        private string Header => $"%Version {VersionNumber}";
+        logWriter = File.CreateText(
+            path: BGC.IO.DataManagement.PathForDataFile(subDir, $"{FileTimeStampA} {fileName} {FileTimeStampB}.txt"));
+        PushLines(Header, "");
+    }
 
-        private string VersionNumber => FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).ProductVersion;
+    /// <summary>
+    /// Append line to the log file
+    /// </summary>
+    public void PushLine(string line) => logWriter.WriteLine(line);
 
-        private readonly StreamWriter logWriter;
-        private bool disposedValue;
-
-        public LocalLogger(string subDir, string fileName)
+    /// <summary>
+    /// Append lines to the log file
+    /// </summary>
+    public void PushLines(params string[] lines)
+    {
+        foreach (string line in lines)
         {
-            logWriter = File.CreateText(
-                path: BGC.IO.DataManagement.PathForDataFile(subDir, $"{FileTimeStampA} {fileName} {FileTimeStampB}.txt"));
-            PushLines(Header, "");
+            logWriter.WriteLine(line);
         }
+    }
 
-        /// <summary>
-        /// Append line to the log file
-        /// </summary>
-        public void PushLine(string line) => logWriter.WriteLine(line);
-
-        /// <summary>
-        /// Append lines to the log file
-        /// </summary>
-        public void PushLines(params string[] lines)
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposedValue)
         {
-            foreach (string line in lines)
+            if (disposing)
             {
-                logWriter.WriteLine(line);
+                logWriter.Dispose();
             }
-        }
 
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    logWriter.Dispose();
-                }
-
-                disposedValue = true;
-            }
+            disposedValue = true;
         }
+    }
 
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

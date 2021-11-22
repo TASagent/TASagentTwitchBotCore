@@ -1,63 +1,58 @@
-﻿using System;
-using System.Collections.Generic;
+﻿namespace TASagentTwitchBot.Plugin.ControllerSpy.Readers;
 
-namespace TASagentTwitchBot.Plugin.ControllerSpy.Readers
+sealed public class SerialControllerReader<T> : IControllerReader<T>, IDisposable
+    where T : NewControllerState
 {
-    sealed public class SerialControllerReader<T> : IControllerReader<T>, IDisposable
-        where T : NewControllerState
+    public event StateEventHandler<T>? ControllerStateChanged;
+    public event ControllerDisconnectedHandler? ControllerDisconnected;
+
+    private readonly Func<byte[], T> packetParser;
+    private readonly SerialMonitor serialMonitor;
+    public string PortName { get; init; }
+
+    private bool disposedValue;
+
+    public SerialControllerReader(
+        string portName,
+        Func<byte[], T> packetParser)
     {
-        public event StateEventHandler<T> ControllerStateChanged;
-        public event EventHandler ControllerDisconnected;
+        PortName = portName;
+        this.packetParser = packetParser;
 
-        private readonly Func<byte[], T> packetParser;
-        private readonly SerialMonitor serialMonitor;
-        public string PortName { get; init; }
+        serialMonitor = new SerialMonitor(portName, PacketReceived, Disconnected);
+    }
 
-        private bool disposedValue;
+    void Disconnected(object sender)
+    {
+        serialMonitor.Stop();
+        ControllerDisconnected?.Invoke(this);
+    }
 
-        public SerialControllerReader(string portName, Func<byte[], T> packetParser)
+    void PacketReceived(object sender, byte[] packet)
+    {
+        if (ControllerStateChanged is not null && packetParser(packet) is T state)
         {
-            PortName = portName;
-            this.packetParser = packetParser;
-
-            serialMonitor = new SerialMonitor(portName);
-            serialMonitor.PacketReceived += PacketReceived;
-            serialMonitor.Disconnected += Disconnected;
-            serialMonitor.Start();
+            ControllerStateChanged(this, state);
         }
+    }
 
-        void Disconnected(object sender, EventArgs e)
+    private void Dispose(bool disposing)
+    {
+        if (!disposedValue)
         {
-            serialMonitor.Stop();
-            ControllerDisconnected?.Invoke(this, EventArgs.Empty);
-        }
-
-        void PacketReceived(object sender, byte[] packet)
-        {
-            if (ControllerStateChanged is not null && packetParser(packet) is T state)
+            if (disposing)
             {
-                ControllerStateChanged(this, state);
+                serialMonitor.Stop();
             }
-        }
 
-        private void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    serialMonitor.Stop();
-                }
-
-                disposedValue = true;
-            }
+            disposedValue = true;
         }
+    }
 
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

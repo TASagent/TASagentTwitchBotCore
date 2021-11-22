@@ -1,11 +1,8 @@
-﻿using System;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.SignalR;
 
-namespace TASagentTwitchBot.Plugin.ControllerSpy.Web.Hubs
+namespace TASagentTwitchBot.Plugin.ControllerSpy.Web.Hubs;
+
+public class ControllerSpyHub : Hub
 {
-    public class ControllerSpyHub : Hub
-    {
 
-    }
 }
