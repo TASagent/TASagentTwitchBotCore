@@ -25,7 +25,7 @@ WebServerConfig configFile = WebServerConfig.GetConfig();
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost
-    .UseUrls("http://0.0.0.0:5000");
+    .UseUrls("http://0.0.0.0:5003");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(configFile.DBConnectionString));
