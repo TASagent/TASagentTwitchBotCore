@@ -24,7 +24,8 @@ public class TTTASRenderer : ITTTASRenderer
     //  Words containing letters and apostrophes, and optionally ending in a period, questionmark, comma, or exclamation mark
     //  Numbers containing commas and periods and optionally ending with punctuation and optionally starting with a negative sign
     //  Slashes, quotation marks, dashes, question marks
-    private static readonly Regex wordRegex = new Regex(@"(?:\![\p{L}']+(?:\([0-9, ]+\))?|\/[\p{L}']+|[\p{L}']+[?.,!]?|\-?[0-9,.]+[?.,!]?|[\/\\\""\-\?]|(?:\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]))");
+    private static readonly Regex wordRegex = new Regex(
+        @"(?:\![\p{L}']+(?:\([0-9, ]+\))?|\/[\p{L}']+|[\p{L}']+[?.,!]?|\-?[0-9,.]+[?.,!]?|[\/\\\""\-\?]|(?:\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]))");
     private static readonly Regex numberLikeSplitter = new Regex(@"(?:[0-9]+|.)");
 
 
@@ -163,7 +164,6 @@ public class TTTASRenderer : ITTTASRenderer
 
             return;
         }
-
 
         if (char.IsDigit(tttasWord[0]) || (tttasWord[0] == '-' && tttasWord.Length > 1 && char.IsDigit(tttasWord[1])))
         {
@@ -735,13 +735,11 @@ public class TTTASRenderer : ITTTASRenderer
                 HandleWord("novenquinquagintillion", audioFragments, pendingRequests);
                 return;
 
-
             default:
                 communication.SendWarningMessage($"Skipping unexpected NumberTriplet Word: {tripletNum}");
                 break;
         }
     }
-
 
     private static string NormalizeString(string input)
     {

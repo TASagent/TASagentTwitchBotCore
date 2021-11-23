@@ -100,7 +100,7 @@ public sealed class RingBuffer<T> : IEnumerable<T>, ICollection<T>
 
         int i = -1;
 
-        using var e = values.GetEnumerator();
+        using IEnumerator<T> e = values.GetEnumerator();
         while (e.MoveNext() && ++i < availableCount)
         {
             this.values[headIndex - i] = e.Current;

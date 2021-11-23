@@ -235,7 +235,7 @@ public class MessageBuffer<T>
         }
 
         int key = -1;
-        foreach (var pair in messageDict)
+        foreach (KeyValuePair<int, T> pair in messageDict)
         {
             if (selector.Invoke(pair.Value))
             {

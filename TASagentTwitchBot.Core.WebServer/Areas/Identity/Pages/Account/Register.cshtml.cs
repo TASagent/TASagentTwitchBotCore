@@ -73,7 +73,8 @@ public class RegisterModel : PageModel
             {
                 TwitchBroadcasterName = Input.TwitchBroadcasterName,
                 UserName = m.User,
-                Email = Input.Email
+                Email = Input.Email,
+                SubscriptionSecret = Guid.NewGuid().ToString("N")
             };
 
             IdentityResult result = await userManager.CreateAsync(user, Input.Password);
@@ -88,7 +89,7 @@ public class RegisterModel : PageModel
                 return LocalRedirect(returnUrl);
             }
 
-            foreach (var error in result.Errors)
+            foreach (IdentityError? error in result.Errors)
             {
                 ModelState.AddModelError(string.Empty, error.Description);
             }

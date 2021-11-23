@@ -70,13 +70,13 @@ public class ResetPasswordModel : PageModel
             return RedirectToPage("./ResetPasswordConfirmation");
         }
 
-        var result = await _userManager.ResetPasswordAsync(user, Input.Code, Input.Password);
+        IdentityResult result = await _userManager.ResetPasswordAsync(user, Input.Code, Input.Password);
         if (result.Succeeded)
         {
             return RedirectToPage("./ResetPasswordConfirmation");
         }
 
-        foreach (var error in result.Errors)
+        foreach (IdentityError error in result.Errors)
         {
             ModelState.AddModelError(string.Empty, error.Description);
         }

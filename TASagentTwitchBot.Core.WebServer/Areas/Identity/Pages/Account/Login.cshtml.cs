@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
+using IdentitySignInResult = Microsoft.AspNetCore.Identity.SignInResult;
+
 namespace TASagentTwitchBot.Core.WebServer.Areas.Identity.Pages.Account;
 
 [AllowAnonymous]
@@ -83,7 +85,7 @@ public class LoginModel : PageModel
                 }
             }
 
-            var result = await _signInManager.PasswordSignInAsync(userName, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+            IdentitySignInResult result = await _signInManager.PasswordSignInAsync(userName, Input.Password, Input.RememberMe, lockoutOnFailure: false);
             if (result.Succeeded)
             {
                 _logger.LogInformation("User logged in.");

@@ -111,6 +111,13 @@ public class ServerEventSubHandler : IServerEventSubHandler
         ApplicationUser user,
         string subType)
     {
+        if (string.IsNullOrEmpty(user.TwitchBroadcasterName) || string.IsNullOrEmpty(user.TwitchBroadcasterId))
+        {
+            logger.LogWarning("Subscription request from {UserName} with blank or null Broadcaster Name or Id.", user.UserName);
+            return;
+        }
+
+
         logger.LogInformation("{TwitchBroadcasterName} Requested subscription to event {SubType}", user.TwitchBroadcasterName, subType);
 
         SubKey key = new SubKey(user.TwitchBroadcasterId, subType);
@@ -203,6 +210,12 @@ public class ServerEventSubHandler : IServerEventSubHandler
         ApplicationUser user,
         TwitchEventSubPayload payload)
     {
+        if (string.IsNullOrEmpty(user.TwitchBroadcasterId))
+        {
+            logger.LogWarning("Subscription Event Payload for {UserName} with blank or null Broadcaster Name or Id.", user.UserName);
+            return;
+        }
+
         //Do the thing
         await botEventSubHub.Clients.Groups(user.TwitchBroadcasterId).SendAsync(
             method: "ReceiveEvent",

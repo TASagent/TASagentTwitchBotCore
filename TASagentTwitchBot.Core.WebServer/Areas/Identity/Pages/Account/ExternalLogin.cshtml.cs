@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 using TASagentTwitchBot.Core.WebServer.Models;
 
+using IdentitySignInResult = Microsoft.AspNetCore.Identity.SignInResult;
+
 namespace TASagentTwitchBot.Core.WebServer.Areas.Identity.Pages.Account;
 
 [AllowAnonymous]
@@ -67,7 +69,7 @@ public class ExternalLoginModel : PageModel
         }
 
         // Sign in the user with this external login provider if the user already has a login.
-        var result = await signInManager.ExternalLoginSignInAsync(
+        IdentitySignInResult? result = await signInManager.ExternalLoginSignInAsync(
             loginProvider: info.LoginProvider,
             providerKey: info.ProviderKey,
             isPersistent: false,

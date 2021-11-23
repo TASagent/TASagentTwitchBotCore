@@ -309,17 +309,16 @@ public class QuoteSystem : ICommandContainer
         if (!db.Quotes.Any())
         {
             communication.SendPublicChatMessage($"@{requestingUser.TwitchUserName} Sorry, no quotes can be displayed.");
+            return;
         }
-        else
-        {
-            int index = randomizer.Next(0, db.Quotes.Count());
 
-            //Return a random Quote
-            Quote randomQuote = db.Quotes.Skip(index).First();
+        int index = randomizer.Next(0, db.Quotes.Count());
 
-            await db.Entry(randomQuote).Reference(x => x.Creator).LoadAsync();
-            SendQuote(randomQuote);
-        }
+        //Return a random Quote
+        Quote randomQuote = db.Quotes.Skip(index).First();
+
+        await db.Entry(randomQuote).Reference(x => x.Creator).LoadAsync();
+        SendQuote(randomQuote);
     }
 
     private async Task AddQuote(IRC.TwitchChatter chatter, string quoteText)

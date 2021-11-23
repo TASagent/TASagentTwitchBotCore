@@ -8,8 +8,6 @@ namespace TASagentTwitchBot.Core.WebServer.Database;
 
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 {
-    public DbSet<SubscriptionData> Subscriptions { get; set; } = null!;
-
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
     {

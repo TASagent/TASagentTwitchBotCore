@@ -107,6 +107,12 @@ public class ServerTTSRenderer : IServerTTSRenderer
 
     public async Task HandleTTSRequest(UserManager<ApplicationUser> userManager, ApplicationUser user, ServerTTSRequest ttsRequest)
     {
+        if (string.IsNullOrEmpty(user.TwitchBroadcasterId))
+        {
+            logger.LogWarning("Received TTS Request from user {UserName} with null or empty BroadcasterId", user.UserName);
+            return;
+        }
+
         try
         {
             int requestedCharacters = ttsRequest.Ssml.Length;
@@ -119,7 +125,7 @@ public class ServerTTSRenderer : IServerTTSRenderer
                     //Fix neural request for unauthorized user
                     ttsRequest = ttsRequest with { Voice = TTSVoice.Unassigned };
 
-                    logger.LogInformation($"{user.TwitchBroadcasterName} requested unauthorized Neural TTS");
+                    logger.LogInformation("{UserName} requested unauthorized Neural TTS", user.TwitchBroadcasterName);
 
                     await botTTSHub.Clients.Groups(user.TwitchBroadcasterId).SendAsync(
                         method: "ReceiveWarning",
@@ -137,7 +143,7 @@ public class ServerTTSRenderer : IServerTTSRenderer
             if (user.MonthlyTTSLimit != -1 &&
                 (user.MonthlyTTSUsage + requestedCharacters) >= user.MonthlyTTSLimit)
             {
-                logger.LogInformation($"{user.TwitchBroadcasterName} hit monthly allocation");
+                logger.LogInformation("{UserName} hit monthly allocation", user.TwitchBroadcasterName);
 
                 await botTTSHub.Clients.Groups(user.TwitchBroadcasterId).SendAsync(
                         method: "CancelRequest",
@@ -226,6 +232,12 @@ public class ServerTTSRenderer : IServerTTSRenderer
         ApplicationUser user,
         Web.Hubs.RawServerTTSRequest ttsRequest)
     {
+        if (string.IsNullOrEmpty(user.TwitchBroadcasterId))
+        {
+            logger.LogWarning("Received TTS Request from user {UserName} with null or empty BroadcasterId", user.UserName);
+            return;
+        }
+
         try
         {
             int requestedCharacters = ttsRequest.Text.Length;
@@ -242,7 +254,7 @@ public class ServerTTSRenderer : IServerTTSRenderer
                     //Fix neural request for unauthorized user
                     voice = TTSVoice.Unassigned;
 
-                    logger.LogInformation($"{user.TwitchBroadcasterName} requested unauthorized Neural TTS");
+                    logger.LogInformation("{UserName} requested unauthorized Neural TTS", user.TwitchBroadcasterName);
 
                     await botTTSHub.Clients.Groups(user.TwitchBroadcasterId).SendAsync(
                         method: "ReceiveWarning",
@@ -260,7 +272,7 @@ public class ServerTTSRenderer : IServerTTSRenderer
             if (user.MonthlyTTSLimit != -1 &&
                 (user.MonthlyTTSUsage + requestedCharacters) >= user.MonthlyTTSLimit)
             {
-                logger.LogInformation($"{user.TwitchBroadcasterName} hit monthly allocation");
+                logger.LogInformation("{UserName} hit monthly allocation", user.TwitchBroadcasterName);
 
                 await botTTSHub.Clients.Groups(user.TwitchBroadcasterId).SendAsync(
                         method: "CancelRequest",
@@ -377,7 +389,7 @@ public class ServerTTSRenderer : IServerTTSRenderer
                 {
                     //Fix neural request for unauthorized user
                     voice = TTSVoice.Unassigned;
-                    logger.LogInformation($"{user.TwitchBroadcasterName} requested unauthorized Neural TTS");
+                    logger.LogInformation("{UserName} requested unauthorized Neural TTS", user.TwitchBroadcasterName);
                 }
             }
 
@@ -391,7 +403,7 @@ public class ServerTTSRenderer : IServerTTSRenderer
             if (user.MonthlyTTSLimit != -1 &&
                 (user.MonthlyTTSUsage + requestedCharacters) >= user.MonthlyTTSLimit)
             {
-                logger.LogInformation($"{user.TwitchBroadcasterName} hit monthly allocation");
+                logger.LogInformation("{UserName} hit monthly allocation", user.TwitchBroadcasterName);
                 return null;
             }
 

@@ -129,7 +129,7 @@ public sealed class AnalyticStreamAdder : AnalyticFilter
 
     public override void Dispose()
     {
-        foreach (var stream in streams)
+        foreach (IAnalyticStream stream in streams)
         {
             stream.Dispose();
         }

@@ -75,7 +75,6 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 builder.Services.AddSingleton(configFile);
 
 builder.Services
-    .AddSingleton<ApplicationManagement>()
     .AddSingleton<ICommunication, WebServerCommunicationHandler>()
     .AddSingleton<IServerEventSubHandler, ServerEventSubHandler>();
 
@@ -156,8 +155,10 @@ static void UseCoreLibraryAssets(WebApplication app)
 
     if (app.Environment.IsDevelopment())
     {
-        var path = Directory.GetParent(app.Environment.ContentRootPath)!.FullName;
-#warning DotNet Core 6.0 Fix
+#warning DOTNET CORE 6 FIX
+        //Behavior of Directory.GetParent(x) seems to have changed in DotNetCore 6.0.
+        //Now Directory.GetParent("/path/to/dir/") returns "/path/to/dir" when it used to return "/path/to"
+        string path = Directory.GetParent(app.Environment.ContentRootPath)!.FullName;
         path = Directory.GetParent(path)!.FullName;
 
         //Navigate relative to the current path in Development

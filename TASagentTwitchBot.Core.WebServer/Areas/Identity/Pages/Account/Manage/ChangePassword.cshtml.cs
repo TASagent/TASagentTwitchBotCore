@@ -79,7 +79,7 @@ public class ChangePasswordModel : PageModel
         IdentityResult changePasswordResult = await userManager.ChangePasswordAsync(user, Input.OldPassword, Input.NewPassword);
         if (!changePasswordResult.Succeeded)
         {
-            foreach (var error in changePasswordResult.Errors)
+            foreach (IdentityError error in changePasswordResult.Errors)
             {
                 ModelState.AddModelError(string.Empty, error.Description);
             }

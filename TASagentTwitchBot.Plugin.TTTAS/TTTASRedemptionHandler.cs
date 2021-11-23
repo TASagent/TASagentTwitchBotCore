@@ -1,5 +1,4 @@
-﻿
-using TASagentTwitchBot.Core.Database;
+﻿using TASagentTwitchBot.Core.Database;
 using TASagentTwitchBot.Core.API.Twitch;
 using TASagentTwitchBot.Core.PubSub;
 
@@ -69,7 +68,7 @@ public class TTTASRedemptionHandler : IRedemptionContainer, IDisposable
         if (!string.IsNullOrEmpty(tttasConfig.Redemption.RedemptionID))
         {
             //Verify
-            var customRewards = await helixHelper.GetCustomReward(
+            TwitchCustomReward customRewards = await helixHelper.GetCustomReward(
                 id: tttasConfig.Redemption.RedemptionID,
                 onlyManageableRewards: true) ??
                 throw new Exception($"Unable to get TTTASRedemption Reward Data");
@@ -93,12 +92,12 @@ public class TTTASRedemptionHandler : IRedemptionContainer, IDisposable
         if (string.IsNullOrEmpty(tttasConfig.Redemption.RedemptionID))
         {
             //Find or Create
-            var customRewards = await helixHelper.GetCustomReward(onlyManageableRewards: true) ??
+            TwitchCustomReward customRewards = await helixHelper.GetCustomReward(onlyManageableRewards: true) ??
                 throw new Exception($"Unable to get TTTASRedemption Reward Data");
 
             string tttasID = "";
 
-            foreach (var customReward in customRewards.Data)
+            foreach (TwitchCustomReward.Datum customReward in customRewards.Data)
             {
                 if (customReward.Title == tttasConfig.Redemption.Name)
                 {
@@ -109,7 +108,7 @@ public class TTTASRedemptionHandler : IRedemptionContainer, IDisposable
 
             if (string.IsNullOrEmpty(tttasID))
             {
-                var creationResponse = await helixHelper.CreateCustomReward(
+                TwitchCustomReward creationResponse = await helixHelper.CreateCustomReward(
                     title: tttasConfig.Redemption.Name,
                     cost: tttasConfig.Redemption.Cost,
                     prompt: tttasConfig.Redemption.Description,
@@ -134,7 +133,7 @@ public class TTTASRedemptionHandler : IRedemptionContainer, IDisposable
         //Check for changed properties
         {
             //Verify
-            var customRewards = await helixHelper.GetCustomReward(
+            TwitchCustomReward customRewards = await helixHelper.GetCustomReward(
                 id: tttasConfig.Redemption.RedemptionID,
                 onlyManageableRewards: true) ??
                 throw new Exception($"Unable to get TTTASRedemption Reward Data");
@@ -144,7 +143,7 @@ public class TTTASRedemptionHandler : IRedemptionContainer, IDisposable
                 customRewards.Data[0].Title == tttasConfig.Redemption.Name)
             {
                 //Confirmed Match
-                var rewardInfo = customRewards.Data[0];
+                TwitchCustomReward.Datum rewardInfo = customRewards.Data[0];
 
                 //Compare Properties
                 if (rewardInfo.Cost != tttasConfig.Redemption.Cost ||
@@ -169,14 +168,14 @@ public class TTTASRedemptionHandler : IRedemptionContainer, IDisposable
         }
 
         //Refund pending rewards
-        var pendingRedemptions = await helixHelper.GetCustomRewardRedemptions(
+        TwitchCustomRewardRedemption pendingRedemptions = await helixHelper.GetCustomRewardRedemptions(
             rewardId: tttasConfig.Redemption.RedemptionID,
             status: "UNFULFILLED") ??
             throw new Exception($"Unable to get pending TTTASRedemption Redemption Data");
 
         int refundedCount = 0;
 
-        foreach (var redemption in pendingRedemptions.Data)
+        foreach (TwitchCustomRewardRedemption.Datum redemption in pendingRedemptions.Data)
         {
             refundedCount++;
 

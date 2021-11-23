@@ -188,7 +188,7 @@ public readonly struct IRCMessage
         if (tags is not null)
         {
             string[] temp_tags = new string[tags.Count];
-            var i = 0;
+            int i = 0;
 
             foreach (KeyValuePair<string, string> tag in tags)
             {

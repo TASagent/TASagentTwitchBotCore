@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -11,6 +12,7 @@ public class ExternalLoginsModel : PageModel
 {
     private readonly UserManager<ApplicationUser> userManager;
     private readonly SignInManager<ApplicationUser> signInManager;
+    private readonly ILogger<ExternalLoginsModel> logger;
 
     public IList<UserLoginInfo> CurrentLogins { get; set; } = null!;
 
@@ -23,10 +25,12 @@ public class ExternalLoginsModel : PageModel
 
     public ExternalLoginsModel(
         UserManager<ApplicationUser> userManager,
-        SignInManager<ApplicationUser> signInManager)
+        SignInManager<ApplicationUser> signInManager,
+        ILogger<ExternalLoginsModel> logger)
     {
         this.userManager = userManager;
         this.signInManager = signInManager;
+        this.logger = logger;
     }
 
     public async Task<IActionResult> OnGetAsync()
@@ -95,6 +99,24 @@ public class ExternalLoginsModel : PageModel
         {
             StatusMessage = "The external login was not added. External logins can only be associated with one account.";
             return RedirectToPage();
+        }
+
+        //Success
+        string? displayName = info.Principal.FindFirstValue("urn:twitch:displayname");
+        
+        if (!string.IsNullOrEmpty(displayName))
+        {
+            user.TwitchBroadcasterId = info.ProviderKey;
+            user.TwitchBroadcasterName = displayName;
+            user.SubscriptionSecret = Guid.NewGuid().ToString("N");
+
+            await userManager.UpdateAsync(user);
+
+            logger.LogInformation("Added Twitch Connection from LinkLoginCallback for user {User}", user.UserName);
+        }
+        else
+        {
+            logger.LogWarning("Received null or empty displayname from LinkLoginCallback for user {User}", user.UserName);
         }
 
         // Clear the existing external cookie to ensure a clean login process

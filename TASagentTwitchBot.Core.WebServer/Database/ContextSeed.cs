@@ -31,7 +31,10 @@ public static class ContextSeed
             {
                 UserName = "admin",
                 Email = "admin@dev.null",
-                EmailConfirmed = true
+                EmailConfirmed = true,
+                SubscriptionSecret = "",
+                TwitchBroadcasterId = "",
+                TwitchBroadcasterName = ""
             };
 
             await userManager.CreateAsync(admin, "DefaultPassword123.$");
