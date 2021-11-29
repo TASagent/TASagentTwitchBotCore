@@ -46,7 +46,7 @@ public class MonitorHub : Hub
         }
 
         //Failed to authenticate
-        return new MessageBlock<SimpleMessage>(new System.Collections.Generic.List<SimpleMessage>());
+        return new MessageBlock<SimpleMessage>(new List<SimpleMessage>());
     }
 
     public MessageBlock<SimpleMessage> RequestAllEvents()
@@ -57,7 +57,7 @@ public class MonitorHub : Hub
         }
 
         //Failed to authenticate
-        return new MessageBlock<SimpleMessage>(new System.Collections.Generic.List<SimpleMessage>());
+        return new MessageBlock<SimpleMessage>(new List<SimpleMessage>());
     }
 
     public MessageBlock<SimpleMessage> RequestAllDebugs()
@@ -68,7 +68,7 @@ public class MonitorHub : Hub
         }
 
         //Failed to authenticate
-        return new MessageBlock<SimpleMessage>(new System.Collections.Generic.List<SimpleMessage>());
+        return new MessageBlock<SimpleMessage>(new List<SimpleMessage>());
     }
 
     public MessageBlock<NotificationMessage> RequestAllNotifications()
@@ -79,7 +79,7 @@ public class MonitorHub : Hub
         }
 
         //Failed to authenticate
-        return new MessageBlock<NotificationMessage>(new System.Collections.Generic.List<NotificationMessage>());
+        return new MessageBlock<NotificationMessage>(new List<NotificationMessage>());
     }
 
     public MessageBlock<NotificationMessage> RequestAllPendingNotifications()
@@ -90,6 +90,6 @@ public class MonitorHub : Hub
         }
 
         //Failed to authenticate
-        return new MessageBlock<NotificationMessage>(new System.Collections.Generic.List<NotificationMessage>());
+        return new MessageBlock<NotificationMessage>(new List<NotificationMessage>());
     }
 }
