@@ -12,6 +12,8 @@ public class HelixEventSubHelper
     private readonly Config.WebServerConfig webServerConfig;
     private readonly ILogger<HelixEventSubHelper> logger;
 
+    private static readonly Uri HelixURI = new Uri("https://api.twitch.tv/helix");
+
     public HelixEventSubHelper(
         Config.WebServerConfig webServerConfig,
         AppAccessTokenManager appAccessTokenManager,
@@ -30,8 +32,8 @@ public class HelixEventSubHelper
         Condition condition,
         Transport transport)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/eventsub/subscriptions");
-        RestRequest request = new RestRequest(Method.POST);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("eventsub/subscriptions", Method.Post);
         request.AddHeader("Client-ID", webServerConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {await appAccessTokenManager.GetAppAccessToken()}");
 
@@ -41,7 +43,7 @@ public class HelixEventSubHelper
             Condition: condition,
             Transport: transport)));
 
-        IRestResponse response = await restClient.ExecuteAsync(request);
+        RestResponse response = await restClient.ExecuteAsync(request);
 
         if (response.StatusCode != HttpStatusCode.Accepted)
         {
@@ -49,7 +51,10 @@ public class HelixEventSubHelper
             return null;
         }
 
-        return JsonSerializer.Deserialize<TwitchSubscribeResponse>(response.Content);
+        //TEMP
+        logger.LogInformation("TEMP: Subscribe Response: {response.Content}", response.Content);
+
+        return JsonSerializer.Deserialize<TwitchSubscribeResponse>(response.Content!);
     }
 
     /// <summary>
@@ -58,13 +63,13 @@ public class HelixEventSubHelper
     public async Task<TwitchDeleteSubscriptionResponse> DeleteSubscription(
         string Id)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/eventsub/subscriptions");
-        RestRequest request = new RestRequest(Method.DELETE);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("eventsub/subscriptions", Method.Delete);
         request.AddHeader("Client-ID", webServerConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {await appAccessTokenManager.GetAppAccessToken()}");
         request.AddQueryParameter("id", Id);
 
-        IRestResponse response = await restClient.ExecuteAsync(request);
+        RestResponse response = await restClient.ExecuteAsync(request);
 
         return response.StatusCode switch
         {
@@ -83,8 +88,8 @@ public class HelixEventSubHelper
         string? subscriptionType = null,
         string? after = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/eventsub/subscriptions");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("eventsub/subscriptions", Method.Get);
         request.AddHeader("Client-ID", webServerConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {await appAccessTokenManager.GetAppAccessToken()}");
 
@@ -92,14 +97,17 @@ public class HelixEventSubHelper
         request.AddOptionalParameter("type", subscriptionType);
         request.AddOptionalParameter("after", after);
 
-        IRestResponse response = await restClient.ExecuteAsync(request);
+        RestResponse response = await restClient.ExecuteAsync(request);
 
         if (response.StatusCode != HttpStatusCode.OK)
         {
-            logger.LogWarning("Bad response to GetSubscriptions request: {Content}", response.Content);
+            logger.LogWarning("Bad response to GetSubscriptions request: {StatusCode} - {Content}", response.StatusCode, response.Content);
             return null;
         }
 
-        return JsonSerializer.Deserialize<TwitchGetSubscriptionsResponse>(response.Content);
+        //TEMP
+        logger.LogInformation("TEMP: GetSubscriptions Response: {response.Content}", response.Content);
+
+        return JsonSerializer.Deserialize<TwitchGetSubscriptionsResponse>(response.Content!);
     }
 }

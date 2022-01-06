@@ -69,17 +69,17 @@ public class EventSubController : Controller
             //Return Ok if it is a revocation anyway
             if (messageType == "revocation")
             {
-                logger.LogInformation($"Received revocation for unrecognized user: {userId}, {payload}");
+                logger.LogInformation("Received revocation for unrecognized user: {userId}, {payload}", userId, payload);
                 if (eventSubHandler.HandleSubRevocation(payload.Subscription.Id))
                 {
                     return Ok();
                 }
 
-                logger.LogInformation($"Received unexpected webhook revocation: {payload}");
+                logger.LogInformation("Received unexpected webhook revocation: {payload}", payload);
                 return Ok();
             }
 
-            logger.LogInformation($"Received EventSub for unrecognized user: {userId}, {payload}");
+            logger.LogInformation("Received EventSub for unrecognized user: {userId}, {payload}", userId, payload);
             return BadRequest();
         }
 
@@ -108,17 +108,17 @@ public class EventSubController : Controller
                 //Handle Subscription Verification
                 if (string.IsNullOrEmpty(payload.Challenge))
                 {
-                    logger.LogWarning($"Received webhook_callback_verification without a Challenge payload: {body}");
+                    logger.LogWarning("Received webhook_callback_verification without a Challenge payload: {body}", body);
                     return BadRequest("No Challenge Payload found");
                 }
 
                 if (eventSubHandler.HandleSubVerification(payload.Subscription.Id))
                 {
-                    logger.LogInformation($"Confirmed Sub Payload, subscription verified.");
+                    logger.LogInformation("Confirmed Sub Payload, subscription verified.");
                     return Ok(payload.Challenge);
                 }
 
-                logger.LogInformation($"Received unexpected webhook_callback_verification: {body}");
+                logger.LogInformation("Received unexpected webhook_callback_verification: {body}", body);
                 return BadRequest("No match to pending subs");
 
             case "revocation":
@@ -127,7 +127,7 @@ public class EventSubController : Controller
                     return Ok();
                 }
 
-                logger.LogInformation($"Received unexpected webhook revocation: {body}");
+                logger.LogInformation("Received unexpected webhook revocation: {body}", body);
                 return Ok();
 
             case "notification":
@@ -136,7 +136,7 @@ public class EventSubController : Controller
                 return Ok();
 
             default:
-                logger.LogInformation($"Received unexpected messageType: {messageType}, {body}");
+                logger.LogInformation("Received unexpected messageType: {messageType}, {body}", messageType, body);
                 //Handle event anyway
                 eventSubHandler.HandleEventPayload(user, payload);
                 return Ok();

@@ -40,7 +40,6 @@ public class EventSubHandler : IDisposable
             subscriber.RegisterHandlers(eventHandlers);
         }
 
-
         if (this.eventSubSubscribers.Length == 0)
         {
             communication.SendDebugMessage($"No EventSub Listener registered. Skipping EventSub Websocket.");

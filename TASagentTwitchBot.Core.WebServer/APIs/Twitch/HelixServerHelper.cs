@@ -9,6 +9,8 @@ public class HelixServerHelper
 {
     private readonly Config.WebServerConfig webServerConfig;
 
+    private static readonly Uri OAuthURI = new Uri("https://id.twitch.tv/oauth2");
+
     /// <summary>
     /// Constructor for the Twitch_Helix api helper
     /// </summary>
@@ -25,20 +27,20 @@ public class HelixServerHelper
     /// </summary>
     public async Task<TokenRequest?> GetAppAccessToken()
     {
-        RestClient restClient = new RestClient("https://id.twitch.tv/oauth2/token");
-        RestRequest request = new RestRequest(Method.POST);
+        RestClient restClient = new RestClient(OAuthURI);
+        RestRequest request = new RestRequest("token", Method.Post);
         request.AddParameter("client_id", webServerConfig.TwitchClientId);
         request.AddParameter("client_secret", webServerConfig.TwitchClientSecret);
         request.AddParameter("grant_type", "client_credentials");
 
-        IRestResponse response = await restClient.ExecuteAsync(request);
+        RestResponse response = await restClient.ExecuteAsync(request);
 
         if (response.StatusCode != HttpStatusCode.OK)
         {
             return null;
         }
 
-        return JsonSerializer.Deserialize<TokenRequest>(response.Content);
+        return JsonSerializer.Deserialize<TokenRequest>(response.Content!);
     }
 
     /// <summary>
@@ -47,12 +49,12 @@ public class HelixServerHelper
     public async Task<bool> ExpireToken(
         string token)
     {
-        RestClient restClient = new RestClient("https://id.twitch.tv/oauth2/revoke");
-        RestRequest request = new RestRequest(Method.POST);
+        RestClient restClient = new RestClient(OAuthURI);
+        RestRequest request = new RestRequest("revoke", Method.Post);
         request.AddParameter("client_id", webServerConfig.TwitchClientId);
         request.AddParameter("token", token);
 
-        IRestResponse response = await restClient.ExecuteAsync(request);
+        RestResponse response = await restClient.ExecuteAsync(request);
 
         return response.StatusCode == HttpStatusCode.OK;
     }
@@ -63,18 +65,18 @@ public class HelixServerHelper
     public async Task<TokenValidationRequest?> ValidateToken(
         string accessToken)
     {
-        RestClient restClient = new RestClient("https://id.twitch.tv/oauth2/validate");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(OAuthURI);
+        RestRequest request = new RestRequest("validate", Method.Get);
         request.AddHeader("Authorization", $"OAuth {accessToken}");
 
-        IRestResponse response = await restClient.ExecuteAsync(request);
+        RestResponse response = await restClient.ExecuteAsync(request);
 
         if (response.StatusCode != HttpStatusCode.OK)
         {
             return null;
         }
 
-        return JsonSerializer.Deserialize<TokenValidationRequest>(response.Content);
+        return JsonSerializer.Deserialize<TokenValidationRequest>(response.Content!);
     }
 
     #endregion Authentication

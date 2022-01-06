@@ -6,6 +6,8 @@ namespace TASagentTwitchBot.Core.API.BTTV;
 
 public class BTTVHelper
 {
+    private static readonly Uri BTTVAPIURI = new Uri("https://api.betterttv.net/3");
+
     public BTTVHelper()
     {
 
@@ -13,47 +15,47 @@ public class BTTVHelper
 
     public async Task<List<BTTVGlobalEmote>?> GetGlobalEmotes()
     {
-        RestClient restClient = new RestClient("https://api.betterttv.net/3/cached/emotes/global");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(BTTVAPIURI);
+        RestRequest request = new RestRequest("cached/emotes/global", Method.Get);
 
-        IRestResponse response = await restClient.ExecuteAsync(request);
+        RestResponse response = await restClient.ExecuteAsync(request);
 
-        if (response.StatusCode != System.Net.HttpStatusCode.OK)
+        if (response.StatusCode != HttpStatusCode.OK)
         {
             return null;
         }
 
-        return JsonSerializer.Deserialize<List<BTTVGlobalEmote>>(response.Content);
+        return JsonSerializer.Deserialize<List<BTTVGlobalEmote>>(response.Content!);
     }
 
     public async Task<BTTVChannelData?> GetChannelBTTVData(string userId)
     {
-        RestClient restClient = new RestClient($"https://api.betterttv.net/3/cached/users/twitch/{userId}");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(BTTVAPIURI);
+        RestRequest request = new RestRequest($"cached/users/twitch/{userId}", Method.Get);
 
-        IRestResponse response = await restClient.ExecuteAsync(request);
+        RestResponse response = await restClient.ExecuteAsync(request);
 
-        if (response.StatusCode != System.Net.HttpStatusCode.OK)
+        if (response.StatusCode != HttpStatusCode.OK)
         {
             return null;
         }
 
-        return JsonSerializer.Deserialize<BTTVChannelData>(response.Content);
+        return JsonSerializer.Deserialize<BTTVChannelData>(response.Content!);
     }
 
     public async Task<List<FFZEmote>?> GetChannelFFZEmotes(string userId)
     {
-        RestClient restClient = new RestClient($"https://api.betterttv.net/3/cached/frankerfacez/users/twitch/{userId}");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(BTTVAPIURI);
+        RestRequest request = new RestRequest($"cached/frankerfacez/users/twitch/{userId}", Method.Get);
 
-        IRestResponse response = await restClient.ExecuteAsync(request);
+        RestResponse response = await restClient.ExecuteAsync(request);
 
-        if (response.StatusCode != System.Net.HttpStatusCode.OK)
+        if (response.StatusCode != HttpStatusCode.OK)
         {
             return null;
         }
 
-        return JsonSerializer.Deserialize<List<FFZEmote>>(response.Content);
+        return JsonSerializer.Deserialize<List<FFZEmote>>(response.Content!);
     }
 }
 

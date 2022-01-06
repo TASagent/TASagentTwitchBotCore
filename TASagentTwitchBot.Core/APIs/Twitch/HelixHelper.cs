@@ -1,5 +1,4 @@
-﻿
-/**
+﻿/**
  *    Copyright 2019 Amazon.com, Inc. or its affiliates
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,6 +27,9 @@ public class HelixHelper : IOAuthHandler
     private readonly Config.BotConfiguration botConfig;
     private readonly ICommunication communication;
 
+    private static readonly Uri OAuthURI = new Uri("https://id.twitch.tv/oauth2");
+    private static readonly Uri HelixURI = new Uri("https://api.twitch.tv/helix");
+
     /// <summary>
     /// Constructor for the Twitch_Helix api helper
     /// </summary>
@@ -48,8 +50,8 @@ public class HelixHelper : IOAuthHandler
         string authCode,
         string redirectURI)
     {
-        RestClient restClient = new RestClient("https://id.twitch.tv/oauth2/token");
-        RestRequest request = new RestRequest(Method.POST);
+        RestClient restClient = new RestClient(OAuthURI);
+        RestRequest request = new RestRequest("token", Method.Post);
         request.AddParameter("client_id", botConfig.TwitchClientId);
         request.AddParameter("client_secret", botConfig.TwitchClientSecret);
         request.AddParameter("code", authCode);
@@ -65,8 +67,8 @@ public class HelixHelper : IOAuthHandler
     public async Task<TokenRequest?> GetClientCredentialsToken()
     {
 
-        RestClient restClient = new RestClient("https://id.twitch.tv/oauth2/token");
-        RestRequest request = new RestRequest(Method.POST);
+        RestClient restClient = new RestClient(OAuthURI);
+        RestRequest request = new RestRequest("token", Method.Post);
         request.AddParameter("client_id", botConfig.TwitchClientId);
         request.AddParameter("client_secret", botConfig.TwitchClientSecret);
         request.AddParameter("grant_type", "client_credentials");
@@ -80,12 +82,12 @@ public class HelixHelper : IOAuthHandler
     public async Task<bool> ExpireToken(
         string token)
     {
-        RestClient restClient = new RestClient("https://id.twitch.tv/oauth2/revoke");
-        RestRequest request = new RestRequest(Method.POST);
+        RestClient restClient = new RestClient(OAuthURI);
+        RestRequest request = new RestRequest("revoke", Method.Post);
         request.AddParameter("client_id", botConfig.TwitchClientId);
         request.AddParameter("token", token);
 
-        IRestResponse response = await restClient.ExecuteAsync(request);
+        RestResponse response = await restClient.ExecuteAsync(request);
 
         return response.StatusCode == HttpStatusCode.OK;
     }
@@ -96,14 +98,14 @@ public class HelixHelper : IOAuthHandler
     public async Task<TokenRefreshRequest?> RefreshToken(
         string refreshToken)
     {
-        RestClient restClient = new RestClient("https://id.twitch.tv/oauth2/token");
-        RestRequest request = new RestRequest(Method.POST);
+        RestClient restClient = new RestClient(OAuthURI);
+        RestRequest request = new RestRequest("token", Method.Post);
         request.AddParameter("grant_type", "refresh_token");
         request.AddParameter("refresh_token", refreshToken);
         request.AddParameter("client_id", botConfig.TwitchClientId);
         request.AddParameter("client_secret", botConfig.TwitchClientSecret);
 
-        IRestResponse response = await restClient.ExecuteAsync(request);
+        RestResponse response = await restClient.ExecuteAsync(request);
 
         if (response.StatusCode != HttpStatusCode.OK)
         {
@@ -112,7 +114,7 @@ public class HelixHelper : IOAuthHandler
             return null;
         }
 
-        return JsonSerializer.Deserialize<TokenRefreshRequest>(response.Content);
+        return JsonSerializer.Deserialize<TokenRefreshRequest>(response.Content!);
     }
 
     /// <summary>
@@ -121,8 +123,8 @@ public class HelixHelper : IOAuthHandler
     public async Task<TokenValidationRequest?> ValidateToken(
         string accessToken)
     {
-        RestClient restClient = new RestClient("https://id.twitch.tv/oauth2/validate");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(OAuthURI);
+        RestRequest request = new RestRequest("validate", Method.Get);
         request.AddHeader("Authorization", $"OAuth {accessToken}");
 
         return Deserialize<TokenValidationRequest>(await restClient.ExecuteAsync(request));
@@ -137,8 +139,8 @@ public class HelixHelper : IOAuthHandler
         List<string>? gameIDs = null,
         List<string>? gameNames = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/games");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("games", Method.Get);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
 
         request.AddOptionalParameter("id", gameIDs);
@@ -156,8 +158,8 @@ public class HelixHelper : IOAuthHandler
         string? before = null,
         string? first = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/games/top");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("games/top", Method.Get);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
 
         request.AddOptionalParameter("first", first);
@@ -173,8 +175,8 @@ public class HelixHelper : IOAuthHandler
     /// </summary>
     public async Task<TwitchUsers.Datum?> GetUserById(string id)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/users");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("users", Method.Get);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {botConfig.BotAccessToken}");
 
@@ -195,8 +197,8 @@ public class HelixHelper : IOAuthHandler
     /// </summary>
     public async Task<TwitchUsers.Datum?> GetUserByLogin(string login)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/users");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("users", Method.Get);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {botConfig.BotAccessToken}");
 
@@ -221,8 +223,8 @@ public class HelixHelper : IOAuthHandler
         List<string>? ids = null,
         List<string>? logins = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/users");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("users", Method.Get);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {botConfig.BotAccessToken}");
 
@@ -238,8 +240,8 @@ public class HelixHelper : IOAuthHandler
     /// </summary>
     public async Task<TwitchStreamTags?> GetStreamTags(string broadcasterId)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/streams/tags");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("streams/tags", Method.Get);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
 
         request.AddParameter("broadcaster_id", broadcasterId);
@@ -256,8 +258,8 @@ public class HelixHelper : IOAuthHandler
         string? after = null,
         List<string>? tagIDs = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/tags/streams");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("tags/streams", Method.Get);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
 
         request.AddOptionalParameter("first", first);
@@ -277,8 +279,8 @@ public class HelixHelper : IOAuthHandler
         string? after = null,
         string? first = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/users/follows");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("users/follows", Method.Get);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
 
         request.AddOptionalParameter("first", first);
@@ -305,8 +307,8 @@ public class HelixHelper : IOAuthHandler
         string? sort = null,
         string? type = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/videos");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("videos", Method.Get);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
 
         request.AddOptionalParameter("video_id", videoID);
@@ -337,8 +339,8 @@ public class HelixHelper : IOAuthHandler
         string? startedAt = null,
         string? first = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/clips");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("clips", Method.Get);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
 
         request.AddOptionalParameter("id", clipID);
@@ -367,8 +369,8 @@ public class HelixHelper : IOAuthHandler
         List<string>? userIDs = null,
         List<string>? userLogins = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/streams");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("streams", Method.Get);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {botConfig.BotAccessToken}");
 
@@ -391,8 +393,8 @@ public class HelixHelper : IOAuthHandler
     public async Task<TwitchChannels?> GetChannels(
         string broadcaseterID)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/channels");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("channels", Method.Get);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {botConfig.BotAccessToken}");
 
@@ -409,8 +411,8 @@ public class HelixHelper : IOAuthHandler
         string token,
         string description)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/users");
-        RestRequest request = new RestRequest(Method.PUT);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("users", Method.Put);
         request.AddHeader("Authorization", $"Bearer {token}");
 
         request.AddParameter("description", description);
@@ -426,8 +428,8 @@ public class HelixHelper : IOAuthHandler
         List<string>? userIDs,
         string broadcasterID)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/subscriptions");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("subscriptions", Method.Get);
         request.AddHeader("Authorization", $"Bearer {token}");
 
         request.AddParameter("broadcaster_id", broadcasterID);
@@ -444,8 +446,8 @@ public class HelixHelper : IOAuthHandler
         string token,
         string broadcasterID)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/subscriptions");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("subscriptions", Method.Get);
         request.AddHeader("Authorization", $"Bearer {token}");
 
         request.AddParameter("broadcaster_id", broadcasterID);
@@ -461,8 +463,8 @@ public class HelixHelper : IOAuthHandler
         string broadcasterID,
         string? hlsDelay = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/clips");
-        RestRequest request = new RestRequest(Method.POST);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("clips", Method.Post);
         request.AddHeader("Authorization", $"Bearer {botConfig.BotAccessToken}");
 
         request.AddParameter("broadcaster_id", broadcasterID);
@@ -485,8 +487,8 @@ public class HelixHelper : IOAuthHandler
         string? type = null)
     {
 
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/analytics/games");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("analytics/games", Method.Get);
         request.AddHeader("Authorization", $"Bearer {botConfig.BotAccessToken}");
 
         request.AddOptionalParameter("after", after);
@@ -505,8 +507,8 @@ public class HelixHelper : IOAuthHandler
     /// </summary>
     public async Task<TwitchUserExtensions?> GetUserExtensions()
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/users/extensions/list");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("users/extensions/list", Method.Get);
         request.AddHeader("Authorization", $"Bearer {botConfig.BotAccessToken}");
 
         return Deserialize<TwitchUserExtensions>(await restClient.ExecuteAsync(request));
@@ -519,8 +521,8 @@ public class HelixHelper : IOAuthHandler
     public async Task<TwitchActiveUserExtensions?> GetActiveUserExtensions(
         string? userID = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/users/extensions");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("users/extensions", Method.Get);
         request.AddHeader("Authorization", $"Bearer {botConfig.BotAccessToken}");
 
         request.AddOptionalParameter("user_id", userID);
@@ -540,8 +542,8 @@ public class HelixHelper : IOAuthHandler
         string? startedAt = null,
         string? type = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/analytics/extensions");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("analytics/extensions", Method.Get);
         request.AddHeader("Authorization", $"Bearer {botConfig.BotAccessToken}");
 
         request.AddOptionalParameter("after", after);
@@ -570,8 +572,8 @@ public class HelixHelper : IOAuthHandler
         List<string>? userIDs = null,
         List<string>? userLogins = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/streams/metadata");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("streams/metadata", Method.Get);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
 
         request.AddOptionalParameter("after", after);
@@ -596,8 +598,8 @@ public class HelixHelper : IOAuthHandler
     public async Task<TwitchActiveUserExtensions?> UpdateUserExtensions(
         TwitchUpdateActiveUserExtensions toUpdate)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/users/extensions");
-        RestRequest request = new RestRequest(Method.PUT);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("users/extensions", Method.Put);
         request.AddHeader("Authorization", $"Bearer {botConfig.BotAccessToken}");
         request.AddHeader("Content-Type", "application/json");
 
@@ -618,8 +620,8 @@ public class HelixHelper : IOAuthHandler
         string? startedAt = null,
         string? userID = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/bits/leaderboard");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("bits/leaderboard", Method.Get);
         request.AddHeader("Authorization", $"Bearer {botConfig.BotAccessToken}");
 
         request.AddOptionalParameter("count", count);
@@ -640,8 +642,8 @@ public class HelixHelper : IOAuthHandler
         string broadcasterID,
         TwitchTagsUpdate? tags = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/streams/tags");
-        RestRequest request = new RestRequest(Method.PUT);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("streams/tags", Method.Put);
         request.AddHeader("Authorization", $"Bearer {botConfig.BotAccessToken}");
         request.AddHeader("Content-Type", "application/json");
 
@@ -656,7 +658,7 @@ public class HelixHelper : IOAuthHandler
             request.AddJsonBody(toUpdate_Json);
         }
 
-        IRestResponse response = await restClient.ExecuteAsync(request);
+        RestResponse response = await restClient.ExecuteAsync(request);
 
         return response.StatusCode == HttpStatusCode.NoContent;
     }
@@ -670,8 +672,8 @@ public class HelixHelper : IOAuthHandler
         string? after = null,
         string? first = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/webhooks/subscriptions");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("webhooks/subscriptions", Method.Get);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {clientCredentialsToken}");
 
@@ -692,8 +694,8 @@ public class HelixHelper : IOAuthHandler
         int lease,
         string secret)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/webhooks/hub");
-        RestRequest request = new RestRequest(Method.POST);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("webhooks/hub", Method.Post);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {botConfig.BotAccessToken}");
 
@@ -703,7 +705,7 @@ public class HelixHelper : IOAuthHandler
         request.AddParameter("hub.lease_seconds", lease);
         request.AddParameter("hub.secret", secret);
 
-        IRestResponse response = await restClient.ExecuteAsync(request);
+        RestResponse response = await restClient.ExecuteAsync(request);
 
         if (response.StatusCode != HttpStatusCode.Accepted)
         {
@@ -720,8 +722,8 @@ public class HelixHelper : IOAuthHandler
     public async Task<TwitchCheermotes?> GetCheermotes(
         string? broadcasterID = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/bits/cheermotes");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("bits/cheermotes", Method.Get);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {botConfig.BotAccessToken}");
 
@@ -738,8 +740,8 @@ public class HelixHelper : IOAuthHandler
         string? id = null,
         bool? onlyManageableRewards = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/channel_points/custom_rewards");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient("https://api.twitch.tv/helix");
+        RestRequest request = new RestRequest("channel_points/custom_rewards", Method.Get);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {botConfig.BroadcasterAccessToken}");
 
@@ -766,8 +768,8 @@ public class HelixHelper : IOAuthHandler
         int? globalCooldown = null,
         bool redemptionsSkipQueue = false)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/channel_points/custom_rewards");
-        RestRequest request = new RestRequest(Method.POST);
+        RestClient restClient = new RestClient("https://api.twitch.tv/helix");
+        RestRequest request = new RestRequest("channel_points/custom_rewards", Method.Post);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {botConfig.BroadcasterAccessToken}");
         request.AddQueryParameter("broadcaster_id", botConfig.BroadcasterId);
@@ -825,8 +827,8 @@ public class HelixHelper : IOAuthHandler
         string? after = null,
         int? first = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/channel_points/custom_rewards/redemptions");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient("https://api.twitch.tv/helix");
+        RestRequest request = new RestRequest("channel_points/custom_rewards/redemptions", Method.Get);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {botConfig.BroadcasterAccessToken}");
 
@@ -847,8 +849,8 @@ public class HelixHelper : IOAuthHandler
         string id,
         string status)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/channel_points/custom_rewards/redemptions");
-        RestRequest request = new RestRequest(Method.PATCH);
+        RestClient restClient = new RestClient("https://api.twitch.tv/helix");
+        RestRequest request = new RestRequest("channel_points/custom_rewards/redemptions", Method.Patch);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {botConfig.BroadcasterAccessToken}");
 
@@ -868,8 +870,8 @@ public class HelixHelper : IOAuthHandler
         string? backgroundColor = null,
         bool? paused = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix/channel_points/custom_rewards");
-        RestRequest request = new RestRequest(Method.PATCH);
+        RestClient restClient = new RestClient("https://api.twitch.tv/helix");
+        RestRequest request = new RestRequest("channel_points/custom_rewards", Method.Patch);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {botConfig.BroadcasterAccessToken}");
 
@@ -884,7 +886,7 @@ public class HelixHelper : IOAuthHandler
         return Deserialize<TwitchCustomRewardRedemption>(await restClient.ExecuteAsync(request));
     }
 
-    private T? Deserialize<T>(IRestResponse response)
+    private T? Deserialize<T>(RestResponse response)
     {
         if (response.StatusCode != HttpStatusCode.OK)
         {
@@ -892,16 +894,16 @@ public class HelixHelper : IOAuthHandler
             return default;
         }
 
-        return JsonSerializer.Deserialize<T>(response.Content);
+        return JsonSerializer.Deserialize<T>(response.Content!);
     }
 
-    private static T? Deserialize<T>(IRestResponse response, Func<string, string> contentMutator)
+    private static T? Deserialize<T>(RestResponse response, Func<string, string> contentMutator)
     {
         if (response.StatusCode != HttpStatusCode.OK)
         {
             return default;
         }
 
-        return JsonSerializer.Deserialize<T>(contentMutator(response.Content));
+        return JsonSerializer.Deserialize<T>(contentMutator(response.Content!));
     }
 }

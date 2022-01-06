@@ -11,6 +11,9 @@ public class TiltifyHelper : IOAuthHandler
     private readonly TiltifyConfiguration tiltifyConfig;
     private readonly ICommunication communication;
 
+    private static readonly Uri OAuthURI = new Uri("https://tiltify.com/oauth");
+    private static readonly Uri TiltifyAPIURI = new Uri("https://tiltify.com/api/v3");
+
     public TiltifyHelper(
         TiltifyConfiguration tiltifyConfig,
         ICommunication communication)
@@ -25,35 +28,35 @@ public class TiltifyHelper : IOAuthHandler
         string authCode,
         string redirectURI)
     {
-        RestClient restClient = new RestClient("https://tiltify.com/oauth/token");
-        RestRequest request = new RestRequest(Method.POST);
+        RestClient restClient = new RestClient(OAuthURI);
+        RestRequest request = new RestRequest("token", Method.Post);
         request.AddParameter("client_id", tiltifyConfig.ApplicationId);
         request.AddParameter("client_secret", tiltifyConfig.ApplicationSecret);
         request.AddParameter("code", authCode);
         request.AddParameter("grant_type", "authorization_code");
         request.AddParameter("redirect_uri", redirectURI);
 
-        IRestResponse response = await restClient.ExecuteAsync(request);
+        RestResponse response = await restClient.ExecuteAsync(request);
 
         if (response.StatusCode != HttpStatusCode.OK)
         {
             return null;
         }
 
-        return JsonSerializer.Deserialize<TokenRequest>(response.Content);
+        return JsonSerializer.Deserialize<TokenRequest>(response.Content!);
     }
 
     public async Task<TokenRefreshRequest?> RefreshToken(
         string refreshToken)
     {
-        RestClient restClient = new RestClient("https://tiltify.com/oauth/token");
-        RestRequest request = new RestRequest(Method.POST);
+        RestClient restClient = new RestClient(OAuthURI);
+        RestRequest request = new RestRequest("token", Method.Post);
         request.AddParameter("grant_type", "refresh_token");
         request.AddParameter("refresh_token", refreshToken);
         request.AddParameter("client_id", tiltifyConfig.ApplicationId);
         request.AddParameter("client_secret", tiltifyConfig.ApplicationSecret);
 
-        IRestResponse response = await restClient.ExecuteAsync(request);
+        RestResponse response = await restClient.ExecuteAsync(request);
 
         if (response.StatusCode != HttpStatusCode.OK)
         {
@@ -62,17 +65,17 @@ public class TiltifyHelper : IOAuthHandler
             return null;
         }
 
-        return JsonSerializer.Deserialize<TokenRefreshRequest>(response.Content);
+        return JsonSerializer.Deserialize<TokenRefreshRequest>(response.Content!);
     }
 
     public async Task<TokenValidationRequest?> ValidateToken(
         string accessToken)
     {
-        RestClient restClient = new RestClient("https://tiltify.com/oauth/validate");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(OAuthURI);
+        RestRequest request = new RestRequest("validate", Method.Get);
         request.AddHeader("Authorization", $"OAuth {accessToken}");
 
-        IRestResponse response = await restClient.ExecuteAsync(request);
+        RestResponse response = await restClient.ExecuteAsync(request);
 
         if (response.StatusCode != HttpStatusCode.OK)
         {
@@ -80,18 +83,18 @@ public class TiltifyHelper : IOAuthHandler
             return null;
         }
 
-        return JsonSerializer.Deserialize<TokenValidationRequest>(response.Content);
+        return JsonSerializer.Deserialize<TokenValidationRequest>(response.Content!);
     }
 
     public async Task<bool> ExpireToken(
         string token)
     {
-        RestClient restClient = new RestClient("https://tiltify.com/oauth/revoke");
-        RestRequest request = new RestRequest(Method.POST);
+        RestClient restClient = new RestClient(OAuthURI);
+        RestRequest request = new RestRequest("revoke", Method.Post);
         request.AddParameter("client_id", tiltifyConfig.ApplicationId);
         request.AddParameter("token", token);
 
-        IRestResponse response = await restClient.ExecuteAsync(request);
+        RestResponse response = await restClient.ExecuteAsync(request);
 
         return response.StatusCode == HttpStatusCode.OK;
     }
@@ -102,11 +105,11 @@ public class TiltifyHelper : IOAuthHandler
     public async Task<CampaignRequest?> GetCampaign(
         int campaignId)
     {
-        RestClient restClient = new RestClient($"https://tiltify.com/api/v3/campaigns/{campaignId}");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(TiltifyAPIURI);
+        RestRequest request = new RestRequest($"campaigns/{campaignId}", Method.Get);
         request.AddHeader("Authorization", $"Bearer {tiltifyConfig.ApplicationAccessToken}");
 
-        IRestResponse response = await restClient.ExecuteAsync(request);
+        RestResponse response = await restClient.ExecuteAsync(request);
 
         if (response.StatusCode != HttpStatusCode.OK)
         {
@@ -114,20 +117,20 @@ public class TiltifyHelper : IOAuthHandler
             return null;
         }
 
-        return JsonSerializer.Deserialize<CampaignRequest>(response.Content);
+        return JsonSerializer.Deserialize<CampaignRequest>(response.Content!);
     }
 
     public async Task<CampaignDonationRequest?> GetCampaignDonations(
         int campaignId,
         int? afterIndex = null)
     {
-        RestClient restClient = new RestClient($"https://tiltify.com/api/v3/campaigns/{campaignId}/donations");
-        RestRequest request = new RestRequest(Method.GET);
+        RestClient restClient = new RestClient(TiltifyAPIURI);
+        RestRequest request = new RestRequest($"campaigns/{campaignId}/donations", Method.Get);
         request.AddHeader("Authorization", $"Bearer {tiltifyConfig.ApplicationAccessToken}");
 
         request.AddOptionalParameter("after", afterIndex);
 
-        IRestResponse response = await restClient.ExecuteAsync(request);
+        RestResponse response = await restClient.ExecuteAsync(request);
 
         if (response.StatusCode != HttpStatusCode.OK)
         {
@@ -135,7 +138,7 @@ public class TiltifyHelper : IOAuthHandler
             return null;
         }
 
-        return JsonSerializer.Deserialize<CampaignDonationRequest>(response.Content);
+        return JsonSerializer.Deserialize<CampaignDonationRequest>(response.Content!);
     }
 
     #endregion Campaigns
