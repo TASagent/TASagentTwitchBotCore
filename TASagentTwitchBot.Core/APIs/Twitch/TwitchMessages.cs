@@ -546,11 +546,11 @@ public record Condition(
 public record Transport(
     [property: JsonPropertyName("method")] string Method,
     [property: JsonPropertyName("callback")] string Callback,
-    [property: JsonPropertyName("secret")] string Secret);
+    [property: JsonPropertyName("secret")] string? Secret = null);
 
 public record TwitchEventSubPayload(
     [property: JsonPropertyName("subscription")] TwitchSubscriptionDatum Subscription,
-    [property: JsonPropertyName("event")] JsonElement TwitchEvent,
+    [property: JsonPropertyName("event")] JsonElement TwitchEvent = default,
     [property: JsonPropertyName("challenge")] string? Challenge = null);
 
 public enum TwitchDeleteSubscriptionResponse

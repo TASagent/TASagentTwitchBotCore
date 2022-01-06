@@ -51,9 +51,6 @@ public class HelixEventSubHelper
             return null;
         }
 
-        //TEMP
-        logger.LogInformation("TEMP: Subscribe Response: {response.Content}", response.Content);
-
         return JsonSerializer.Deserialize<TwitchSubscribeResponse>(response.Content!);
     }
 
@@ -104,9 +101,6 @@ public class HelixEventSubHelper
             logger.LogWarning("Bad response to GetSubscriptions request: {StatusCode} - {Content}", response.StatusCode, response.Content);
             return null;
         }
-
-        //TEMP
-        logger.LogInformation("TEMP: GetSubscriptions Response: {response.Content}", response.Content);
 
         return JsonSerializer.Deserialize<TwitchGetSubscriptionsResponse>(response.Content!);
     }
