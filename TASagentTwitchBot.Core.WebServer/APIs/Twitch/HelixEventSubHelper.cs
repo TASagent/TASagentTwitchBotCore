@@ -37,11 +37,11 @@ public class HelixEventSubHelper
         request.AddHeader("Client-ID", webServerConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {await appAccessTokenManager.GetAppAccessToken()}");
 
-        request.AddJsonBody(JsonSerializer.Serialize(new TwitchSubscribeRequest(
+        request.AddJsonBody(new TwitchSubscribeRequest(
             SubscriptionType: subscriptionType,
             Version: "1",
             Condition: condition,
-            Transport: transport)));
+            Transport: transport));
 
         RestResponse response = await restClient.ExecuteAsync(request);
 

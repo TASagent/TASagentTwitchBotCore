@@ -604,7 +604,7 @@ public class HelixHelper : IOAuthHandler
         request.AddHeader("Content-Type", "application/json");
 
         //Add serialized toUpdate as body
-        request.AddJsonBody(JsonSerializer.Serialize(toUpdate));
+        request.AddJsonBody(toUpdate);
 
         return Deserialize<TwitchActiveUserExtensions>(await restClient.ExecuteAsync(request));
     }
@@ -652,10 +652,8 @@ public class HelixHelper : IOAuthHandler
         //Serialize "toUpdate" to json
         if (tags?.TagIDs is not null && tags.TagIDs.Count > 0)
         {
-            //Serialize "toUpdate" to json
-            string toUpdate_Json = JsonSerializer.Serialize(tags);
-            //Add body
-            request.AddJsonBody(toUpdate_Json);
+            //Serialize "toUpdate" to json and add
+            request.AddJsonBody(tags);
         }
 
         RestResponse response = await restClient.ExecuteAsync(request);
