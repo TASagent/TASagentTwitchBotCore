@@ -516,32 +516,32 @@ public record TwitchSubscriptionDatum(
 
 public record Condition(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        [property: JsonPropertyName("broadcaster_user_id")]
-        string? BroadcasterUserId = null,
+    [property: JsonPropertyName("broadcaster_user_id")]
+    string? BroadcasterUserId = null,
 
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        [property: JsonPropertyName("from_broadcaster_user_id")]
-        string? FromBroadcasterUserId = null,
+    [property: JsonPropertyName("from_broadcaster_user_id")]
+    string? FromBroadcasterUserId = null,
 
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        [property: JsonPropertyName("to_broadcaster_user_id")]
-        string? ToBroadcasterUserId = null,
+    [property: JsonPropertyName("to_broadcaster_user_id")]
+    string? ToBroadcasterUserId = null,
 
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        [property: JsonPropertyName("reward_id")]
-        string? RewardId = null,
+    [property: JsonPropertyName("reward_id")]
+    string? RewardId = null,
 
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        [property: JsonPropertyName("extension_client_id")]
-        string? ExtensionClientId = null,
+    [property: JsonPropertyName("extension_client_id")]
+    string? ExtensionClientId = null,
 
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        [property: JsonPropertyName("client_id")]
-        string? ClientId = null,
+    [property: JsonPropertyName("client_id")]
+    string? ClientId = null,
 
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        [property: JsonPropertyName("user_id")]
-        string? UserId = null);
+    [property: JsonPropertyName("user_id")]
+    string? UserId = null);
 
 public record Transport(
     [property: JsonPropertyName("method")] string Method,

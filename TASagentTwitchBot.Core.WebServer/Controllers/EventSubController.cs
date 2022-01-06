@@ -61,6 +61,22 @@ public class EventSubController : Controller
             return BadRequest();
         }
 
+        //Check userId for dashes
+        if (userId.Length == 36 && userId[8] == '-')
+        {
+            //Dashes found
+            //No changes required
+        }
+        else if (userId.Length == 32)
+        {
+            userId = $"{userId[0..8]}-{userId[8..12]}-{userId[12..16]}-{userId[16..20]}-{userId[20..32]}";
+        }
+        else
+        {
+            logger.LogWarning("Received EventCall with a bad userId.");
+            return BadRequest("Malformed URL");
+        }
+
         ApplicationUser user = await userManager.FindByIdAsync(userId);
 
         if (user is null)
