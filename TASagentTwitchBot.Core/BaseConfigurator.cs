@@ -201,103 +201,60 @@ public abstract class BaseConfigurator : IConfigurator
 
     protected bool ConfigurePasswords()
     {
-#pragma warning disable CS0618 // Type or member is obsolete - Conversion of old Password field
-
         bool successful = true;
         if (string.IsNullOrEmpty(botConfig.AuthConfiguration.Admin.PasswordHash))
         {
-            //Check obsolete field
-            if (!string.IsNullOrEmpty(botConfig.AuthConfiguration.Admin.Password))
-            {
-                //Convert the obsolete field
-                botConfig.AuthConfiguration.Admin.PasswordHash = Cryptography.HashPassword(botConfig.AuthConfiguration.Admin.Password);
-                botConfig.AuthConfiguration.Admin.Password = "";
-                botConfig.Serialize();
+            WritePrompt("Admin password for bot control");
 
-                WriteMessage("Converted Old Admin Password");
+            string pass = Console.ReadLine()!.Trim();
+
+            if (!string.IsNullOrEmpty(pass))
+            {
+                botConfig.AuthConfiguration.Admin.PasswordHash = Cryptography.HashPassword(pass);
+                botConfig.Serialize();
             }
             else
             {
-                WritePrompt("Admin password for bot control");
-
-                string pass = Console.ReadLine()!.Trim();
-
-                if (!string.IsNullOrEmpty(pass))
-                {
-                    botConfig.AuthConfiguration.Admin.PasswordHash = Cryptography.HashPassword(pass);
-                    botConfig.Serialize();
-                }
-                else
-                {
-                    WriteError("Empty Admin Password received.");
-                    successful = false;
-                }
+                WriteError("Empty Admin Password received.");
+                successful = false;
             }
         }
 
         if (string.IsNullOrEmpty(botConfig.AuthConfiguration.Privileged.PasswordHash))
         {
-            //Check obsolete field
-            if (!string.IsNullOrEmpty(botConfig.AuthConfiguration.Privileged.Password))
-            {
-                //Convert the obsolete field
-                botConfig.AuthConfiguration.Privileged.PasswordHash = Cryptography.HashPassword(botConfig.AuthConfiguration.Privileged.Password);
-                botConfig.AuthConfiguration.Privileged.Password = "";
-                botConfig.Serialize();
+            WritePrompt("Moderator password for bot control");
 
-                WriteMessage("Converted Old Privileged Password");
+            string pass = Console.ReadLine()!.Trim();
+
+            if (!string.IsNullOrEmpty(pass))
+            {
+                botConfig.AuthConfiguration.Privileged.PasswordHash = Cryptography.HashPassword(pass);
+                botConfig.Serialize();
             }
             else
             {
-                WritePrompt("Moderator password for bot control");
-
-                string pass = Console.ReadLine()!.Trim();
-
-                if (!string.IsNullOrEmpty(pass))
-                {
-                    botConfig.AuthConfiguration.Privileged.PasswordHash = Cryptography.HashPassword(pass);
-                    botConfig.Serialize();
-                }
-                else
-                {
-                    WriteError("Empty Moderator Password received.");
-                    successful = false;
-                }
+                WriteError("Empty Moderator Password received.");
+                successful = false;
             }
         }
 
         if (string.IsNullOrEmpty(botConfig.AuthConfiguration.User.PasswordHash))
         {
-            //Check obsolete field
-            if (!string.IsNullOrEmpty(botConfig.AuthConfiguration.User.Password))
-            {
-                //Convert the obsolete field
-                botConfig.AuthConfiguration.User.PasswordHash = Cryptography.HashPassword(botConfig.AuthConfiguration.User.Password);
-                botConfig.AuthConfiguration.User.Password = "";
-                botConfig.Serialize();
+            WritePrompt("User password for bot control");
 
-                WriteMessage("Converted Old User Password");
+            string pass = Console.ReadLine()!.Trim();
+
+            if (!string.IsNullOrEmpty(pass))
+            {
+                botConfig.AuthConfiguration.User.PasswordHash = Cryptography.HashPassword(pass);
+                botConfig.Serialize();
             }
             else
             {
-                WritePrompt("User password for bot control");
-
-                string pass = Console.ReadLine()!.Trim();
-
-                if (!string.IsNullOrEmpty(pass))
-                {
-                    botConfig.AuthConfiguration.User.PasswordHash = Cryptography.HashPassword(pass);
-                    botConfig.Serialize();
-                }
-                else
-                {
-                    WriteError("Empty User Password received.");
-                    successful = false;
-                }
+                WriteError("Empty User Password received.");
+                successful = false;
             }
         }
-
-#pragma warning restore CS0618 // Type or member is obsolete
 
         return successful;
     }

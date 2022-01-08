@@ -10,6 +10,7 @@ namespace TASagentTwitchBot.Plugin.TTTAS;
 
 public interface ITTTASProvider
 {
+    int GetRecordingCount();
     int GetPendingCount();
 
     bool ShowPrompt();
@@ -256,10 +257,8 @@ public class TTTASProvider : ITTTASProvider
         }
     }
 
-    public void ClearPrompt()
-    {
-        monitorHubContext.Clients.All.SendAsync("ClearPrompt");
-    }
+    public void ClearPrompt() => monitorHubContext.Clients.All.SendAsync("ClearPrompt");
+    public int GetRecordingCount() => recordingData.Recordings.Count;
 
     public List<string> GetPendingRecordings() => pendingRecordings.Values.Select(x => x.Name).ToList();
 

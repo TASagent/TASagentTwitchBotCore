@@ -32,16 +32,21 @@ public class TTSSystem : ICommandContainer
         this.scopeFactory = scopeFactory;
     }
 
-    public void RegisterCommands(
-        Dictionary<string, CommandHandler> commands,
-        Dictionary<string, HelpFunction> helpFunctions,
-        Dictionary<string, SetFunction> setFunctions,
-        Dictionary<string, GetFunction> getFunctions)
+    public void RegisterCommands(ICommandRegistrar commandRegistrar)
     {
-        commands.Add(ttsConfig.Command.CommandName, HandleTTSRequest);
-        helpFunctions.Add(ttsConfig.Command.CommandName, HandleTTSHelpRequest);
-        setFunctions.Add(ttsConfig.Command.CommandName, HandleTTSSetRequest);
-        getFunctions.Add(ttsConfig.Command.CommandName, HandleTTSGetRequest);
+        commandRegistrar.RegisterGlobalCommand(ttsConfig.Command.CommandName, HandleTTSRequest);
+
+        commandRegistrar.RegisterScopedCommand("set", ttsConfig.Command.CommandName, HandleTTSSetRequest);
+        commandRegistrar.RegisterScopedCommand("get", ttsConfig.Command.CommandName, HandleTTSGetRequest);
+
+        commandRegistrar.RegisterHelpCommand(ttsConfig.Command.CommandName, HandleTTSHelpRequest);
+
+        commandRegistrar.RegisterScopedCommand("disable", ttsConfig.Command.CommandName, HandleTTSDisableRequest);
+        commandRegistrar.RegisterScopedCommand("enable", ttsConfig.Command.CommandName, HandleTTSEnableRequest);
+
+        commandRegistrar.RegisterScopedCommand("set", "voice", (chatter, remainingCommand) => HandleBadSetRequests(chatter, remainingCommand, "voice"));
+        commandRegistrar.RegisterScopedCommand("set", "pitch", (chatter, remainingCommand) => HandleBadSetRequests(chatter, remainingCommand, "pitch"));
+        commandRegistrar.RegisterScopedCommand("set", "speed", (chatter, remainingCommand) => HandleBadSetRequests(chatter, remainingCommand, "speed"));
     }
 
     public IEnumerable<string> GetPublicCommands()
@@ -83,6 +88,19 @@ public class TTSSystem : ICommandContainer
         {
             return $"No TTS subcommand found: {string.Join(' ', remainingCommand)}";
         }
+    }
+
+    /// <summary>
+    /// This handles when someone messes up and types "!set voice Brian" instead of "!set tts voice Brian"
+    /// </summary>
+    /// <param name="chatter"></param>
+    /// <param name="remainingCommand"></param>
+    /// <param name="parameter"></param>
+    /// <returns></returns>
+    private Task HandleBadSetRequests(IRC.TwitchChatter chatter, string[] remainingCommand, string parameter)
+    {
+        remainingCommand = remainingCommand.Prepend(parameter).ToArray();
+        return HandleTTSSetRequest(chatter, remainingCommand);
     }
 
     private async Task HandleTTSRequest(IRC.TwitchChatter chatter, string[] remainingCommand)
@@ -132,6 +150,48 @@ public class TTSSystem : ICommandContainer
             //TTS Error
             communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, sorry, I can't TTS nothing.");
             return;
+        }
+
+        if (remainingCommand.Length == 2)
+        {
+            //Special overloaded service to handle when "!set" is forgotten
+            switch (remainingCommand[0].ToLowerInvariant())
+            {
+                case "voice":
+                    TTSVoice newTTSVoice = remainingCommand[1].TranslateTTSVoice();
+                    if (newTTSVoice != TTSVoice.MAX)
+                    {
+                        //Looks like a Set TTS Voice command. Set and return.
+                        await HandleTTSSetRequest(chatter, remainingCommand);
+                        return;
+                    }
+                    break;
+
+                case "pitch":
+                    TTSPitch newTTSPitch = remainingCommand[1].TranslateTTSPitch();
+                    if (newTTSPitch != TTSPitch.MAX)
+                    {
+                        //Looks like a Set TTS Pitch command. Set and return.
+                        await HandleTTSSetRequest(chatter, remainingCommand);
+                        return;
+                    }
+                    break;
+
+                case "speed":
+                    TTSSpeed newTTSSpeed = remainingCommand[1].TranslateTTSSpeed();
+                    if (newTTSSpeed != TTSSpeed.MAX)
+                    {
+                        //Looks like a Set TTS Speed command. Set and return.
+                        await HandleTTSSetRequest(chatter, remainingCommand);
+                        return;
+                    }
+                    break;
+
+                case "effect":
+                default:
+                    //Do nothing, it's likely a TTS request.
+                    break;
+            }
         }
 
         //Update last TTS time
@@ -335,9 +395,7 @@ public class TTSSystem : ICommandContainer
             case "effect":
             case "effects":
             case "effectchain":
-            case "effect_chain":
             case "effectschain":
-            case "effects_chain":
                 if (remainingCommand.Length == 1)
                 {
                     communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, no TTS effects specified.");
@@ -428,86 +486,69 @@ public class TTSSystem : ICommandContainer
             return;
         }
 
-        if (remainingCommand.Length == 1 && remainingCommand[0].StartsWith('@'))
+        if (remainingCommand.Length != 1 || remainingCommand[0].Length < 2)
         {
-            //Try to find other user
-
-            string userName = remainingCommand[0];
-
-            //Strip off optional leading @
-            if (userName.StartsWith('@'))
-            {
-                userName = userName[1..].ToLower();
-            }
-
-            {
-                string lowerUserName = userName.ToLower();
-                using IServiceScope scope = scopeFactory.CreateScope();
-                BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
-                User? dbUser = await db.Users.FirstOrDefaultAsync(x => x.TwitchUserName.ToLower() == lowerUserName);
-
-                if (dbUser is null)
-                {
-                    communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, no user named {userName} found.");
-                    return;
-                }
-
-                communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, the TTS settings of @{dbUser.TwitchUserName}: {GetUserTTSSettings(dbUser)}");
-                return;
-            }
+            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, malformed \"Get TTS\" command. Expected: \"!get tts\" or \"!get tts @username\"");
         }
 
-        string settingName = remainingCommand[0].ToLowerInvariant();
+        //Try to find other user
+        string userName = remainingCommand[0];
 
-        switch (settingName)
+        //Strip off optional leading @
+        if (userName.StartsWith('@'))
         {
-            case "voice":
-            case "pitch":
-            case "effect":
-            case "effects":
-            case "effectchain":
-            case "effect_chain":
-                if (remainingCommand.Length == 1)
-                {
-                    communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, your TTS settings: {GetUserTTSSettings(chatter.User)}");
-                    return;
-                }
-
-                if (remainingCommand.Length == 2 && remainingCommand[1].Length > 1)
-                {
-                    //Try to find other user
-
-                    string userName = remainingCommand[1];
-
-                    //Strip off optional leading @
-                    if (userName.StartsWith('@'))
-                    {
-                        userName = userName[1..].ToLower();
-                    }
-
-                    using IServiceScope scope = scopeFactory.CreateScope();
-
-                    string lowerUserName = userName.ToLower();
-                    BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
-                    User? dbUser = await db.Users.FirstOrDefaultAsync(x => x.TwitchUserName.ToLower() == lowerUserName);
-
-                    if (dbUser is null)
-                    {
-                        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, no user named {userName} found.");
-                        return;
-                    }
-
-                    communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, the TTS settings of @{dbUser.TwitchUserName}: {GetUserTTSSettings(dbUser)}");
-                }
-                else
-                {
-                    communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, unable to query specified TTS settings.");
-                }
-                break;
-
-            default:
-                communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, TTS setting not recognized ({string.Join(' ', remainingCommand)}).");
-                break;
+            userName = userName[1..].ToLower();
         }
+
+        string lowerUserName = userName.ToLower();
+        using IServiceScope scope = scopeFactory.CreateScope();
+        BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+        User? dbUser = await db.Users.FirstOrDefaultAsync(x => x.TwitchUserName.ToLower() == lowerUserName);
+
+        if (dbUser is null)
+        {
+            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, no user named \"{userName}\" found.");
+            return;
+        }
+
+        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, the TTS settings of @{dbUser.TwitchUserName}: {GetUserTTSSettings(dbUser)}");
+        return;
+    }
+
+    private Task HandleTTSDisableRequest(IRC.TwitchChatter chatter, string[] remainingCommand)
+    {
+        if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
+        {
+            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, you are not authorized to disable TTS.");
+            return Task.CompletedTask;
+        }
+
+        SetTTSSystemStatus(chatter, false);
+        return Task.CompletedTask;
+    }
+
+    private Task HandleTTSEnableRequest(IRC.TwitchChatter chatter, string[] remainingCommand)
+    {
+        if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
+        {
+            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, you are not authorized to enable TTS.");
+            return Task.CompletedTask;
+        }
+
+        SetTTSSystemStatus(chatter, true);
+        return Task.CompletedTask;
+    }
+
+    private void SetTTSSystemStatus(IRC.TwitchChatter chatter, bool enabled)
+    {
+        if (ttsConfig.Command.Enabled == enabled)
+        {
+            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, the TTS system is already {(enabled ? "enabled" : "disabled")}");
+            return;
+        }
+
+        ttsConfig.Command.Enabled = enabled;
+        ttsConfig.Serialize();
+        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, the TTS system has been {(enabled ? "enabled" : "disabled")}");
     }
 }

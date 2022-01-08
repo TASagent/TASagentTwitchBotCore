@@ -115,10 +115,7 @@ public class TTTASRedemptionHandler : IRedemptionContainer, IDisposable
                     enabled: true,
                     backgroundColor: tttasConfig.Redemption.BackgroundColor,
                     userInputRequired: true,
-                    maxPerStreamEnabled: false,
-                    maxPerUserPerStreamEnabled: false,
-                    globalCooldownEnabled: false,
-                    redemptionsSkipQueue: false) ??
+                    skipQueue: false) ??
                     throw new Exception($"Unable to create TTTASRedemption Reward Data");
 
                 tttasID = creationResponse.Data[0].Id;

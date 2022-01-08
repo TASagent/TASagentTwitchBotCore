@@ -46,18 +46,26 @@ public class QuoteSystem : ICommandContainer
         fakeNewsBag.AutoRefill = true;
     }
 
-    public void RegisterCommands(
-        Dictionary<string, CommandHandler> commands,
-        Dictionary<string, HelpFunction> helpFunctions,
-        Dictionary<string, SetFunction> setFunctions,
-        Dictionary<string, GetFunction> getFunctions)
+    public void RegisterCommands(ICommandRegistrar commandRegistrar)
     {
-        commands.Add("quote", QuoteCommandHandler);
-        commands.Add("addquote", AddQuoteCommandHandler);
+        commandRegistrar.RegisterGlobalCommand("quote", QuoteCommandHandler);
 
-        helpFunctions.Add("quote", QuoteHelpHandler);
+        commandRegistrar.RegisterGlobalCommand("addquote", AddQuoteCommandHandler);
+        commandRegistrar.RegisterScopedCommand("quote", "add", AddQuoteCommandHandler);
+        commandRegistrar.RegisterScopedCommand("add", "quote", AddQuoteCommandHandler);
 
-        setFunctions.Add("quote", HandleQuoteSetRequest);
+        commandRegistrar.RegisterGlobalCommand("removequote", RemoveQuoteCommandHandler);
+        commandRegistrar.RegisterScopedCommand("quote", "remove", RemoveQuoteCommandHandler);
+        commandRegistrar.RegisterScopedCommand("remove", "quote", RemoveQuoteCommandHandler);
+
+        commandRegistrar.RegisterGlobalCommand("getquote", GetQuoteCommandHandler);
+        commandRegistrar.RegisterScopedCommand("quote", "get", GetQuoteCommandHandler);
+        commandRegistrar.RegisterScopedCommand("get", "quote", GetQuoteCommandHandler);
+
+        commandRegistrar.RegisterScopedCommand("set", "quote", HandleQuoteSetRequest);
+        commandRegistrar.RegisterScopedCommand("quote", "set", HandleQuoteSetRequest);
+
+        commandRegistrar.RegisterHelpCommand("quote", QuoteHelpHandler);
     }
 
     public IEnumerable<string> GetPublicCommands()
@@ -92,20 +100,6 @@ public class QuoteSystem : ICommandContainer
         {
             //Get a quote by ID
             await GetQuoteById(chatter, quoteId);
-        }
-        else if (remainingCommand[0].ToLowerInvariant() == "add")
-        {
-            //Add a quote
-            string addQuoteText = string.Join(' ', remainingCommand[1..]).Trim();
-            await AddQuote(chatter, addQuoteText);
-        }
-        else if (remainingCommand[0].ToLowerInvariant() == "remove" &&
-            remainingCommand.Length > 1 &&
-            remainingCommand[1].StartsWith('#') &&
-            int.TryParse(remainingCommand[1][1..], out int removeQuoteId))
-        {
-            //Try to remove a quote
-            await RemoveQuote(chatter, removeQuoteId);
         }
         else
         {
@@ -158,7 +152,33 @@ public class QuoteSystem : ICommandContainer
             $"@{chatter.User.TwitchUserName}, Quote setting not recognized ({string.Join(' ', remainingCommand)}).");
     }
 
-    private async Task AddQuoteCommandHandler(IRC.TwitchChatter chatter, string[] remainingCommand)
+    private Task GetQuoteCommandHandler(IRC.TwitchChatter chatter, string[] remainingCommand)
+    {
+        if (remainingCommand is not null && remainingCommand.Length == 1)
+        {
+            string number = remainingCommand[1];
+
+            if (number.Length >= 2 && number[0] == '#')
+            {
+                number = number[1..];
+            }
+
+            if (!int.TryParse(number, out int getQuoteId))
+            {
+                communication.SendPublicChatMessage(
+                    $"@{chatter.User.TwitchUserName}, Malformed Quote Remove command.  Expected Form: !quote #5");
+                communication.SendDebugMessage($"    Original Message: {chatter.Message}");
+
+                return Task.CompletedTask;
+            }
+
+            return GetQuoteById(chatter, getQuoteId);
+        }
+
+        return GetRandomQuote(chatter.User);
+    }
+
+    private Task AddQuoteCommandHandler(IRC.TwitchChatter chatter, string[] remainingCommand)
     {
         if (remainingCommand is null || remainingCommand.Length == 0)
         {
@@ -167,12 +187,44 @@ public class QuoteSystem : ICommandContainer
                 $"@{chatter.User.TwitchUserName}, Malformed Quote Add command.  Expected: !quote add \"Contents\" [optional username]");
             communication.SendDebugMessage($"    Original Message: {chatter.Message}");
 
-            return;
+            return Task.CompletedTask;
         }
 
         //Add a quote
         string addQuoteText = string.Join(' ', remainingCommand).Trim();
-        await AddQuote(chatter, addQuoteText);
+        return AddQuote(chatter, addQuoteText);
+    }
+
+    private Task RemoveQuoteCommandHandler(IRC.TwitchChatter chatter, string[] remainingCommand)
+    {
+        if (remainingCommand is null || remainingCommand.Length != 1)
+        {
+            //Malformed
+            communication.SendPublicChatMessage(
+                $"@{chatter.User.TwitchUserName}, Malformed Quote Remove command.  Expected Form: !Quote Remove #5");
+            communication.SendDebugMessage($"    Original Message: {chatter.Message}");
+
+            return Task.CompletedTask;
+        }
+
+        string number = remainingCommand[1];
+
+        if (number.Length >= 2 && number[0] == '#')
+        {
+            number = number[1..];
+        }
+
+        if (!int.TryParse(number, out int removeQuoteId))
+        {
+            communication.SendPublicChatMessage(
+                $"@{chatter.User.TwitchUserName}, Malformed Quote Remove command.  Expected Form: !Quote Remove #5");
+            communication.SendDebugMessage($"    Original Message: {chatter.Message}");
+
+            return Task.CompletedTask;
+        }
+
+        //Try to remove a quote
+        return RemoveQuote(chatter, removeQuoteId);
     }
 
     private async Task MarkFakeNews(

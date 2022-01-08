@@ -25,14 +25,10 @@ public class ShoutOutSystem : ICommandContainer
         this.helixHelper = helixHelper;
     }
 
-    public void RegisterCommands(
-        Dictionary<string, CommandHandler> commands,
-        Dictionary<string, HelpFunction> helpFunctions,
-        Dictionary<string, SetFunction> setFunctions,
-        Dictionary<string, GetFunction> getFunctions)
+    public void RegisterCommands(ICommandRegistrar commandRegistrar)
     {
-        commands.Add("so", ShoutOutCommandHandler);
-        helpFunctions.Add("so", ShoutOutHelpHandler);
+        commandRegistrar.RegisterGlobalCommand("so", ShoutOutCommandHandler);
+        commandRegistrar.RegisterHelpCommand("so", ShoutOutHelpHandler);
     }
 
     public IEnumerable<string> GetPublicCommands()

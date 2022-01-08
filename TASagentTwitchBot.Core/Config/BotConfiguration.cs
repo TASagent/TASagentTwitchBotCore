@@ -25,9 +25,6 @@ public class BotConfiguration
     public bool LogAllErrors { get; set; } = true;
     public bool ExhaustiveIRCLogging { get; set; } = true;
 
-    [Obsolete("Moved to CommandConfiguration.EnableErrorHandling")]
-    public bool EnableErrorHandling { get; set; } = true;
-
     //Output configuration
     public string EffectOutputDevice { get; set; } = "";
     public string VoiceOutputDevice { get; set; } = "";
@@ -52,15 +49,6 @@ public class BotConfiguration
         {
             config = new BotConfiguration();
         }
-
-#pragma warning disable CS0618 // Type or member is obsolete
-        if (!config.EnableErrorHandling)
-        {
-            //Move field over
-            config.CommandConfiguration.EnableErrorHandling = false;
-            config.EnableErrorHandling = true;
-        }
-#pragma warning restore CS0618 // Type or member is obsolete
 
         config.AuthConfiguration.RegenerateAuthStrings();
 
@@ -150,8 +138,6 @@ public class AuthConfiguration
 
 public class CredentialSet
 {
-    [Obsolete("The Password field is obsolete. We are hashing it now.")]
-    public string Password { get; set; } = "";
     public string PasswordHash { get; set; } = "";
     public string AuthString { get; set; } = "";
 }
@@ -159,10 +145,11 @@ public class CredentialSet
 public class CommandConfiguration
 {
     public bool HelpEnabled { get; set; } = true;
-    public bool GetEnabled { get; set; } = true;
-    public bool SetEnabled { get; set; } = true;
+    public bool ScopedEnabled { get; set; } = true;
 
-    public bool EnableErrorHandling { get; set; } = true;
+    public bool GlobalErrorHandlingEnabled { get; set; } = true;
+    public bool ScopedErrorHandlingEnabled { get; set; } = true;
+
     public string GenericHelpMessage { get; set; } = "For more information, visit https://tas.wtf/info";
     public string UnknownCommandResponse { get; set; } = "You wot m8‽";
 }

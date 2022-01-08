@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace TASagentTwitchBot.Plugin.TTTAS;
 
@@ -7,6 +8,9 @@ public class TTTASConfiguration
     private static string ConfigFilePath => BGC.IO.DataManagement.PathForDataFile("Config", "TTTAS", "TTTASConfig.json");
     private static readonly object _lock = new object();
 
+    private const int CURRENT_VERSION = 2;
+
+    public int Version { get; private set; } = 0;
     public string FeatureName { get; init; } = "Text-To-TAS";
     public string FeatureNameBrief { get; init; } = "TTTAS";
 
@@ -20,16 +24,25 @@ public class TTTASConfiguration
         if (File.Exists(ConfigFilePath))
         {
             //Load existing config
-            return JsonSerializer.Deserialize<TTTASConfiguration>(File.ReadAllText(ConfigFilePath))!;
+            TTTASConfiguration config = JsonSerializer.Deserialize<TTTASConfiguration>(File.ReadAllText(ConfigFilePath))!;
+
+            if (config.Version < CURRENT_VERSION)
+            {
+                //Update and reserialize
+                config.Version = CURRENT_VERSION;
+                config.Serialize();
+            }
+
+            return config;
         }
         else
         {
-            TTTASConfiguration config = new TTTASConfiguration();
-
-            lock (_lock)
+            TTTASConfiguration config = new TTTASConfiguration
             {
-                File.WriteAllText(ConfigFilePath, JsonSerializer.Serialize(config));
-            }
+                Version = CURRENT_VERSION
+            };
+
+            config.Serialize();
 
             return config;
         }
@@ -38,7 +51,11 @@ public class TTTASConfiguration
     public void UpdateRedemptionID(string newID)
     {
         Redemption.RedemptionID = newID;
+        Serialize();
+    }
 
+    private void Serialize()
+    {
         lock (_lock)
         {
             File.WriteAllText(ConfigFilePath, JsonSerializer.Serialize(this));
@@ -53,6 +70,9 @@ public class TTTASConfiguration
         public bool ModsCanUse { get; init; } = false;
         public bool ElevatedCanUse { get; init; } = false;
         public bool RiffRaffCanUse { get; init; } = false;
+        public bool AllowCreditRedemptions { get; init; } = false;
+        public string CreditName { get; init; } = "TTTAS";
+        public long CreditCost { get; init; } = 8;
     }
 
     public class RedemptionConfiguration

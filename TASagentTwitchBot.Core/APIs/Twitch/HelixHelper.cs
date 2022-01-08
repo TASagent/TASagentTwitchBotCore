@@ -755,16 +755,13 @@ public class HelixHelper : IOAuthHandler
         string title,
         int cost,
         string? prompt = null,
-        bool enabled = true,
+        bool? enabled = null,
         string? backgroundColor = null,
-        bool userInputRequired = false,
-        bool maxPerStreamEnabled = false,
+        bool? userInputRequired = null,
         int? maxPerStream = null,
-        bool maxPerUserPerStreamEnabled = false,
         int? maxPerUserPerStream = null,
-        bool globalCooldownEnabled = false,
         int? globalCooldown = null,
-        bool redemptionsSkipQueue = false)
+        bool? skipQueue = null)
     {
         RestClient restClient = new RestClient("https://api.twitch.tv/helix");
         RestRequest request = new RestRequest("channel_points/custom_rewards", Method.Post);
@@ -772,47 +769,20 @@ public class HelixHelper : IOAuthHandler
         request.AddHeader("Authorization", $"Bearer {botConfig.BroadcasterAccessToken}");
         request.AddQueryParameter("broadcaster_id", botConfig.BroadcasterId);
 
-        request.AddParameter("title", title);
-        request.AddParameter("cost", cost);
-        request.AddOptionalParameter("prompt", prompt);
-        request.AddParameter("is_enabled", enabled);
-        request.AddOptionalParameter("background_color", backgroundColor);
-        request.AddParameter("is_user_input_required", userInputRequired);
-
-        request.AddParameter("is_max_per_stream_enabled", maxPerStreamEnabled);
-        if (maxPerStreamEnabled)
-        {
-            if (maxPerStream is null)
-            {
-                throw new Exception($"Cannot enable {nameof(maxPerStream)} with no value");
-            }
-
-            request.AddParameter("max_per_stream", maxPerStream!.Value);
-        }
-
-        request.AddParameter("is_max_per_user_per_stream_enabled", maxPerUserPerStreamEnabled);
-        if (maxPerUserPerStreamEnabled)
-        {
-            if (maxPerUserPerStream is null)
-            {
-                throw new Exception($"Cannot enable {nameof(maxPerUserPerStream)} with no value");
-            }
-
-            request.AddParameter("max_per_user_per_stream", maxPerUserPerStream!.Value);
-        }
-
-        request.AddParameter("is_global_cooldown_enabled", globalCooldownEnabled);
-        if (globalCooldownEnabled)
-        {
-            if (globalCooldown is null)
-            {
-                throw new Exception($"Cannot enable {nameof(globalCooldown)} with no value");
-            }
-
-            request.AddParameter("global_cooldown_seconds", globalCooldown!.Value);
-        }
-
-        request.AddParameter("should_redemptions_skip_request_queue", redemptionsSkipQueue);
+        request.AddJsonBody(new TwitchCustomRewardCreate(
+            Title: title,
+            Cost: cost,
+            Prompt: prompt,
+            BackgroundColor: backgroundColor,
+            IsEnabled: enabled,
+            IsUserInputRequired: userInputRequired,
+            IsMaxPerStreamEnabled: maxPerStream.HasValue ? true : null,
+            MaxPerStream: maxPerStream,
+            IsMaxPerUserPerStreamEnabled: maxPerUserPerStream.HasValue ? true : null,
+            MaxPerUserPerStream: maxPerUserPerStream,
+            IsGlobalCooldownEnabled: globalCooldown.HasValue ? true : null,
+            GlobalCooldownSeconds: globalCooldown,
+            ShouldRedemptionsSkipRewardQueue: skipQueue));
 
         return Deserialize<TwitchCustomReward>(await restClient.ExecuteAsync(request));
     }
@@ -863,10 +833,17 @@ public class HelixHelper : IOAuthHandler
 
     public async Task<TwitchCustomRewardRedemption?> UpdateCustomRewardProperties(
         string id,
+        string? title = null,
         int? cost = null,
         string? prompt = null,
         string? backgroundColor = null,
-        bool? paused = null)
+        bool? enabled = null,
+        bool? userInputRequired = null,
+        int? maxPerStream = null,
+        int? maxPerUserPerStream = null,
+        int? globalCooldown = null,
+        bool? paused = null,
+        bool? skipQueue = null)
     {
         RestClient restClient = new RestClient("https://api.twitch.tv/helix");
         RestRequest request = new RestRequest("channel_points/custom_rewards", Method.Patch);
@@ -876,10 +853,21 @@ public class HelixHelper : IOAuthHandler
         request.AddQueryParameter("broadcaster_id", botConfig.BroadcasterId);
         request.AddQueryParameter("id", id);
 
-        request.AddOptionalParameter("cost", cost);
-        request.AddOptionalParameter("prompt", prompt);
-        request.AddOptionalParameter("background_color", backgroundColor);
-        request.AddOptionalParameter("is_paused", paused);
+        request.AddJsonBody(new TwitchCustomRewardUpdate(
+            Title: title,
+            Prompt: prompt,
+            Cost: cost,
+            BackgroundColor: backgroundColor,
+            IsEnabled: enabled,
+            IsUserInputRequired: userInputRequired,
+            IsMaxPerStreamEnabled: maxPerStream.HasValue ? true : null,
+            MaxPerStream: maxPerStream,
+            IsMaxPerUserPerStreamEnabled: maxPerUserPerStream.HasValue ? true : null,
+            MaxPerUserPerStream: maxPerUserPerStream,
+            IsGlobalCooldownEnabled: globalCooldown.HasValue ? true : null,
+            GlobalCooldownSeconds: globalCooldown,
+            IsPaused: paused,
+            ShouldRedemptionsSkipRewardQueue: skipQueue));
 
         return Deserialize<TwitchCustomRewardRedemption>(await restClient.ExecuteAsync(request));
     }

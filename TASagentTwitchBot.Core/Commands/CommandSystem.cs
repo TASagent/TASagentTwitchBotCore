@@ -1,6 +1,8 @@
-﻿namespace TASagentTwitchBot.Core.Commands;
+﻿using System.Diagnostics;
 
-public class CommandSystem
+namespace TASagentTwitchBot.Core.Commands;
+
+public class CommandSystem : ICommandRegistrar
 {
     private readonly Config.BotConfiguration botConfig;
     private readonly ICommunication communication;
@@ -11,9 +13,10 @@ public class CommandSystem
 
     //Command Cache
     private readonly Dictionary<string, CommandHandler> commandHandlers = new Dictionary<string, CommandHandler>();
+    private readonly Dictionary<string, CommandHandler> customCommandHandlers = new Dictionary<string, CommandHandler>();
     private readonly Dictionary<string, HelpFunction> helpFunctions = new Dictionary<string, HelpFunction>();
-    private readonly Dictionary<string, SetFunction> setFunctions = new Dictionary<string, SetFunction>();
-    private readonly Dictionary<string, GetFunction> getFunctions = new Dictionary<string, GetFunction>();
+    private readonly Dictionary<(string command, string scope), CommandHandler> scopedHandlers = new Dictionary<(string command, string scope), CommandHandler>();
+    private readonly HashSet<string> scopedCommands = new HashSet<string>();
 
     private readonly Dictionary<string, ResponseHandler> whisperHandlers = new Dictionary<string, ResponseHandler>();
 
@@ -31,7 +34,7 @@ public class CommandSystem
 
         foreach (ICommandContainer commandContainer in this.commandContainers)
         {
-            commandContainer.RegisterCommands(commandHandlers, helpFunctions, setFunctions, getFunctions);
+            commandContainer.RegisterCommands(this);
         }
 
         communication.ReceiveMessageHandlers += HandleChatMessage;
@@ -83,9 +86,7 @@ public class CommandSystem
             return;
         }
 
-        string cleanMessage = chatter.Message.Trim();
-
-        string[] splitMessage = cleanMessage.Split(' ', options: StringSplitOptions.RemoveEmptyEntries);
+        string[] splitMessage = chatter.Message.Trim().Split(' ', options: StringSplitOptions.RemoveEmptyEntries);
 
         string command = splitMessage[0][1..].ToLowerInvariant();
 
@@ -118,53 +119,33 @@ public class CommandSystem
             return;
         }
 
-        //Check Set Commands
-        if (botConfig.CommandConfiguration.SetEnabled && command == "set")
+        //Try Scoped Commands
+        if (botConfig.CommandConfiguration.ScopedEnabled && scopedCommands.Contains(command) && splitMessage.Length > 1)
         {
-            //Handle Set Commands
-            if (splitMessage.Length == 1)
+            if (scopedHandlers.TryGetValue((command, splitMessage[1].ToLowerInvariant()), out CommandHandler? handler))
             {
-                communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, Set what?");
+                await handler(chatter, GetRemainingCommand(splitMessage, 2));
+                return;
             }
-            else if (setFunctions.TryGetValue(splitMessage[1].ToLowerInvariant(), out SetFunction? setFunction))
-            {
-                await setFunction(chatter, GetRemainingCommand(splitMessage, 2));
-            }
-            else
-            {
-                communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, unrecognized Set target \"{splitMessage[0].ToLowerInvariant()}\".");
-            }
-
-            return;
         }
 
-        //Check Get Commands
-        if (botConfig.CommandConfiguration.GetEnabled && command == "get")
-        {
-            //Handle Get Commands
-            if (splitMessage.Length == 1)
-            {
-                communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, Get what?");
-            }
-            else if (getFunctions.TryGetValue(splitMessage[1].ToLowerInvariant(), out GetFunction? getFunction))
-            {
-                await getFunction(chatter, GetRemainingCommand(splitMessage, 2));
-            }
-            else
-            {
-                communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, unrecognized Get target \"{splitMessage[0].ToLowerInvariant()}\".");
-            }
-
-            return;
-        }
-
-        //Roll over to standard command system
+        //Try standard global commands
         if (commandHandlers.TryGetValue(command, out CommandHandler? commandHandler))
         {
             //Invoke handler
             await commandHandler(chatter, GetRemainingCommand(splitMessage, 1));
+            return;
         }
-        else if (botConfig.CommandConfiguration.EnableErrorHandling)
+        
+        //Try custom commands
+        if (customCommandHandlers.TryGetValue(command, out CommandHandler? customCommandHandler))
+        {
+            //Invoke handler
+            await customCommandHandler(chatter, GetRemainingCommand(splitMessage, 1));
+            return;
+        }
+        
+        if (botConfig.CommandConfiguration.GlobalErrorHandlingEnabled)
         {
             string response = GetUnrecognizedCommandMessage(chatter, splitMessage);
             if (!string.IsNullOrEmpty(response))
@@ -172,7 +153,7 @@ public class CommandSystem
                 communication.SendPublicChatMessage(response);
             }
 
-            communication.SendDebugMessage($"Unrecognized command: {cleanMessage}");
+            communication.SendDebugMessage($"Unrecognized command: {chatter.Message}");
         }
     }
 
@@ -189,7 +170,7 @@ public class CommandSystem
             whisperHandlers.Remove(chatter.User.TwitchUserName);
             await responseHandler(chatter);
         }
-        else if (botConfig.CommandConfiguration.EnableErrorHandling)
+        else if (botConfig.CommandConfiguration.GlobalErrorHandlingEnabled)
         {
             communication.SendChatWhisper(chatter.User.TwitchUserName, botConfig.CommandConfiguration.UnknownCommandResponse);
         }
@@ -206,4 +187,24 @@ public class CommandSystem
 
         return splitMessage[fromIndex..];
     }
+
+    #region ICommandRegistrar
+
+    bool ICommandRegistrar.ContainsGlobalCommand(string command) => commandHandlers.ContainsKey(command.ToLower());
+    void ICommandRegistrar.RegisterGlobalCommand(string command, CommandHandler handler) => commandHandlers.Add(command.ToLower(), handler);
+
+    bool ICommandRegistrar.ContainsScopedCommand(string command, string scope) => scopedHandlers.ContainsKey((command.ToLower(), scope.ToLower()));
+    void ICommandRegistrar.RegisterScopedCommand(string command, string scope, CommandHandler handler)
+    {
+        scopedCommands.Add(command.ToLower());
+        scopedHandlers.Add((command.ToLower(), scope.ToLower()), handler);
+    }
+
+    void ICommandRegistrar.RegisterHelpCommand(string command, HelpFunction handler) => helpFunctions.Add(command.ToLower(), handler);
+
+    bool ICommandRegistrar.ContainsCustomCommand(string command) => customCommandHandlers.ContainsKey(command.ToLower());
+    void ICommandRegistrar.RegisterCustomCommand(string command, CommandHandler handler) => customCommandHandlers.Add(command.ToLower(), handler);
+    bool ICommandRegistrar.RemoveCustomCommand(string command) => customCommandHandlers.Remove(command.ToLower());
+
+    #endregion ICommandRegistrar
 }

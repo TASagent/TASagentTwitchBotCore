@@ -9,11 +9,7 @@ public delegate Task ResponseHandler(IRC.TwitchChatter chatter);
 
 public interface ICommandContainer
 {
-    void RegisterCommands(
-        Dictionary<string, CommandHandler> commands,
-        Dictionary<string, HelpFunction> helpFunctions,
-        Dictionary<string, SetFunction> setFunctions,
-        Dictionary<string, GetFunction> getFunctions);
+    void RegisterCommands(ICommandRegistrar commandRegistrar);
 
     IEnumerable<string> GetPublicCommands();
 }

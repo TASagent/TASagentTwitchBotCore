@@ -16,23 +16,19 @@ public class PermissionSystem : ICommandContainer
         this.scopeFactory = scopeFactory;
     }
 
-    public void RegisterCommands(
-        Dictionary<string, CommandHandler> commands,
-        Dictionary<string, HelpFunction> helpFunctions,
-        Dictionary<string, SetFunction> setFunctions,
-        Dictionary<string, GetFunction> getFunctions)
+    public void RegisterCommands(ICommandRegistrar commandRegistrar)
     {
-        commands.Add("mod", async (chatter, remainingCommand) => await ModUser(chatter, remainingCommand, true));
-        commands.Add("unmod", async (chatter, remainingCommand) => await ModUser(chatter, remainingCommand, false));
+        commandRegistrar.RegisterGlobalCommand("mod", (chatter, remainingCommand) => ModUser(chatter, remainingCommand, true));
+        commandRegistrar.RegisterGlobalCommand("unmod", (chatter, remainingCommand) => ModUser(chatter, remainingCommand, false));
 
-        commands.Add("permit", async (chatter, remainingCommand) => await AdjustUser(chatter, remainingCommand, true));
-        commands.Add("promote", async (chatter, remainingCommand) => await AdjustUser(chatter, remainingCommand, true));
-        commands.Add("elevate", async (chatter, remainingCommand) => await AdjustUser(chatter, remainingCommand, true));
+        commandRegistrar.RegisterGlobalCommand("permit", (chatter, remainingCommand) => AdjustUser(chatter, remainingCommand, true));
+        commandRegistrar.RegisterGlobalCommand("promote", (chatter, remainingCommand) => AdjustUser(chatter, remainingCommand, true));
+        commandRegistrar.RegisterGlobalCommand("elevate", (chatter, remainingCommand) => AdjustUser(chatter, remainingCommand, true));
 
-        commands.Add("revoke", async (chatter, remainingCommand) => await AdjustUser(chatter, remainingCommand, false));
-        commands.Add("demote", async (chatter, remainingCommand) => await AdjustUser(chatter, remainingCommand, false));
+        commandRegistrar.RegisterGlobalCommand("revoke", (chatter, remainingCommand) => AdjustUser(chatter, remainingCommand, false));
+        commandRegistrar.RegisterGlobalCommand("demote", (chatter, remainingCommand) => AdjustUser(chatter, remainingCommand, false));
 
-        commands.Add("restrict", RestrictUser);
+        commandRegistrar.RegisterGlobalCommand("restrict", RestrictUser);
     }
 
     public IEnumerable<string> GetPublicCommands()

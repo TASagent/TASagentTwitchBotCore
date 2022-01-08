@@ -470,6 +470,112 @@ public record TwitchCustomRewardRedemption(
         [property: JsonPropertyName("cursor")] string Cursor);
 }
 
+public record TwitchCustomRewardUpdate(
+    [property: JsonPropertyName("title")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? Title = null,
+
+    [property: JsonPropertyName("prompt")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? Prompt = null,
+
+    [property: JsonPropertyName("cost")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    int? Cost = null,
+
+    [property: JsonPropertyName("background_color")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? BackgroundColor = null,
+
+    [property: JsonPropertyName("is_enabled")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    bool? IsEnabled = null,
+
+    [property: JsonPropertyName("is_user_input_required")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    bool? IsUserInputRequired = null,
+
+    [property: JsonPropertyName("is_max_per_stream_enabled")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    bool? IsMaxPerStreamEnabled = null,
+
+    [property: JsonPropertyName("max_per_stream")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    int? MaxPerStream = null,
+
+    [property: JsonPropertyName("is_max_per_user_per_stream_enabled")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    bool? IsMaxPerUserPerStreamEnabled = null,
+
+    [property: JsonPropertyName("max_per_user_per_stream")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    int? MaxPerUserPerStream = null,
+
+    [property: JsonPropertyName("is_global_cooldown_enabled")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    bool? IsGlobalCooldownEnabled = null,
+
+    [property: JsonPropertyName("global_cooldown_seconds")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    int? GlobalCooldownSeconds = null,
+
+    [property: JsonPropertyName("is_paused")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    bool? IsPaused = null,
+
+    [property: JsonPropertyName("should_redemptions_skip_reward_queue")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    bool? ShouldRedemptionsSkipRewardQueue = null);
+
+public record TwitchCustomRewardCreate(
+
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("cost")] int Cost,
+
+    [property: JsonPropertyName("prompt")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? Prompt = null,
+
+    [property: JsonPropertyName("background_color")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? BackgroundColor = null,
+
+    [property: JsonPropertyName("is_enabled")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    bool? IsEnabled = null,
+
+    [property: JsonPropertyName("is_user_input_required")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    bool? IsUserInputRequired = null,
+
+    [property: JsonPropertyName("is_max_per_stream_enabled")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    bool? IsMaxPerStreamEnabled = null,
+
+    [property: JsonPropertyName("max_per_stream")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    int? MaxPerStream = null,
+
+    [property: JsonPropertyName("is_max_per_user_per_stream_enabled")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    bool? IsMaxPerUserPerStreamEnabled = null,
+
+    [property: JsonPropertyName("max_per_user_per_stream")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    int? MaxPerUserPerStream = null,
+
+    [property: JsonPropertyName("is_global_cooldown_enabled")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    bool? IsGlobalCooldownEnabled = null,
+
+    [property: JsonPropertyName("global_cooldown_seconds")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    int? GlobalCooldownSeconds = null,
+
+    [property: JsonPropertyName("should_redemptions_skip_reward_queue")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    bool? ShouldRedemptionsSkipRewardQueue = null);
+
 
 
 public record TwitchSubscribeRequest(

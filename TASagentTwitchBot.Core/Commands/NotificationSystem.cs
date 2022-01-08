@@ -16,19 +16,16 @@ public class NotificationSystem : ICommandContainer
         this.messageAccumulator = messageAccumulator;
     }
 
-    public void RegisterCommands(
-        Dictionary<string, CommandHandler> commands,
-        Dictionary<string, HelpFunction> helpFunctions,
-        Dictionary<string, SetFunction> setFunctions,
-        Dictionary<string, GetFunction> getFunctions)
+    public void RegisterCommands(ICommandRegistrar commandRegistrar)
     {
-        commands.Add("replay", ReplayNotification);
-        commands.Add("skip", SkipNotification);
+        commandRegistrar.RegisterGlobalCommand("replay", ReplayNotification);
+        commandRegistrar.RegisterGlobalCommand("skip", SkipNotification);
 
-        commands.Add("approve", (chatter, args) => HandlePendingTTS(chatter, args, true));
-        commands.Add("accept", (chatter, args) => HandlePendingTTS(chatter, args, true));
-        commands.Add("deny", (chatter, args) => HandlePendingTTS(chatter, args, false));
-        commands.Add("reject", (chatter, args) => HandlePendingTTS(chatter, args, false));
+        commandRegistrar.RegisterGlobalCommand("approve", (chatter, args) => HandlePendingTTS(chatter, args, true));
+        commandRegistrar.RegisterGlobalCommand("accept", (chatter, args) => HandlePendingTTS(chatter, args, true));
+
+        commandRegistrar.RegisterGlobalCommand("deny", (chatter, args) => HandlePendingTTS(chatter, args, false));
+        commandRegistrar.RegisterGlobalCommand("reject", (chatter, args) => HandlePendingTTS(chatter, args, false));
     }
 
     public IEnumerable<string> GetPublicCommands()

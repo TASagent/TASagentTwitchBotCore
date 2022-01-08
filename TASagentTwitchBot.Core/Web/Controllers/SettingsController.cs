@@ -50,14 +50,14 @@ public class SettingsController : ControllerBase
 
     [HttpGet]
     public ActionResult<ErrHEnabled> ErrorHEnabled() =>
-        new ErrHEnabled(botConfig.CommandConfiguration.EnableErrorHandling);
+        new ErrHEnabled(botConfig.CommandConfiguration.GlobalErrorHandlingEnabled);
 
     [HttpPost]
     [AuthRequired(AuthDegree.Admin)]
     public IActionResult ErrorHEnabled(ErrHEnabled eHEnabled)
     {
         //Set CompressorConfig
-        botConfig.CommandConfiguration.EnableErrorHandling = eHEnabled.Enabled;
+        botConfig.CommandConfiguration.GlobalErrorHandlingEnabled = eHEnabled.Enabled;
 
         //Save
         botConfig.Serialize();

@@ -28,15 +28,11 @@ public class TestCommandSystem : ICommandContainer
         this.userHelper = userHelper;
     }
 
-    public void RegisterCommands(
-        Dictionary<string, CommandHandler> commands,
-        Dictionary<string, HelpFunction> helpFunctions,
-        Dictionary<string, SetFunction> setFunctions,
-        Dictionary<string, GetFunction> getFunctions)
+    public void RegisterCommands(ICommandRegistrar commandRegistrar)
     {
-        commands.Add("testraid", TestRaidHandler);
-        commands.Add("testsub", TestSubHandler);
-        commands.Add("testcheer", TestCheerHandler);
+        commandRegistrar.RegisterGlobalCommand("testraid", TestRaidHandler);
+        commandRegistrar.RegisterGlobalCommand("testsub", TestSubHandler);
+        commandRegistrar.RegisterGlobalCommand("testcheer", TestCheerHandler);
     }
 
     public IEnumerable<string> GetPublicCommands()

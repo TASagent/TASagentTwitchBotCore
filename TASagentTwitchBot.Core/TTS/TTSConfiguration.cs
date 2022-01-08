@@ -8,6 +8,9 @@ public class TTSConfiguration
     private static string ConfigFilePath => BGC.IO.DataManagement.PathForDataFile("Config", "TTSConfig.json");
     private static readonly object _lock = new object();
 
+    private const int CURRENT_VERSION = 2;
+
+    public int Version { get; private set; } = 0;
     public string FeatureName { get; init; } = "Text-To-Speech";
     public string FeatureNameBrief { get; init; } = "TTS";
 
@@ -46,11 +49,24 @@ public class TTSConfiguration
                 Converters = { new JsonStringEnumConverter() }
             };
 
-            return JsonSerializer.Deserialize<TTSConfiguration>(File.ReadAllText(ConfigFilePath), options) ?? new TTSConfiguration();
+            TTSConfiguration config = JsonSerializer.Deserialize<TTSConfiguration>(File.ReadAllText(ConfigFilePath), options)!;
+
+            if (config.Version < CURRENT_VERSION)
+            {
+                //Update and reserialize
+                config.Version = CURRENT_VERSION;
+                config.Serialize();
+            }
+
+            return config;
         }
         else
         {
-            TTSConfiguration config = new TTSConfiguration();
+            TTSConfiguration config = new TTSConfiguration()
+            {
+                Version = CURRENT_VERSION
+            };
+
             config.Serialize();
             return config;
         }
@@ -206,6 +222,9 @@ public class TTSConfiguration
         public string CommandName { get; init; } = "tts";
         public int CooldownTime { get; set; } = 20;
         public bool ModsIgnoreCooldown { get; set; } = true;
+        public bool AllowCreditRedemptions { get; init; } = false;
+        public string CreditName { get; init; } = "TTS";
+        public long CreditCost { get; init; } = 4;
     }
 
     public class RedemptionConfiguration
