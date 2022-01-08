@@ -179,7 +179,7 @@ public class TTTASRedemptionHandler : IRedemptionContainer, IDisposable
             await helixHelper.UpdateCustomRewardRedemptions(
                 redemption.RewardData.Id,
                 redemption.Id,
-                status: "UNFULFILLED");
+                status: "CANCELED");
         }
 
         if (refundedCount > 0)
