@@ -470,6 +470,7 @@ public record TwitchCustomRewardRedemption(
         [property: JsonPropertyName("cursor")] string Cursor);
 }
 
+
 public record TwitchCustomRewardUpdate(
     [property: JsonPropertyName("title")]
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -577,6 +578,8 @@ public record TwitchCustomRewardCreate(
     bool? ShouldRedemptionsSkipRewardQueue = null);
 
 
+public record TwitchRedemptionUpdate(
+    [property: JsonPropertyName("status")] string Status);
 
 public record TwitchSubscribeRequest(
     [property: JsonPropertyName("type")] string SubscriptionType,

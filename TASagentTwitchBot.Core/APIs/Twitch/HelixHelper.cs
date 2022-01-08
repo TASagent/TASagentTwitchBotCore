@@ -822,11 +822,11 @@ public class HelixHelper : IOAuthHandler
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {botConfig.BroadcasterAccessToken}");
 
+        request.AddQueryParameter("id", id);
         request.AddQueryParameter("broadcaster_id", botConfig.BroadcasterId);
         request.AddQueryParameter("reward_id", rewardId);
-        request.AddQueryParameter("id", id);
 
-        request.AddParameter("status", status);
+        request.AddJsonBody(new TwitchRedemptionUpdate(status));
 
         return Deserialize<TwitchCustomRewardRedemption>(await restClient.ExecuteAsync(request));
     }
