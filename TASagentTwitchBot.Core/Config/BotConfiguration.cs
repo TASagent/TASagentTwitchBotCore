@@ -148,7 +148,6 @@ public class CommandConfiguration
     public bool ScopedEnabled { get; set; } = true;
 
     public bool GlobalErrorHandlingEnabled { get; set; } = true;
-    public bool ScopedErrorHandlingEnabled { get; set; } = true;
 
     public string GenericHelpMessage { get; set; } = "For more information, visit https://tas.wtf/info";
     public string UnknownCommandResponse { get; set; } = "You wot m8‽";
