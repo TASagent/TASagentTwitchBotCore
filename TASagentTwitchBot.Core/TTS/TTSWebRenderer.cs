@@ -93,7 +93,10 @@ public class TTSWebRenderer : ITTSRenderer, IDisposable
 
     private Task ServerHubConnectionClosed(Exception? arg)
     {
-        errorHandler.LogSystemException(arg ?? new Exception("Unspecified ServerHub exception"));
+        if (arg is not null)
+        {
+            errorHandler.LogSystemException(arg);
+        }
         return Task.CompletedTask;
     }
 

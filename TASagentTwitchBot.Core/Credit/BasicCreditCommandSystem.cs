@@ -27,18 +27,26 @@ public class BasicCreditCommandSystem : ICommandContainer
             return;
         }
 
+        commandRegistrar.RegisterGlobalCommand("credit", GetCreditsHandler);
+        commandRegistrar.RegisterGlobalCommand("credits", GetCreditsHandler);
         commandRegistrar.RegisterGlobalCommand("getcredits", GetCreditsHandler);
+        commandRegistrar.RegisterScopedCommand("get", "credit", GetCreditsHandler);
         commandRegistrar.RegisterScopedCommand("get", "credits", GetCreditsHandler);
         commandRegistrar.RegisterScopedCommand("get", "creditreport", GetCreditsHandler);
         commandRegistrar.RegisterScopedCommand("credits", "get", GetCreditsHandler);
+        commandRegistrar.RegisterScopedCommand("credit", "get", GetCreditsHandler);
 
         commandRegistrar.RegisterGlobalCommand("setcredits", SetCreditsHandler);
+        commandRegistrar.RegisterScopedCommand("set", "credit", SetCreditsHandler);
         commandRegistrar.RegisterScopedCommand("set", "credits", SetCreditsHandler);
         commandRegistrar.RegisterScopedCommand("credits", "set", SetCreditsHandler);
+        commandRegistrar.RegisterScopedCommand("credit", "set", SetCreditsHandler);
 
-        commandRegistrar.RegisterGlobalCommand("givecredits", GiveCreditsHandler);
-        commandRegistrar.RegisterScopedCommand("give", "credits", GiveCreditsHandler);
-        commandRegistrar.RegisterScopedCommand("credits", "give", GiveCreditsHandler);
+        commandRegistrar.RegisterGlobalCommand("addcredits", AddCreditsHandler);
+        commandRegistrar.RegisterScopedCommand("add", "credit", AddCreditsHandler);
+        commandRegistrar.RegisterScopedCommand("add", "credits", AddCreditsHandler);
+        commandRegistrar.RegisterScopedCommand("credits", "add", AddCreditsHandler);
+        commandRegistrar.RegisterScopedCommand("credit", "add", AddCreditsHandler);
     }
 
     IEnumerable<string> ICommandContainer.GetPublicCommands()
@@ -158,11 +166,11 @@ public class BasicCreditCommandSystem : ICommandContainer
             $"@{chatter.User.TwitchUserName}, the {creditType} credits of @{dbUser.TwitchUserName} have been updated from {oldCreditValue:N0} to {newCreditValue:N0}");
     }
 
-    private async Task GiveCreditsHandler(IRC.TwitchChatter chatter, string[] remainingCommand)
+    private async Task AddCreditsHandler(IRC.TwitchChatter chatter, string[] remainingCommand)
     {
         if (remainingCommand is null || remainingCommand.Length != 3)
         {
-            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, malformed \"Give Credits\" command. Expected: \"!give credits TYPE @USERNAME VALUE\"");
+            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, malformed \"Add Credits\" command. Expected: \"!add credits TYPE @USERNAME VALUE\"");
             return;
         }
 
@@ -184,13 +192,13 @@ public class BasicCreditCommandSystem : ICommandContainer
 
         if (userName.Length < 3)
         {
-            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, malformed \"Give Credits\" command. Expected: \"!give credits TYPE @USERNAME VALUE\": Invalid Username.");
+            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, malformed \"Add Credits\" command. Expected: \"!add credits TYPE @USERNAME VALUE\": Invalid Username.");
             return;
         }
 
         if (!long.TryParse(remainingCommand[2], out long deltaCredits))
         {
-            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, malformed \"Give Credits\" command. Expected: \"!give credits TYPE @USERNAME VALUE\": Unable to parse Value.");
+            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, malformed \"Add Credits\" command. Expected: \"!add credits TYPE @USERNAME VALUE\": Unable to parse Value.");
             return;
         }
 

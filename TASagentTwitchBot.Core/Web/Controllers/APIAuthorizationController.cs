@@ -9,17 +9,14 @@ namespace TASagentTwitchBot.Core.Web.Controllers;
 public class APIAuthorizationController : ControllerBase
 {
     private readonly Config.BotConfiguration botConfig;
-    private readonly IMessageAccumulator messageAccumulator;
     private readonly ICommunication communication;
 
     public APIAuthorizationController(
         Config.BotConfiguration botConfig,
-        ICommunication communication,
-        IMessageAccumulator messageAccumulator)
+        ICommunication communication)
     {
         this.botConfig = botConfig;
         this.communication = communication;
-        this.messageAccumulator = messageAccumulator;
     }
 
     [HttpPost]
@@ -66,7 +63,9 @@ public class APIAuthorizationController : ControllerBase
 
     [HttpPost]
     [AuthRequired(AuthDegree.Admin)]
-    public IActionResult Lockdown(LockdownStatus status)
+    public IActionResult Lockdown(
+        LockdownStatus status,
+        [FromServices] IMessageAccumulator messageAccumulator)
     {
         botConfig.AuthConfiguration.PublicAuthAllowed = !status.Locked;
 

@@ -115,7 +115,8 @@ public class BasicView : IConsoleOutput, IShutdownListener, IDisposable
             {
                 ConsoleKeyInfo nextKey = default;
 
-                await Task.Run(() => nextKey = Console.ReadKey(true), generalTokenSource.Token);
+                //await Task.Run(() => nextKey = Console.ReadKey(true), generalTokenSource.Token);
+                await Task.Run(() => nextKey = Console.ReadKey(true)).WithCancellation(generalTokenSource.Token);
 
                 //Bail if we're trying to quit
                 if (generalTokenSource.IsCancellationRequested)

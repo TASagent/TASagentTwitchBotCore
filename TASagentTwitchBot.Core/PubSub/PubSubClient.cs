@@ -171,8 +171,11 @@ public class PubSubClient : IShutdownListener, IDisposable
 
         if (clientWebSocket is not null)
         {
-            await clientWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnecting", disconnectTokenSource.Token);
-
+            if (clientWebSocket.State == WebSocketState.Open)
+            {
+                await clientWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnecting", disconnectTokenSource.Token);
+            }
+            
             clientWebSocket.Dispose();
             clientWebSocket = null;
         }

@@ -21,8 +21,22 @@ public abstract class NewControllerState
         obj is NewControllerState state &&
         state == this;
 
-    public override int GetHashCode() =>
-        throw new NotImplementedException($"Proper hashcode support for NewControllerState not implemented");
+    public override int GetHashCode()
+    {
+        HashCode hash = new HashCode();
+
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            hash.Add(buttons[i]);
+        }
+
+        for (int i = 0; i < sticks.Length; i++)
+        {
+            hash.Add(sticks[i]);
+        }
+
+        return hash.ToHashCode();
+    }
 
     public static bool operator ==(in NewControllerState lhs, in NewControllerState rhs)
     {
@@ -85,6 +99,24 @@ public class SNESControllerState : NewControllerState
         bool[] buttons,
         float[] sticks)
         : base(buttons, sticks)
+    {
+
+    }
+
+    public SNESControllerState(
+        bool a = false,
+        bool b = false,
+        bool x = false,
+        bool y = false,
+        bool l = false,
+        bool r = false,
+        bool start = false,
+        bool select = false,
+        bool up = false,
+        bool down = false,
+        bool left = false,
+        bool right = false)
+        : base(new[] { b, y, select, start, up, down, left, right, a, x, l, r }, Array.Empty<float>())
     {
 
     }

@@ -105,27 +105,55 @@ public class IrcClient : IShutdownListener, IDisposable
 
     private async void Start()
     {
-        bool tokenValidated = await botTokenValidator.WaitForValidationAsync(generalTokenSource.Token);
-
-        if (!tokenValidated)
+        try
         {
-            communication.SendErrorMessage($"Bot token validation failed. Unable to connect with IRC.");
-            return;
+            const int CONNECTION_ATTEMPT_MAX = 5;
+            bool tokenValidated = await botTokenValidator.WaitForValidationAsync(generalTokenSource.Token);
+
+            if (!tokenValidated)
+            {
+                communication.SendErrorMessage($"Bot token validation failed. Unable to connect with IRC.");
+                return;
+            }
+
+            for (int connectionAttempt = 0; connectionAttempt < CONNECTION_ATTEMPT_MAX; connectionAttempt++)
+            {
+                if (await Connect())
+                {
+                    break;
+                }
+
+                if (connectionAttempt == CONNECTION_ATTEMPT_MAX - 1)
+                {
+                    throw new Exception($"Unable to connect to IRC after {CONNECTION_ATTEMPT_MAX} attempts.");
+                }
+
+                communication.SendWarningMessage($"Reattempting IRC Connection");
+
+                try
+                {
+                    //Ensure we are disconnected
+                    await Disconnect();
+                }
+                catch (Exception) { /* swallow */ }
+            }
+
+            //Kick off message reader
+            handleIncomingMessagesTask = HandleIncomingMessages();
+
+            //Kick off message sender
+            handleOutgoingMessagesTask = HandleOutgoingMessages();
+
+            //Kick off Ping listener
+            handlePingsTask = HandlePings();
         }
-
-        await Connect();
-
-        //Kick off message reader
-        handleIncomingMessagesTask = HandleIncomingMessages();
-
-        //Kick off message sender
-        handleOutgoingMessagesTask = HandleOutgoingMessages();
-
-        //Kick off Ping listener
-        handlePingsTask = HandlePings();
+        catch (Exception ex)
+        {
+            errorHandler.LogFatalException(ex);
+        }
     }
 
-    private async Task Connect()
+    private async Task<bool> Connect()
     {
         WriteToIRCLogRaw("");
         WriteToIRCLog("Connecting\n");
@@ -135,7 +163,7 @@ public class IrcClient : IShutdownListener, IDisposable
         tcpClient = new TcpClient(TWITCH_IRC_SERVER, TWITCH_IRC_PORT);
         sslStream = new SslStream(tcpClient.GetStream());
 
-        sslStream.AuthenticateAsClient(TWITCH_IRC_SERVER);
+        await sslStream.AuthenticateAsClientAsync(TWITCH_IRC_SERVER);
 
         inputStream = new StreamReader(sslStream);
         outputStream = new StreamWriter(sslStream)
@@ -144,16 +172,16 @@ public class IrcClient : IShutdownListener, IDisposable
         };
 
         // Reference: https://dev.twitch.tv/docs/irc/tags/
-        outputStream.WriteLine("CAP REQ :twitch.tv/tags");
+        await outputStream.WriteLineAsync("CAP REQ :twitch.tv/tags");
         // Reference: https://dev.twitch.tv/docs/irc/commands/
-        outputStream.WriteLine("CAP REQ :twitch.tv/commands");
+        await outputStream.WriteLineAsync("CAP REQ :twitch.tv/commands");
         // Reference: https://dev.twitch.tv/docs/irc/membership/
-        outputStream.WriteLine("CAP REQ :twitch.tv/membership");
+        await outputStream.WriteLineAsync("CAP REQ :twitch.tv/membership");
 
-        outputStream.WriteLine($"PASS oauth:{botConfig.BotAccessToken}");
-        outputStream.WriteLine($"NICK {username}");
-        outputStream.WriteLine($"USER {username} 8 * :{username}");
-        outputStream.WriteLine($"JOIN #{channel}");
+        await outputStream.WriteLineAsync($"PASS oauth:{botConfig.BotAccessToken}");
+        await outputStream.WriteLineAsync($"NICK {username}");
+        await outputStream.WriteLineAsync($"USER {username} 8 * :{username}");
+        await outputStream.WriteLineAsync($"JOIN #{channel}");
 
         //Log these messages
         LogIRCMessage($"CAP REQ :twitch.tv/tags", false);
@@ -166,6 +194,49 @@ public class IrcClient : IShutdownListener, IDisposable
         LogIRCMessage($"JOIN #{channel}", false);
 
         await outputStream.FlushAsync();
+
+        if (await GetNextLine() != ":tmi.twitch.tv CAP * ACK :twitch.tv/tags" ||
+            await GetNextLine() != ":tmi.twitch.tv CAP * ACK :twitch.tv/commands" ||
+            await GetNextLine() != ":tmi.twitch.tv CAP * ACK :twitch.tv/membership")
+        {
+            //Failed to get expected responses
+            return false;
+        }
+
+        return true;
+    }
+
+    private async Task<string?> GetNextLine()
+    {
+        const int RESPONSE_WAIT_TIME = 5;
+
+        try
+        {
+            Task<string?> nextLineTask = inputStream!.ReadLineAsync().WithCancellation(generalTokenSource.Token);
+            await nextLineTask.WaitAsync(new TimeSpan(0, 0, RESPONSE_WAIT_TIME));
+
+            if (!nextLineTask.IsCompleted)
+            {
+                communication.SendErrorMessage($"No IRC response received within {RESPONSE_WAIT_TIME} seconds.");
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(nextLineTask.Result))
+            {
+                communication.SendErrorMessage($"Null or empty IRC response received.");
+                return null;
+            }
+
+            communication.SendDebugMessage($"  {nextLineTask.Result}");
+            LogIRCMessage(nextLineTask.Result, true);
+
+            return nextLineTask.Result;
+        }
+        catch (Exception ex)
+        {
+            communication.SendErrorMessage($"Exception waiting for next line: {ex.Message}");
+            return null;
+        }
     }
 
     private void WriteToIRCLogRaw(string message)
@@ -343,10 +414,11 @@ public class IrcClient : IShutdownListener, IDisposable
                         break;
                     }
 
-                    await Connect();
-
-                    //Successfully Reconnected?
-                    break;
+                    if (await Connect())
+                    {
+                        //Successfully Reconnected
+                        break;
+                    }
                 }
                 catch (Exception ex)
                 {

@@ -107,7 +107,11 @@ public class EventSubHandler : IDisposable
 
     private Task ServerHubConnectionClosed(Exception? arg)
     {
-        errorHandler.LogSystemException(arg ?? new Exception($"Unspecified ServerHub Exception"));
+        if (arg is not null)
+        {
+            errorHandler.LogSystemException(arg);
+        }
+
         return Task.CompletedTask;
     }
 
