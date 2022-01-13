@@ -86,7 +86,7 @@ builder.Services
 builder.Services.AddSingleton<IServerTTSRenderer, ServerTTSRenderer>();
 
 
-WebApplication app = builder.Build();
+using WebApplication app = builder.Build();
 
 app.UseForwardedHeaders();
 
