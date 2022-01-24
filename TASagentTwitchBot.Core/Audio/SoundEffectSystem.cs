@@ -465,5 +465,18 @@ public class SoundEffectSystem : ISoundEffectSystem
     }
 }
 
-public record SoundEffect(string Name, string FilePath, string[] Aliases);
+public record SoundEffect(string Name, string FilePath, string[] Aliases) : IComparable
+{
+    int IComparable.CompareTo(object? obj)
+    {
+        if (obj is not SoundEffect other)
+        {
+            return 1;
+        }
+
+        return Name.CompareTo(other.Name);
+    }
+}
+
+
 public record ReverbIRF(string Name, string FilePath, double Gain, string[] Aliases);
