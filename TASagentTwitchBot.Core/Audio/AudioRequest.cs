@@ -69,11 +69,11 @@ public class VideoFileAudioRequest : AudioRequest
 
         outputPlayer.Init(audioStream.ToBGCStream().SlowRangeFitter().StreamLevelScaler(-10).ToSampleProvider());
         outputPlayer.Play();
-        while (outputPlayer.PlaybackState == PlaybackState.Playing && !cancel)
+        while (outputPlayer.PlaybackState == PlaybackState.Playing)
         {
             await Task.Delay(50);
 
-            if (cancel)
+            if (cancel && outputPlayer.PlaybackState == PlaybackState.Playing)
             {
                 outputPlayer.Stop();
             }
@@ -109,11 +109,11 @@ public class AudioFileRequest : AudioRequest
 
         outputPlayer.Init(audioStream.ApplyEffects(effectsChain));
         outputPlayer.Play();
-        while (outputPlayer.PlaybackState == PlaybackState.Playing && !cancel)
+        while (outputPlayer.PlaybackState == PlaybackState.Playing)
         {
             await Task.Delay(50);
 
-            if (cancel)
+            if (cancel && outputPlayer.PlaybackState == PlaybackState.Playing)
             {
                 outputPlayer.Stop();
             }
@@ -147,11 +147,11 @@ public class SoundEffectRequest : AudioRequest
 
         outputPlayer.Init(audioStream.ToBGCStream().SlowRangeFitter().StreamLevelScaler(-10).ToSampleProvider());
         outputPlayer.Play();
-        while (outputPlayer.PlaybackState == PlaybackState.Playing && !cancel)
+        while (outputPlayer.PlaybackState == PlaybackState.Playing)
         {
             await Task.Delay(50);
 
-            if (cancel)
+            if (cancel && outputPlayer.PlaybackState == PlaybackState.Playing)
             {
                 outputPlayer.Stop();
             }
@@ -201,11 +201,11 @@ public class BGCStreamRequest : AudioRequest
 
         outputPlayer.Init(sampleProvider);
         outputPlayer.Play();
-        while (outputPlayer.PlaybackState == PlaybackState.Playing && !cancel)
+        while (outputPlayer.PlaybackState == PlaybackState.Playing)
         {
             await Task.Delay(50);
 
-            if (cancel)
+            if (cancel && outputPlayer.PlaybackState == PlaybackState.Playing)
             {
                 outputPlayer.Stop();
             }

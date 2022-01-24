@@ -11,7 +11,6 @@ public interface IActivityDispatcher
     bool UpdatePendingRequest(int index, bool approved);
 
     void Skip();
-
 }
 
 /// <summary>
@@ -98,7 +97,6 @@ public class ActivityDispatcher : IActivityDispatcher, IDisposable
     }
 
     public void Skip() => audioPlayer.RequestCancel();
-
 
     public void QueueActivity(ActivityRequest activity, bool approved)
     {

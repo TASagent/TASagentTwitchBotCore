@@ -51,17 +51,17 @@ public class BasicView : IConsoleOutput, IShutdownListener, IDisposable
         communication.SendDebugMessage("BasicView Connected.  Listening for Ctrl+Q to quit gracefully.\n");
     }
 
-    private void ReceiveEventHandler(string message)
+    protected virtual void ReceiveEventHandler(string message)
     {
         Console.WriteLine($"Event   {message}");
     }
 
-    private void ReceivePendingNotification(int id, string message)
+    protected virtual void ReceivePendingNotification(int id, string message)
     {
         Console.WriteLine($"Notice  Pending Notification {id}: {message}");
     }
 
-    private void DebugMessageHandler(string message, MessageType messageType)
+    protected virtual void DebugMessageHandler(string message, MessageType messageType)
     {
         switch (messageType)
         {
@@ -86,17 +86,17 @@ public class BasicView : IConsoleOutput, IShutdownListener, IDisposable
         }
     }
 
-    private void SendPublicChatHandler(string message)
+    protected virtual void SendPublicChatHandler(string message)
     {
         Console.WriteLine($"Chat    {botConfig.BotName}: {message}");
     }
 
-    private void SendWhisperHandler(string username, string message)
+    protected virtual void SendWhisperHandler(string username, string message)
     {
         Console.WriteLine($"Chat    {botConfig.BotName} whispers {username}: {message}");
     }
 
-    private void ReceiveMessageHandler(IRC.TwitchChatter chatter)
+    protected virtual void ReceiveMessageHandler(IRC.TwitchChatter chatter)
     {
         Console.WriteLine($"Chat    {chatter.User.TwitchUserName}: {chatter.Message}");
     }
@@ -146,8 +146,14 @@ public class BasicView : IConsoleOutput, IShutdownListener, IDisposable
             {
                 applicationManagement.TriggerExit();
             }
+            else
+            {
+                HandleKeys(input);
+            }
         }
     }
+
+    protected virtual void HandleKeys(in ConsoleKeyInfo input) { }
 
     public void NotifyShuttingDown()
     {

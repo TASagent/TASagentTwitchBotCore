@@ -426,6 +426,7 @@
               <button class="nav-link adminAuthGroup" id="nav-settings-midi-tab" data-bs-toggle="tab" data-bs-target="#nav-settings-midi" type="button" role="tab" aria-controls="nav-settings-midi" aria-selected="false">Midi</button>
               <button class="nav-link adminAuthGroup" id="nav-settings-timer-tab" data-bs-toggle="tab" data-bs-target="#nav-settings-timer" type="button" role="tab" aria-controls="nav-settings-timer" aria-selected="false">Timer</button>
               <button class="nav-link adminAuthGroup" id="nav-settings-tts-tab" data-bs-toggle="tab" data-bs-target="#nav-settings-tts" type="button" role="tab" aria-controls="nav-settings-tts" aria-selected="false">TTS</button>
+              <button class="nav-link privAuthGroup" id="nav-settings-sfx-tab" data-bs-toggle="tab" data-bs-target="#nav-settings-sfx" type="button" role="tab" aria-controls="nav-settings-sfx" aria-selected="false">Sfx</button>
             </div>
           </nav>
 
@@ -719,6 +720,38 @@
 
               <button id="button-Submit-errorh-Enabled" class="btn btn-primary requireAdminAuth px-3 py-2">Submit</button>
 
+            </div>
+
+
+            <!--SFX Settings Tab-->
+            <div class="tab-pane fade" id="nav-settings-sfx" role="tabpanel" aria-labelledby="nav-settings-sfx-tab">
+
+              <div class="input-group mb-2">
+                <label class="input-group-text" for="select-Sfx">Sound Effects</label>
+                <select class="form-select form-control" id="select-Sfx">
+                  <option selected>None</option>
+                </select>
+                <button class="btn btn-primary" id="button-PlaySfx">Play</button>
+                <button class="btn btn-primary requireAdminAuth" id="button-DeleteSfx">Delete</button>
+              </div>
+
+              <h5>Upload</h5>
+
+              <div class="input-group mb-2">
+                <input class="form-control" type="file" id="input-SfxFile">
+              </div>
+
+              <div class="input-group mb-2">
+                <label class="input-group-text" for="input-SfxName">Name</label>
+                <input class="form-control" type="text" id="input-SfxName">
+              </div>
+
+              <div class="input-group mb-2">
+                <label class="input-group-text" for="input-SfxAliases">Aliases</label>
+                <input class="form-control" type="text" id="input-SfxAliases">
+              </div>
+
+              <button class="btn btn-primary requirePrivAuth mt-1 px-3 py-2" id="button-UploadSfx">Upload</button>
             </div>
           </div>
         </div>

@@ -11,9 +11,14 @@ public interface ISoundEffectSystem
     SoundEffect? GetSoundEffectByAlias(string alias);
     SoundEffect? GetSoundEffectByName(string name);
 
-    List<string> GetSoundEffects();
+    SoundEffect? GetAnySoundEffect();
+
+    void AddEffect(string name, string filePath, string[] aliases, bool serialize);
+    bool RemoveEffect(string name);
 
     IReadOnlyList<SoundEffect> GetAllSoundEffects();
+    IEnumerable<string> GetAllSoundEffectNames();
+    IEnumerable<SoundEffect> GetSoundEffects(int page, int count);
 
     ReverbIRF? GetReverbEffectByAlias(string alias);
     ReverbIRF? GetReverbEffectByName(string name);
@@ -51,7 +56,10 @@ public class SoundEffectSystem : ISoundEffectSystem
 
     public bool HasSoundEffects() => soundEffectData.SoundEffects.Count != 0;
 
-    public List<string> GetSoundEffects() => new List<string>(soundEffectData.SoundEffects.Select(x => x.Name));
+    public IEnumerable<string> GetAllSoundEffectNames() => soundEffectData.SoundEffects.Select(x => x.Name);
+    public IEnumerable<SoundEffect> GetSoundEffects(int page, int count) => soundEffectData.SoundEffects.Skip(page * count).Take(count);
+
+    public SoundEffect? GetAnySoundEffect() => soundEffectData.SoundEffects.FirstOrDefault();
 
     public IReadOnlyList<SoundEffect> GetAllSoundEffects() => soundEffectData.SoundEffects;
 
@@ -166,26 +174,47 @@ public class SoundEffectSystem : ISoundEffectSystem
             }
         }
 
-        if (newAliases.Count == 0)
-        {
-            communication.SendErrorMessage($"Sound effect \"{name}\" has no remaining unique aliases");
-            return;
-        }
-
         SoundEffect newSoundEffect = new SoundEffect(name, filePath, newAliases.ToArray());
 
         soundEffectData.SoundEffects.Add(newSoundEffect);
         soundEffectData.SoundEffectNameLookup.Add(newSoundEffect.Name.ToLowerInvariant(), newSoundEffect);
+
+        //Keep sound effects sorted
+        soundEffectData.SoundEffects.Sort();
 
         foreach (string alias in newAliases)
         {
             soundEffectData.SoundEffectAliasLookup.Add(alias.ToLowerInvariant(), newSoundEffect);
         }
 
+        communication.SendDebugMessage($"Sound effect \"{name}\" added.");
+
         if (serialize)
         {
             Serialize();
         }
+    }
+
+    public bool RemoveEffect(string name)
+    {
+        SoundEffect? soundEffect = GetSoundEffectByName(name.ToLowerInvariant());
+
+        if (soundEffect is null)
+        {
+            return false;
+        }
+
+        soundEffectData.SoundEffects.Remove(soundEffect);
+        soundEffectData.SoundEffectNameLookup.Remove(soundEffect.Name.ToLowerInvariant());
+
+        foreach (string alias in soundEffect.Aliases)
+        {
+            soundEffectData.SoundEffectAliasLookup.Remove(alias.ToLowerInvariant());
+        }
+
+        Serialize();
+
+        return true;
     }
 
     public void AddReverbIRF(string name, string filePath, string[] aliases, bool serialize = true)
@@ -394,6 +423,9 @@ public class SoundEffectSystem : ISoundEffectSystem
 
         public void VerifyAndPopulate(ICommunication communication)
         {
+            //Keep SoundEffects Sorted
+            SoundEffects.Sort();
+
             foreach (SoundEffect soundEffect in SoundEffects.ToArray())
             {
                 if (!File.Exists(soundEffect.FilePath))

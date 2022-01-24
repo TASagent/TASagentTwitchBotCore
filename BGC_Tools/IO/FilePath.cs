@@ -6,34 +6,6 @@ public static class FilePath
     private static HashSet<char> InvalidChars => invalidChars ??= new HashSet<char>(
                 Path.GetInvalidPathChars().Concat(Path.GetInvalidFileNameChars()).Distinct());
 
-    #region RepalceInvalidCharacters
-
-    [Obsolete("Use SanitizeForFilename or SanitizeAndReplaceForFilename, instead")]
-    public static void ReplaceInvalidCharacters(ref string path, string replacementValue)
-    {
-        char[] invalidCharacters = Path.GetInvalidFileNameChars();
-
-        for (int i = 0; i < invalidCharacters.Length; ++i)
-        {
-            path = path.Replace(invalidCharacters[i].ToString(), replacementValue);
-        }
-    }
-
-    /// <summary>
-    /// Eliminates all invalid characters from string
-    /// </summary>
-    [Obsolete("Use SanitizeForFilename instead.")]
-    public static void ReplaceInvalidCharacters(ref string path)
-    {
-        char[] invalidCharacters = Path.GetInvalidFileNameChars();
-
-        for (int i = 0; i < invalidCharacters.Length; ++i)
-        {
-            path = path.Replace(invalidCharacters[i].ToString(), "");
-        }
-    }
-
-    #endregion RepalceInvalidCharacters
     #region Sanitize
 
     /// <summary>

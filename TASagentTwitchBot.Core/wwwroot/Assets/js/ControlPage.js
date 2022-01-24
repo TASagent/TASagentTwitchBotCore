@@ -423,6 +423,110 @@
     });
   }
 
+  function UpdateSfx() {
+    $.get({
+      url: "/TASagentBotAPI/SFX/FetchSoundEffects",
+      headers: { "Authorization": "PASS NONE" },
+      success: (soundEffects) => {
+
+        let sfxSelector = $("#select-Sfx");
+
+        sfxSelector.empty();
+
+        if (soundEffects && soundEffects.length > 0) {
+          soundEffects.forEach(function (soundEffect) {
+            let soundEffectElement = $(`<option value="${soundEffect}">${soundEffect}</option>`);
+            sfxSelector.append(soundEffectElement);
+          });
+        }
+      },
+      beforeSend: auth.ApplyAuth,
+      error: auth.HandleErrorResponse
+    });
+  }
+
+  function PlaySfx(soundEffect) {
+    $.post({
+      url: "/TASagentBotAPI/SFX/PlayImmediate",
+      headers: { "Authorization": "PASS NONE" },
+      contentType: "application/json;charset=utf-8",
+      data: JSON.stringify({
+        effect: soundEffect
+      }),
+      beforeSend: auth.ApplyAuth,
+      error: auth.HandleErrorResponse
+    });
+  }
+
+  function DeleteSfx(soundEffect) {
+    var confirmModal =
+      $('<div class="modal" tabindex="-1">' +
+        '<div class="modal-dialog">' +
+        '<div class="modal-content">' +
+        '<div class="modal-header">' +
+        '<h5 class="modal-title">Confirm Deletion</h5>' +
+        '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+        '</div>' +
+        '<div class="modal-body">' +
+        `<p>Confirm you wish to delete ${soundEffect}.</p>` +
+        '</div>' +
+        '<div class="modal-footer">' +
+        '<button type="button" class="btn btn-primary" data-bs-dismiss="modal">Cancel</button>' +
+        '<button type="button" class="btn btn-danger" id="deleteButton">Delete</button>' +
+        '</div>' +
+        '</div>' +
+        '</div>' +
+        '</div>');
+
+    confirmModal.find('#deleteButton').click(function () {
+      $.post({
+        url: "/TASagentBotAPI/SFX/Remove",
+        headers: { "Authorization": "PASS NONE" },
+        contentType: "application/json;charset=utf-8",
+        data: JSON.stringify({
+          effect: soundEffect
+        }),
+        beforeSend: auth.ApplyAuth,
+        error: auth.HandleErrorResponse
+      });
+      confirmModal.modal('hide');
+      UpdateSfx();
+    });
+
+    confirmModal.modal('show');
+  }
+
+  function UploadSfx() {
+    const file = $('#input-SfxFile').prop('files')[0];
+
+    const name = $('#input-SfxName').val();
+    const aliases = $('#input-SfxAliases').val();
+    if (!file || !name || !aliases) {
+      return;
+    }
+    const reader = new FileReader();
+
+    reader.addEventListener("load", function () {
+      $.post({
+        url: "/TASagentBotAPI/SFX/Upload",
+        headers: { "Authorization": "PASS NONE" },
+        contentType: "application/json;charset=utf-8",
+        data: JSON.stringify({
+          name: name,
+          aliases: aliases,
+          fileName: file.name,
+          file: reader.result,
+        }),
+        beforeSend: auth.ApplyAuth,
+        error: auth.HandleErrorResponse
+      });
+
+      UpdateSfx();
+    }, false);
+
+    reader.readAsDataURL(file);
+  }
+
   function MoveSlider() {
     var value = $('#slider-PitchSlider').slider("value");
     var pitchValue = Math.pow(8, value);
@@ -439,7 +543,7 @@
 
   function SkipNotification() {
     $.post({
-      url: "/TASagentBotAPI/Notifications/SkipNotification",
+      url: "/TASagentBotAPI/Notifications/Skip",
       headers: { "Authorization": "PASS NONE" },
       contentType: "application/json;charset=utf-8",
       beforeSend: auth.ApplyAuth,
@@ -1051,6 +1155,13 @@
 
     $("#button-Submit-TTS-Settings").click(SubmitTTSSettings);
 
+
+
+    var sfxSelect = $("#select-Sfx");
+    $("#button-PlaySfx").click(function () { PlaySfx(sfxSelect.val()); });
+    $("#button-DeleteSfx").click(function () { DeleteSfx(sfxSelect.val()); });
+    $("#button-UploadSfx").click(UploadSfx);
+
     var serialDeviceSelect = $("#select-SerialDevice");
     serialDeviceSelect.change(function () { SubmitSerialDeviceChanged(serialDeviceSelect.val()); });
 
@@ -1066,6 +1177,7 @@
     $("#nav-settings-midi-tab").click(FetchMidiDevices);
     $("#nav-settings-timer-tab").click(FetchTimerValues);
     $("#nav-settings-tts-tab").click(UpdateTTSSettings);
+    $("#nav-settings-sfx-tab").click(UpdateSfx);
 
 
     RefreshMiscSettings();
