@@ -22,8 +22,10 @@ public class BotConfiguration
     public string BroadcasterAccessToken { get; set; } = "";
     public string BroadcasterRefreshToken { get; set; } = "";
 
+    public bool LogChat { get; set; } = true;
     public bool LogAllErrors { get; set; } = true;
     public bool ExhaustiveIRCLogging { get; set; } = true;
+    public bool ExhaustiveRedemptionLogging { get; set; } = true;
 
     //Output configuration
     public string EffectOutputDevice { get; set; } = "";

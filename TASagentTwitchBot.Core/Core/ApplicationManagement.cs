@@ -6,9 +6,12 @@ public class ApplicationManagement
     private readonly TaskCompletionSource exitTrigger = new TaskCompletionSource();
     private readonly List<IShutdownListener> shutdownListeners = new List<IShutdownListener>();
 
+    private bool exitInitiated = false;
+
     public ApplicationManagement(ErrorHandler errorHandler)
     {
         this.errorHandler = errorHandler;
+        this.errorHandler.SetApplicationManagement(this);
     }
 
     public void RegisterShutdownListener(IShutdownListener shutdownListener) => shutdownListeners.Add(shutdownListener);
@@ -17,6 +20,13 @@ public class ApplicationManagement
 
     public void TriggerExit()
     {
+        if (exitInitiated)
+        {
+            return;
+        }
+
+        exitInitiated = true;
+
         foreach (IShutdownListener listener in shutdownListeners)
         {
             try

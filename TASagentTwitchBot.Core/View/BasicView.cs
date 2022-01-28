@@ -9,8 +9,8 @@ public class BasicView : IConsoleOutput, IShutdownListener, IDisposable
     private readonly ApplicationManagement applicationManagement;
 
     private readonly CancellationTokenSource generalTokenSource = new CancellationTokenSource();
-    private Task? readHandlerTask;
-    private Task? keysHandlerTask;
+    private readonly Task readHandlerTask;
+    private readonly Task keysHandlerTask;
 
     private readonly ChannelWriter<ConsoleKeyInfo> consoleChannelWriter;
     private readonly ChannelReader<ConsoleKeyInfo> consoleChannelReader;
@@ -34,11 +34,13 @@ public class BasicView : IConsoleOutput, IShutdownListener, IDisposable
 
         if (botConfig.UseThreadedMonitors)
         {
-            Task.Run(LaunchListeners);
+            readHandlerTask = Task.Run(ReadKeysHandler);
+            keysHandlerTask = Task.Run(HandleKeysLoop);
         }
         else
         {
-            LaunchListeners();
+            readHandlerTask = ReadKeysHandler();
+            keysHandlerTask = HandleKeysLoop();
         }
 
         communication.ReceivePendingNotificationHandlers += ReceivePendingNotification;
@@ -101,11 +103,6 @@ public class BasicView : IConsoleOutput, IShutdownListener, IDisposable
         Console.WriteLine($"Chat    {chatter.User.TwitchUserName}: {chatter.Message}");
     }
 
-    public void LaunchListeners()
-    {
-        readHandlerTask = ReadKeysHandler();
-        keysHandlerTask = HandleKeysLoop();
-    }
 
     private async Task ReadKeysHandler()
     {
@@ -127,7 +124,6 @@ public class BasicView : IConsoleOutput, IShutdownListener, IDisposable
                 await consoleChannelWriter.WriteAsync(nextKey);
             }
         }
-        catch (TaskCanceledException) { /* swallow */ }
         catch (OperationCanceledException) { /* swallow */ }
         catch (Exception ex)
         {
@@ -178,13 +174,8 @@ public class BasicView : IConsoleOutput, IShutdownListener, IDisposable
 
                 consoleChannelWriter.TryComplete();
 
-                readHandlerTask?.Wait(500);
-                readHandlerTask?.Dispose();
-                readHandlerTask = null;
-
-                keysHandlerTask?.Wait(500);
-                keysHandlerTask?.Dispose();
-                keysHandlerTask = null;
+                readHandlerTask.Wait(2_000);
+                keysHandlerTask.Wait(2_000);
 
                 generalTokenSource.Dispose();
             }

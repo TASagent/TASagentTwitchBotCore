@@ -447,7 +447,7 @@
 
   function PlaySfx(soundEffect) {
     $.post({
-      url: "/TASagentBotAPI/SFX/PlayImmediate",
+      url: "/TASagentBotAPI/SFX/PlayImmediateByName",
       headers: { "Authorization": "PASS NONE" },
       contentType: "application/json;charset=utf-8",
       data: JSON.stringify({

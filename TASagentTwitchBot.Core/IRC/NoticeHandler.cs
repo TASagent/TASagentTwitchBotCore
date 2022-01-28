@@ -8,20 +8,17 @@ public interface INoticeHandler
 public class NoticeHandler : INoticeHandler
 {
     protected readonly ICommunication communication;
-    protected readonly Audio.Effects.IAudioEffectSystem audioEffectSystem;
     protected readonly Notifications.IRaidHandler raidhandler;
     protected readonly Notifications.ISubscriptionHandler subhandler;
     protected readonly Notifications.IGiftSubHandler giftSubHandler;
 
     public NoticeHandler(
         ICommunication communication,
-        Audio.Effects.IAudioEffectSystem audioEffectSystem,
         Notifications.ISubscriptionHandler subhandler,
         Notifications.IRaidHandler raidhandler,
         Notifications.IGiftSubHandler giftSubHandler)
     {
         this.communication = communication;
-        this.audioEffectSystem = audioEffectSystem;
         this.subhandler = subhandler;
         this.raidhandler = raidhandler;
         this.giftSubHandler = giftSubHandler;

@@ -4,18 +4,13 @@ using TASagentTwitchBot.Core.PubSub;
 
 namespace TASagentTwitchBot.Plugin.TTTAS;
 
-public class TTTASRedemptionHandler : IRedemptionContainer, IDisposable
+public class TTTASRedemptionHandler : IRedemptionContainer
 {
     private readonly Core.ICommunication communication;
     private readonly ITTTASHandler tttasHandler;
     private readonly HelixHelper helixHelper;
 
     private readonly TTTASConfiguration tttasConfig;
-
-    private readonly SemaphoreSlim initSemaphore = new SemaphoreSlim(1);
-
-    private bool initialized = false;
-    private bool disposedValue = false;
 
     public TTTASRedemptionHandler(
         Core.ICommunication communication,
@@ -33,34 +28,10 @@ public class TTTASRedemptionHandler : IRedemptionContainer, IDisposable
     {
         if (tttasConfig.Redemption.Enabled)
         {
-            if (!initialized)
-            {
-                await InitializeAsync();
-            }
+            await Initialize();
 
             handlers.Add(tttasConfig.Redemption.RedemptionID, HandleRedemption);
         }
-    }
-
-    private async Task InitializeAsync()
-    {
-        if (initialized)
-        {
-            return;
-        }
-
-        await initSemaphore.WaitAsync();
-
-        if (initialized)
-        {
-            initSemaphore.Release();
-            return;
-        }
-
-        await Initialize();
-
-        initialized = true;
-        initSemaphore.Release();
     }
 
     private async Task Initialize()
@@ -213,25 +184,5 @@ public class TTTASRedemptionHandler : IRedemptionContainer, IDisposable
                 message: redemption.UserInput,
                 approved: false);
         }
-    }
-
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!disposedValue)
-        {
-            if (disposing)
-            {
-                initSemaphore.Dispose();
-            }
-
-            disposedValue = true;
-        }
-    }
-
-    public void Dispose()
-    {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
     }
 }

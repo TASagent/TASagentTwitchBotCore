@@ -7,20 +7,47 @@ namespace TASagentTwitchBot.Core.Bits;
 public class CheerHelper
 {
     private readonly Config.BotConfiguration botConfig;
+    private readonly ICommunication communication;
+    private readonly IBotTokenValidator botTokenValidator;
     private readonly HelixHelper helixHelper;
 
-    private bool hasData = false;
+    private readonly Task initializationTask;
 
-    private static readonly Regex cheerFinder = new Regex(@"([a-zA-Z]+)(\d+)");
+    private static readonly Regex cheerFinder = new Regex(@"(?:\s|^)([a-zA-Z]+)(\d+)(?:\s|$)");
 
     private readonly Dictionary<string, List<TwitchCheermotes.Datum.Tier>> cheerLookup = new Dictionary<string, List<TwitchCheermotes.Datum.Tier>>();
 
     public CheerHelper(
         Config.BotConfiguration botConfig,
+        ICommunication communication,
+        IBotTokenValidator botTokenValidator,
         HelixHelper helixHelper)
     {
         this.botConfig = botConfig;
+        this.communication = communication;
+        this.botTokenValidator = botTokenValidator;
         this.helixHelper = helixHelper;
+
+        initializationTask = Initialize();
+    }
+
+    private async Task Initialize()
+    {
+        bool tokenValidated = await botTokenValidator.WaitForValidationAsync();
+
+        if (!tokenValidated)
+        {
+            communication.SendErrorMessage("Unable to fetch Cheermotes due to failed acquisition of Bot token. Aborting.");
+            throw new Exception("Unable to fetch Cheermotes due to failed acquisition of Bot token. Aborting.");
+        }
+
+        TwitchCheermotes? cheermotes = await helixHelper.GetCheermotes(botConfig.BroadcasterId) ??
+            throw new Exception("Unable to fetch Cheermotes");
+
+        foreach (TwitchCheermotes.Datum cheermote in cheermotes.Data)
+        {
+            cheerLookup.Add(cheermote.Prefix.ToLower(), cheermote.Tiers);
+        }
     }
 
     public async Task<string?> GetCheerImageURL(string message, int quantity)
@@ -54,23 +81,32 @@ public class CheerHelper
         return imageURL;
     }
 
+    public async Task<string?> GetCheermoteURL(string prefix)
+    {
+        if (!initializationTask.IsCompleted)
+        {
+            communication.SendDebugMessage($"Waiting for initialization for static Cheermote URL: {prefix}");
+            await initializationTask;
+        }
+
+        if (cheerLookup.TryGetValue(prefix.ToLower(), out List<TwitchCheermotes.Datum.Tier>? tierList))
+        {
+            return tierList[0].Images.Dark.Static.SmallishURL;
+        }
+
+        return null;
+    }
+
 
     public async Task<string?> GetAnimatedCheerURL(string prefix, int quantity, bool dark = true)
     {
-        if (!hasData)
+        if (!initializationTask.IsCompleted)
         {
-            TwitchCheermotes? cheermotes = await helixHelper.GetCheermotes(botConfig.BroadcasterId) ??
-                throw new Exception("Unable to get Cheermotes");
-
-            foreach (TwitchCheermotes.Datum cheermote in cheermotes.Data)
-            {
-                cheerLookup.Add(cheermote.Prefix.ToLower(), cheermote.Tiers);
-            }
-
-            hasData = true;
+            communication.SendDebugMessage($"Waiting for initialization for Animated Cheer URL: {prefix}{quantity}");
+            await initializationTask;
         }
 
-        if (cheerLookup.TryGetValue(prefix.ToLowerInvariant(), out List<TwitchCheermotes.Datum.Tier>? tierList))
+        if (cheerLookup.TryGetValue(prefix.ToLower(), out List<TwitchCheermotes.Datum.Tier>? tierList))
         {
             TwitchCheermotes.Datum.Tier? lastMatch = null;
 

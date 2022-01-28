@@ -207,7 +207,7 @@ public class QuoteSystem : ICommandContainer
             return Task.CompletedTask;
         }
 
-        string number = remainingCommand[1];
+        string number = remainingCommand[0];
 
         if (number.Length >= 2 && number[0] == '#')
         {

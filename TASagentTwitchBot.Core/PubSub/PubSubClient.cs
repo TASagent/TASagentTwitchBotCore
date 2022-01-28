@@ -35,10 +35,10 @@ public class PubSubClient : IShutdownListener, IDisposable
 
     private readonly TimeSpan pingWaitTime = new TimeSpan(hours: 0, minutes: 4, seconds: 00);
 
+    private readonly RingBuffer<PubSubMessage> sentMessages = new RingBuffer<PubSubMessage>(20);
+
     private readonly byte[] incomingData = new byte[4096];
     private bool pongReceived = false;
-
-    private readonly RingBuffer<PubSubMessage> sentMessages = new RingBuffer<PubSubMessage>(20);
 
     public PubSubClient(
         Config.BotConfiguration botConfig,
@@ -76,12 +76,12 @@ public class PubSubClient : IShutdownListener, IDisposable
             throw new Exception("Unable to connect to PubSub - requires validated Broadcaster token. ABORTING.");
         }
 
+        await redemptionHandler.Initialize();
+
         await Connect();
 
         handlePingsTask = HandlePings();
         readMessagesTask = ReadMessages();
-
-        await redemptionHandler.Initialize();
     }
 
     private async Task Connect()
@@ -153,7 +153,6 @@ public class PubSubClient : IShutdownListener, IDisposable
 
             communication.SendDebugMessage("PubSub Reconnect Success");
         }
-        catch (TaskCanceledException) { /* swallow */ }
         catch (OperationCanceledException) { /* swallow */ }
         catch (Exception ex)
         {
@@ -241,10 +240,9 @@ public class PubSubClient : IShutdownListener, IDisposable
                 await Task.Delay(pingWaitTime, generalTokenSource.Token);
             }
         }
-        catch (TaskCanceledException) { /* swallow */ }
+        catch (OperationCanceledException) { /* swallow */ }
         catch (ThreadAbortException) { /* swallow */ }
         catch (ObjectDisposedException) { /* swallow */ }
-        catch (OperationCanceledException) { /* swallow */ }
         catch (Exception ex)
         {
             communication.SendErrorMessage($"PubSub Server Pinger Exception: {ex.GetType().Name}");
@@ -269,10 +267,9 @@ public class PubSubClient : IShutdownListener, IDisposable
                     webSocketReceiveResult = await clientWebSocket!.ReceiveAsync(incomingData, readerTokenSource!.Token);
                     readCompleted = true;
                 }
-                catch (TaskCanceledException) { /* swallow */ }
+                catch (OperationCanceledException) { /* swallow */ }
                 catch (ThreadAbortException) { /* swallow */ }
                 catch (ObjectDisposedException) { /* swallow */ }
-                catch (OperationCanceledException) { /* swallow */ }
                 catch (WebSocketException)
                 {
                     communication.SendWarningMessage($"PubSub Websocket closed unexpectedly.");
@@ -311,10 +308,9 @@ public class PubSubClient : IShutdownListener, IDisposable
                         webSocketReceiveResult = await clientWebSocket!.ReceiveAsync(incomingData, readerTokenSource.Token);
                         readCompleted = true;
                     }
-                    catch (TaskCanceledException) { /* swallow */ }
+                    catch (OperationCanceledException) { /* swallow */ }
                     catch (ThreadAbortException) { /* swallow */ }
                     catch (ObjectDisposedException) { /* swallow */ }
-                    catch (OperationCanceledException) { /* swallow */ }
                     catch (WebSocketException)
                     {
                         communication.SendWarningMessage($"PubSub Websocket closed unexpectedly.");
@@ -426,10 +422,9 @@ public class PubSubClient : IShutdownListener, IDisposable
                 }
             }
         }
-        catch (TaskCanceledException) { /* swallow */ }
+        catch (OperationCanceledException) { /* swallow */ }
         catch (ThreadAbortException) { /* swallow */ }
         catch (ObjectDisposedException) { /* swallow */ }
-        catch (OperationCanceledException) { /* swallow */ }
         catch (Exception ex)
         {
             communication.SendErrorMessage($"PubSub Exception: {ex.GetType().Name}");
@@ -518,20 +513,13 @@ public class PubSubClient : IShutdownListener, IDisposable
 
                 List<Task> tasks = new List<Task>() { disconnectionTask, handlePingsTask!, readMessagesTask!, connectionTask! };
 
-                Task.WaitAll(tasks.Where(x => x is not null).ToArray(), 1000);
+                Task.WaitAll(tasks.Where(x => x is not null).ToArray(), 2_000);
 
                 disconnectTokenSource.Cancel();
 
-                handlePingsTask?.Dispose();
                 handlePingsTask = null;
-
-                readMessagesTask?.Dispose();
                 readMessagesTask = null;
-
-                connectionTask?.Dispose();
                 connectionTask = null;
-
-                disconnectionTask?.Dispose();
                 disconnectionTask = null;
 
                 generalTokenSource.Dispose();

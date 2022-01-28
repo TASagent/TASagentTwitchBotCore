@@ -43,6 +43,7 @@ public class LocalLogger : IDisposable
         {
             if (disposing)
             {
+                logWriter.Flush();
                 logWriter.Dispose();
             }
 

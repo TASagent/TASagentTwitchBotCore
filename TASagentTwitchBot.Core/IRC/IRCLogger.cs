@@ -11,23 +11,44 @@ public interface IIRCLogger
 
 public class IRCLogger : IIRCLogger, IDisposable
 {
-    private readonly Lazy<LocalLogger> ircLog;
-    private readonly Channel<string> lineChannel;
+    private readonly Lazy<LocalLogger> ircLog = new Lazy<LocalLogger>(() => new LocalLogger("IRCLogs", "irc"));
+    private readonly ChannelWriter<string> logWriterChannel;
+    private readonly ChannelReader<string> logReaderChannel;
+
+    private readonly Task logHandlerTask;
+
     private bool disposedValue;
 
-    public IRCLogger()
+    public IRCLogger(
+        Config.BotConfiguration botConfig)
     {
-        lineChannel = Channel.CreateUnbounded<string>();
-        ircLog = new Lazy<LocalLogger>(() => new LocalLogger("IRCLogs", "irc"));
+        Channel<string> lineChannel = Channel.CreateUnbounded<string>();
+        logWriterChannel = lineChannel.Writer;
+        logReaderChannel = lineChannel.Reader;
 
-        HandleLines();
+        if (botConfig.ExhaustiveIRCLogging)
+        {
+            if (botConfig.UseThreadedMonitors)
+            {
+                logHandlerTask = Task.Run(HandleLines);
+            }
+            else
+            {
+                logHandlerTask = HandleLines();
+            }
+        }
+        else
+        {
+            logWriterChannel.TryComplete();
+            logHandlerTask = Task.CompletedTask;
+        }
     }
 
-    public void WriteLine(string line) => lineChannel.Writer.TryWrite(line);
+    public void WriteLine(string line) => logWriterChannel.TryWrite(line);
 
-    public async void HandleLines()
+    private async Task HandleLines()
     {
-        await foreach (string line in lineChannel.Reader.ReadAllAsync())
+        await foreach (string line in logReaderChannel.ReadAllAsync())
         {
             ircLog.Value.PushLine(line);
         }
@@ -39,7 +60,9 @@ public class IRCLogger : IIRCLogger, IDisposable
         {
             if (disposing)
             {
-                lineChannel.Writer.TryComplete();
+                logWriterChannel.TryComplete();
+
+                logHandlerTask.Wait(2_000);
 
                 if (ircLog.IsValueCreated)
                 {

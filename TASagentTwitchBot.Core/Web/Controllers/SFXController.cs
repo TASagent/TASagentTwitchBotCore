@@ -55,6 +55,34 @@ public class SFXController : ControllerBase
         return Ok();
     }
 
+    [HttpPost]
+    [AuthRequired(AuthDegree.Privileged)]
+    public IActionResult PlayImmediateByName(SoundEffectLookup request)
+    {
+        if (string.IsNullOrEmpty(request.Effect))
+        {
+            return BadRequest();
+        }
+
+        string sfxString = request.Effect.ToLowerInvariant();
+
+        if (sfxString.StartsWith('/'))
+        {
+            sfxString = sfxString[1..];
+        }
+
+        SoundEffect? soundEffect = soundEffectSystem.GetSoundEffectByName(sfxString);
+
+        if (soundEffect is null)
+        {
+            return BadRequest();
+        }
+
+        audioPlayer.DemandPlayAudioImmediate(new SoundEffectRequest(soundEffect));
+
+        return Ok();
+    }
+
     [HttpGet("{soundEffectString}")]
     public async Task<IActionResult> FetchFile(string soundEffectString)
     {

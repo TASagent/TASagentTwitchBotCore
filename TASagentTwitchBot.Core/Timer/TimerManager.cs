@@ -137,7 +137,6 @@ public class TimerManager : ITimerManager, IDisposable
                 HandleAutosave();
             }
         }
-        catch (TaskCanceledException) { /* swallow */}
         catch (OperationCanceledException) { /* swallow */}
         catch (Exception ex)
         {

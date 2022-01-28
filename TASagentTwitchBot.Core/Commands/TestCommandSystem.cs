@@ -145,11 +145,25 @@ public class TestCommandSystem : ICommandContainer
 
             string message = string.Join(' ', remainingCommand[3..]) + $" {remainingCommand[1]}{remainingCommand[2]}";
 
-            cheerHandler.HandleCheer(
-                cheerer: cheerer!,
-                message: message,
-                quantity: quantity,
-                approved: true);
+            IRC.TwitchChatter testChatter = new IRC.TwitchChatter()
+            {
+                User = cheerer!,
+                CreatedAt = DateTime.UtcNow,
+                Badges = "",
+                Message = message,
+                MessageId = chatter.MessageId,
+                Whisper = false,
+                Bits = quantity,
+                Emotes = new List<IRC.TwitchChatter.Emote>()
+            };
+
+            communication.DispatchChatMessage(testChatter);
+
+            //cheerHandler.HandleCheer(
+            //    cheerer: cheerer!,
+            //    message: message,
+            //    quantity: quantity,
+            //    approved: true);
         }
     }
 }

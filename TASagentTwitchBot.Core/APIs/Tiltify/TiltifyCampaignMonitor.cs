@@ -34,23 +34,28 @@ public class TiltifyCampaignMonitor : IDisposable
 
         handledDonationData = HandledDonationData.GetData();
 
-        if (botConfig.UseThreadedMonitors)
+        if (tiltifyConfig.CampaignId == -1 || !tiltifyConfig.MonitorCampaign)
         {
-            monitorTask = Task.Run(MonitorCampaign);
+            //No campaign running
+            monitorTask = Task.CompletedTask;
         }
         else
         {
-            monitorTask = MonitorCampaign();
+            //Campaign running
+            if (botConfig.UseThreadedMonitors)
+            {
+                monitorTask = Task.Run(MonitorCampaign);
+            }
+            else
+            {
+                monitorTask = MonitorCampaign();
+            }
         }
+
     }
 
     private async Task MonitorCampaign()
     {
-        if (tiltifyConfig.CampaignId == -1 || !tiltifyConfig.MonitorCampaign)
-        {
-            return;
-        }
-
         try
         {
             while (true)
@@ -86,10 +91,9 @@ public class TiltifyCampaignMonitor : IDisposable
                 }
             }
         }
-        catch (TaskCanceledException) { /* swallow */ }
+        catch (OperationCanceledException) { /* swallow */ }
         catch (ThreadAbortException) { /* swallow */ }
         catch (ObjectDisposedException) { /* swallow */ }
-        catch (OperationCanceledException) { /* swallow */ }
         catch (Exception ex)
         {
             communication.SendErrorMessage($"Tiltify Campaign Manager Pinger Exception: {ex.GetType().Name}");
@@ -106,8 +110,7 @@ public class TiltifyCampaignMonitor : IDisposable
                 generalTokenSource.Cancel();
 
                 //Wait for monitor
-                monitorTask.Wait(1000);
-                monitorTask.Dispose();
+                monitorTask.Wait(2_000);
 
                 generalTokenSource.Dispose();
             }

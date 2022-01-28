@@ -18,6 +18,7 @@ public interface IActivityDispatcher
 /// </summary>
 public class ActivityDispatcher : IActivityDispatcher, IDisposable
 {
+    private readonly ErrorHandler errorHandler;
     private readonly ICommunication communication;
     private readonly IAudioPlayer audioPlayer;
 
@@ -28,15 +29,19 @@ public class ActivityDispatcher : IActivityDispatcher, IDisposable
     private readonly Dictionary<int, ActivityRequest> activityDict = new Dictionary<int, ActivityRequest>();
     private readonly Dictionary<int, ActivityRequest> pendingActivityRequests = new Dictionary<int, ActivityRequest>();
 
+    private readonly Task activityListeningTask;
+
     private int nextActivityID = 0;
     private bool disposedValue;
     private ActivityRequest? lastFinishedRequest = null;
 
     public ActivityDispatcher(
         Config.BotConfiguration botConfig,
+        ErrorHandler errorHandler,
         ICommunication communication,
         IAudioPlayer audioPlayer)
     {
+        this.errorHandler = errorHandler;
         this.communication = communication;
         this.audioPlayer = audioPlayer;
 
@@ -46,38 +51,46 @@ public class ActivityDispatcher : IActivityDispatcher, IDisposable
 
         if (botConfig.UseThreadedMonitors)
         {
-            Task.Run(ListenForActivity);
+            activityListeningTask = Task.Run(ListenForActivity);
         }
         else
         {
-            ListenForActivity();
+            activityListeningTask = ListenForActivity();
         }
     }
 
-    public async void ListenForActivity()
+    private async Task ListenForActivity()
     {
         List<Task> taskList = new List<Task>();
 
-        await foreach (ActivityRequest activityRequest in activityReader.ReadAllAsync())
+        try
         {
-            if (activityRequest.Played)
+            await foreach (ActivityRequest activityRequest in activityReader.ReadAllAsync(cancellationTokenSource.Token))
             {
-                communication.SendDebugMessage($"Replaying Notification {activityRequest.Id}: {activityRequest}");
+                if (activityRequest.Played)
+                {
+                    communication.SendDebugMessage($"Replaying Notification {activityRequest.Id}: {activityRequest}");
+                }
+                else
+                {
+                    activityRequest.Played = true;
+                    communication.SendDebugMessage($"Playing Notification {activityRequest.Id}: {activityRequest}");
+                }
+
+                await activityRequest.Execute().WithCancellation(cancellationTokenSource.Token);
+
+                lastFinishedRequest = activityRequest;
+
+                taskList.Clear();
+
+                //2 second delay between notifications
+                await Task.Delay(2000, cancellationTokenSource.Token);
             }
-            else
-            {
-                activityRequest.Played = true;
-                communication.SendDebugMessage($"Playing Notification {activityRequest.Id}: {activityRequest}");
-            }
-
-            await activityRequest.Execute().WithCancellation(cancellationTokenSource.Token);
-
-            lastFinishedRequest = activityRequest;
-
-            taskList.Clear();
-
-            //2 second delay between notifications
-            await Task.Delay(2000, cancellationTokenSource.Token);
+        }
+        catch (OperationCanceledException) { /* swallow */ }
+        catch (Exception ex)
+        {
+            errorHandler.LogSystemException(ex);
         }
     }
 
@@ -145,6 +158,8 @@ public class ActivityDispatcher : IActivityDispatcher, IDisposable
             if (disposing)
             {
                 activityWriter.TryComplete();
+
+                activityListeningTask.Wait(2_000);
 
                 cancellationTokenSource.Cancel();
                 cancellationTokenSource.Dispose();

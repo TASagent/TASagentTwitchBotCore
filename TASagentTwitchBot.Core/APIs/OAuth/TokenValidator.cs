@@ -247,7 +247,6 @@ public abstract class TokenValidator : IShutdownListener, ITokenValidator, IDisp
                 }
             }
         }
-        catch (TaskCanceledException) { /* swallow */ }
         catch (OperationCanceledException) { /* swallow */ }
         catch (Exception ex)
         {
@@ -389,8 +388,7 @@ public abstract class TokenValidator : IShutdownListener, ITokenValidator, IDisp
             {
                 generalTokenSource.Cancel();
 
-                validationTask?.Wait(1000);
-                validationTask?.Dispose();
+                validationTask?.Wait(2_000);
                 validationTask = null;
 
                 generalTokenSource.Dispose();

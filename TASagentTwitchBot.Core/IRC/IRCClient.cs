@@ -243,10 +243,7 @@ public class IrcClient : IShutdownListener, IDisposable
     {
         if (exhaustiveLogging)
         {
-            lock (ircLogger)
-            {
-                ircLogger.WriteLine(message);
-            }
+            ircLogger.WriteLine(message);
         }
     }
 
@@ -254,10 +251,7 @@ public class IrcClient : IShutdownListener, IDisposable
     {
         if (exhaustiveLogging)
         {
-            lock (ircLogger)
-            {
-                ircLogger.WriteLine($"{LogDateString} {message}");
-            }
+            ircLogger.WriteLine($"{LogDateString} {message}");
         }
     }
 
@@ -265,10 +259,7 @@ public class IrcClient : IShutdownListener, IDisposable
     {
         if (exhaustiveLogging)
         {
-            lock (ircLogger)
-            {
-                ircLogger.WriteLine($"{LogDateString} {(incoming ? '<' : '>')} {message}");
-            }
+            ircLogger.WriteLine($"{LogDateString} {(incoming ? '<' : '>')} {message}");
         }
     }
 
@@ -371,7 +362,6 @@ public class IrcClient : IShutdownListener, IDisposable
                 }
             }
         }
-        catch (TaskCanceledException) { /* swallow */ }
         catch (OperationCanceledException) { /* swallow */ }
         catch (Exception ex)
         {
@@ -431,7 +421,6 @@ public class IrcClient : IShutdownListener, IDisposable
 
             communication.SendDebugMessage("IRC Reconnect Success");
         }
-        catch (TaskCanceledException) { /* swallow */ }
         catch (OperationCanceledException) { /* swallow */ }
         catch (Exception ex)
         {
@@ -568,7 +557,6 @@ public class IrcClient : IShutdownListener, IDisposable
 
                     lastMessageTime = DateTime.Now;
                 }
-                catch (TaskCanceledException) { /* swallow */ }
                 catch (OperationCanceledException) { /* swallow */ }
                 catch (Exception ex)
                 {
@@ -615,13 +603,11 @@ public class IrcClient : IShutdownListener, IDisposable
                         //Print out notices
                         if (newIRCMessage.message.Contains("Login authentication failed"))
                         {
-                            communication.SendErrorMessage("------------> URGENT <------------");
-                            communication.SendErrorMessage("Please check your credentials and try again.");
-                            communication.SendErrorMessage("If this error persists, please check if you can access your channel's chat.");
-                            communication.SendErrorMessage("If not, then contact Twitch support.");
-                            communication.SendErrorMessage("Exiting bot application now...");
-                            await Task.Delay(7500);
-                            Environment.Exit(0);
+                            errorHandler.LogFatalError(
+                                "\n------------> URGENT <------------\n" +
+                                "Please check your credentials and try again. " +
+                                "If this error persists, please check if you can access your channel's chat. " +
+                                "If not, then contact Twitch support.");
                         }
                         else
                         {
@@ -695,7 +681,6 @@ public class IrcClient : IShutdownListener, IDisposable
                 }
             }
         }
-        catch (TaskCanceledException) { /* swallow */ }
         catch (OperationCanceledException) { /* swallow */ }
         catch (Exception ex)
         {
@@ -737,19 +722,10 @@ public class IrcClient : IShutdownListener, IDisposable
 
                 Task.WaitAll(tasks.Where(x => x is not null).ToArray(), 1000);
 
-                handlePingsTask?.Dispose();
                 handlePingsTask = null;
-
-                handleIncomingMessagesTask?.Dispose();
                 handleIncomingMessagesTask = null;
-
-                handleOutgoingMessagesTask?.Dispose();
                 handleOutgoingMessagesTask = null;
-
-                connectionTask?.Dispose();
                 connectionTask = null;
-
-                disconnectionTask?.Dispose();
                 disconnectionTask = null;
 
                 generalTokenSource.Dispose();

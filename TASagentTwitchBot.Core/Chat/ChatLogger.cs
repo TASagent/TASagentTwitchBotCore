@@ -5,8 +5,13 @@ namespace TASagentTwitchBot.Core.Chat;
 public class ChatLogger : IDisposable
 {
     private readonly Config.BotConfiguration botConfig;
-    private readonly Lazy<Logs.LocalLogger> chatLog;
-    private readonly Channel<string> lineChannel;
+    private readonly Lazy<Logs.LocalLogger> chatLog = new Lazy<Logs.LocalLogger>(() => new Logs.LocalLogger("ChatLogs", "chat"));
+    private readonly ChannelWriter<string> logWriterChannel;
+    private readonly ChannelReader<string> logReaderChannel;
+
+    private readonly bool logChat;
+    private readonly Task logHandlerTask;
+
     private bool disposedValue;
 
     public ChatLogger(
@@ -15,38 +20,52 @@ public class ChatLogger : IDisposable
     {
         this.botConfig = botConfig;
 
-        lineChannel = Channel.CreateUnbounded<string>();
-        chatLog = new Lazy<Logs.LocalLogger>(() => new Logs.LocalLogger("ChatLogs", "chat"));
+        logChat = botConfig.LogChat;
 
-        communication.SendMessageHandlers += WriteOutgoingMessage;
-        communication.SendWhisperHandlers += WriteOutgoingWhisper;
-        communication.ReceiveMessageLoggers += WriteIncomingMessage;
+        Channel<string> lineChannel = Channel.CreateUnbounded<string>();
+        logWriterChannel = lineChannel.Writer;
+        logReaderChannel = lineChannel.Reader;
 
-        HandleLines();
+        if (logChat)
+        {
+            communication.SendMessageHandlers += WriteOutgoingMessage;
+            communication.SendWhisperHandlers += WriteOutgoingWhisper;
+            communication.ReceiveMessageLoggers += WriteIncomingMessage;
+
+            if (botConfig.UseThreadedMonitors)
+            {
+                logHandlerTask = Task.Run(HandleLines);
+            }
+            else
+            {
+                logHandlerTask = HandleLines();
+            }
+        }
+        else
+        {
+            logWriterChannel.TryComplete();
+            logHandlerTask = Task.CompletedTask;
+        }
     }
 
-    private void WriteOutgoingMessage(string message)
-    {
-        lineChannel.Writer.TryWrite($"[{DateTime.Now:G}] {botConfig.BotName}: {message}");
-    }
+    private void WriteOutgoingMessage(string message) =>
+        logWriterChannel.TryWrite($"[{DateTime.Now:G}] {botConfig.BotName}: {message}");
 
-    private void WriteOutgoingWhisper(string username, string message)
-    {
-        lineChannel.Writer.TryWrite($"[{DateTime.Now:G}] {botConfig.BotName} /w {username} : {message}");
-    }
+    private void WriteOutgoingWhisper(string username, string message) =>
+        logWriterChannel.TryWrite($"[{DateTime.Now:G}] {botConfig.BotName} /w {username} : {message}");
 
-    private void WriteIncomingMessage(IRC.TwitchChatter chatter)
-    {
-        lineChannel.Writer.TryWrite(chatter.ToLogString());
-    }
+    private void WriteIncomingMessage(IRC.TwitchChatter chatter) =>
+        logWriterChannel.TryWrite(chatter.ToLogString());
 
-    public async void HandleLines()
+    private async Task HandleLines()
     {
-        await foreach (string line in lineChannel.Reader.ReadAllAsync())
+        await foreach (string line in logReaderChannel.ReadAllAsync())
         {
             chatLog.Value.PushLine(line);
         }
     }
+
+    #region IDisposable
 
     protected virtual void Dispose(bool disposing)
     {
@@ -54,7 +73,9 @@ public class ChatLogger : IDisposable
         {
             if (disposing)
             {
-                lineChannel.Writer.TryComplete();
+                logWriterChannel.TryComplete();
+
+                logHandlerTask.Wait(2_000);
 
                 if (chatLog.IsValueCreated)
                 {
@@ -72,4 +93,6 @@ public class ChatLogger : IDisposable
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
+
+    #endregion IDisposable
 }

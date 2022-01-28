@@ -16,7 +16,11 @@ public class ErrorHandler : IDisposable
     private static readonly Lazy<Logs.LocalLogger> exceptionLog = new Lazy<Logs.LocalLogger>(
         () => new Logs.LocalLogger("ErrorLogs", "exceptions"));
 
-    private bool disposedValue;
+
+    private bool exitPending = false;
+    private bool disposedValue = false;
+
+    private ApplicationManagement? applicationManagement;
 
     public ErrorHandler(
         Config.BotConfiguration botConfig,
@@ -26,6 +30,35 @@ public class ErrorHandler : IDisposable
         this.communication = communication;
 
         communication.DebugMessageHandlers += DebugMessageHandler;
+    }
+
+    public void SetApplicationManagement(ApplicationManagement applicationManagement) =>
+        this.applicationManagement = applicationManagement;
+
+    private async Task ExitAfterDelay()
+    {
+        if (exitPending)
+        {
+            return;
+        }
+
+        exitPending = true;
+
+        if (applicationManagement is null)
+        {
+            Console.WriteLine($"\nError Handler Error: applicationManagement never set! Aborting.");
+            await Task.Delay(30_000);
+            Environment.Exit(1);
+        }
+
+        applicationManagement.TriggerExit();
+        Task waitForEndTask = applicationManagement.WaitForEndAsync();
+
+        if (await Task.WhenAny(waitForEndTask, Task.Delay(30_000)) != waitForEndTask)
+        {
+            //Timed out after 30 seconds
+            Environment.Exit(1);
+        }
     }
 
     private void DebugMessageHandler(string message, MessageType messageType)
@@ -45,8 +78,7 @@ public class ErrorHandler : IDisposable
         catch (Exception e)
         {
             Console.WriteLine($"\nLogging error found: {e.Message}\nPlease inform author of this error!");
-            Thread.Sleep(5000);
-            Environment.Exit(1);
+            Task.Run(ExitAfterDelay);
         }
     }
 
@@ -62,8 +94,7 @@ public class ErrorHandler : IDisposable
         catch (Exception e)
         {
             Console.WriteLine($"\nLogging error found: {e.Message}\nPlease inform author of this error!");
-            Thread.Sleep(5000);
-            Environment.Exit(1);
+            Task.Run(ExitAfterDelay);
         }
     }
 
@@ -93,8 +124,41 @@ public class ErrorHandler : IDisposable
         catch (Exception e)
         {
             communication.SendErrorMessage($"\nLogging error found: {e.Message}\nPlease inform author of this error!");
-            Thread.Sleep(5000);
-            Environment.Exit(1);
+            Task.Run(ExitAfterDelay);
+        }
+    }
+
+    public void LogFatalError(
+        string message,
+        [CallerFilePath] string filePath = "",
+        [CallerMemberName] string memberName = "",
+        [CallerLineNumber] int lineNumber = 0)
+    {
+        try
+        {
+            communication.SendErrorMessage($"Fatal Error: {message}");
+        }
+        catch (Exception) { }
+
+        try
+        {
+
+            lock (exceptionLock)
+            {
+                exceptionLog.Value.PushLine(
+                    $"Fatal Error at {DateTime.UtcNow}\n" +
+                    $"  Calling File: {filePath}:{lineNumber}\n" +
+                    $"  Calling Member: {memberName}\n" +
+                    $"  Error: {message}\n\n\n");
+            }
+
+            communication.SendErrorMessage("\nShutting down now...");
+            Task.Run(ExitAfterDelay);
+        }
+        catch (Exception e)
+        {
+            communication.SendErrorMessage($"\nLogging error found: {e.Message}. Please inform author of this error!");
+            Task.Run(ExitAfterDelay);
         }
     }
 
@@ -123,14 +187,12 @@ public class ErrorHandler : IDisposable
             }
 
             communication.SendErrorMessage("\nShutting down now...");
-            Thread.Sleep(3000);
-            Environment.Exit(1);
+            Task.Run(ExitAfterDelay);
         }
         catch (Exception e)
         {
             communication.SendErrorMessage($"\nLogging error found: {e.Message}. Please inform author of this error!");
-            Thread.Sleep(5000);
-            Environment.Exit(1);
+            Task.Run(ExitAfterDelay);
         }
     }
 
@@ -160,8 +222,7 @@ public class ErrorHandler : IDisposable
         catch (Exception e)
         {
             communication.SendErrorMessage($"\nLogging error found: {e.Message}. Please inform author of this error!");
-            Thread.Sleep(5000);
-            Environment.Exit(1);
+            Task.Run(ExitAfterDelay);
         }
     }
 
@@ -193,8 +254,7 @@ public class ErrorHandler : IDisposable
         catch (Exception e)
         {
             communication.SendErrorMessage($"\nLogging error found: {e.Message}. Please inform author of this error!");
-            Thread.Sleep(5000);
-            Environment.Exit(1);
+            Task.Run(ExitAfterDelay);
         }
     }
 
@@ -226,8 +286,7 @@ public class ErrorHandler : IDisposable
         catch (Exception e)
         {
             communication.SendErrorMessage($"\nLogging error found: {e.Message}. Please inform author of this error!");
-            Thread.Sleep(5000);
-            Environment.Exit(1);
+            Task.Run(ExitAfterDelay);
         }
     }
 

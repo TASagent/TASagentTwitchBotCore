@@ -107,7 +107,7 @@ public class MessageAccumulator : IMessageAccumulator, IDisposable
                 await Task.Delay(1000, cancellationTokenSource.Token);
             }
         }
-        catch (TaskCanceledException) { /* swallow */ }
+        catch (OperationCanceledException) { /* swallow */ }
         catch (ThreadAbortException) { /* swallow */ }
         catch (ObjectDisposedException) { /* swallow */ }
     }
@@ -193,8 +193,7 @@ public class MessageAccumulator : IMessageAccumulator, IDisposable
             {
                 cancellationTokenSource.Cancel();
 
-                monitorTask.Wait(1000);
-                monitorTask.Dispose();
+                monitorTask.Wait(2_000);
 
                 cancellationTokenSource.Dispose();
             }

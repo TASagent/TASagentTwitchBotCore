@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.SignalR;
 
 using TASagentTwitchBot.Core.API.BTTV;
 
@@ -16,11 +17,13 @@ public class EmoteEffectListener : IEmoteEffectListener, IDisposable
     private readonly Config.BotConfiguration botConfig;
     private readonly IHubContext<Web.Hubs.EmoteHub> emoteHubContext;
     private readonly BTTVHelper bttvHelper;
+    private readonly Bits.CheerHelper cheerHelper;
     private readonly EmoteEffectConfiguration emoteEffectConfig;
 
     private readonly Dictionary<string, string> externalEmoteLookup = new Dictionary<string, string>();
 
     private readonly SemaphoreSlim initSemaphore = new SemaphoreSlim(1);
+    private static readonly Regex cheerFinder = new Regex(@"(?:\s|^)([a-zA-Z]+)(\d+)(?:\s|$)");
 
     private bool initialized = false;
     private bool disposedValue = false;
@@ -30,11 +33,13 @@ public class EmoteEffectListener : IEmoteEffectListener, IDisposable
         ICommunication communication,
         IHubContext<Web.Hubs.EmoteHub> emoteHubContext,
         BTTVHelper bttvHelper,
+        Bits.CheerHelper cheerHelper,
         EmoteEffectConfiguration emoteEffectConfig)
     {
         this.botConfig = botConfig;
         this.emoteHubContext = emoteHubContext;
         this.bttvHelper = bttvHelper;
+        this.cheerHelper = cheerHelper;
         this.emoteEffectConfig = emoteEffectConfig;
 
         communication.ReceiveMessageHandlers += ReceiveMessageHandler;
@@ -158,6 +163,41 @@ public class EmoteEffectListener : IEmoteEffectListener, IDisposable
                     chatter.Emotes.Where(ShouldRender).Select(x => x.URL).ToList());
             }
         }
+
+        if (chatter.Bits > 0)
+        {
+            //Handle Cheermotes
+            Dictionary<string, int> cheerTypes = new Dictionary<string, int>();
+
+            foreach (Match match in cheerFinder.Matches(chatter.Message))
+            {
+                string prefix = match.Groups[1].Value.ToLower();
+                int quantity = int.Parse(match.Groups[2].Value);
+
+                if (!cheerTypes.ContainsKey(prefix))
+                {
+                    cheerTypes[prefix] = quantity;
+                }
+                else
+                {
+                    cheerTypes[prefix] += quantity;
+                }
+            }
+
+            foreach (KeyValuePair<string, int> kvp in cheerTypes)
+            {
+                string? url = await cheerHelper.GetCheermoteURL(kvp.Key);
+
+                if (string.IsNullOrEmpty(url))
+                {
+                    continue;
+                }
+
+                await emoteHubContext.Clients.All.SendAsync(
+                    "ReceiveCheermotes",
+                    new CheermoteData(url, kvp.Value));
+            }
+        }
     }
 
     private bool ShouldRender(IRC.TwitchChatter.Emote emote) => !emoteEffectConfig.IgnoredEmotes.Contains(emote.Code);
@@ -204,3 +244,5 @@ public class EmoteEffectListener : IEmoteEffectListener, IDisposable
         GC.SuppressFinalize(this);
     }
 }
+
+public record CheermoteData(string Url, int Bits);
