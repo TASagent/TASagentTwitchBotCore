@@ -2,18 +2,16 @@
 
 using TASagentTwitchBot.Core.Web.Middleware;
 
-namespace TASagentTwitchBot.Core.Web.Controllers;
+namespace TASagentTwitchBot.Plugin.Audio.Midi.Web.Controllers;
 
 [ApiController]
 [Route("/TASagentBotAPI/Midi/[action]")]
-[ConditionalFeature("Midi")]
-[ConditionalFeature("Audio")]
 public class MidiController : ControllerBase
 {
-    private readonly Audio.MidiKeyboardHandler midiKeyboardHandler;
+    private readonly MidiKeyboardHandler midiKeyboardHandler;
 
     public MidiController(
-        Audio.MidiKeyboardHandler midiKeyboardHandler)
+        MidiKeyboardHandler midiKeyboardHandler)
     {
         this.midiKeyboardHandler = midiKeyboardHandler;
     }
@@ -31,7 +29,7 @@ public class MidiController : ControllerBase
     [HttpPost]
     [AuthRequired(AuthDegree.Admin)]
     public IActionResult CurrentMidiDevice(
-        SettingsController.DeviceRequest deviceRequest)
+        DeviceRequest deviceRequest)
     {
         if (!midiKeyboardHandler.UpdateCurrentMidiDevice(deviceRequest.Device))
         {
@@ -49,7 +47,7 @@ public class MidiController : ControllerBase
     [HttpPost]
     [AuthRequired(AuthDegree.Admin)]
     public IActionResult CurrentMidiOutputDevice(
-        SettingsController.DeviceRequest deviceRequest)
+        DeviceRequest deviceRequest)
     {
         if (!midiKeyboardHandler.UpdateCurrentMidiOutputDevice(deviceRequest.Device))
         {
@@ -91,4 +89,5 @@ public class MidiController : ControllerBase
     }
 
     public record MidiRequest(string Effect, int Channel);
+    public record DeviceRequest(string Device);
 }

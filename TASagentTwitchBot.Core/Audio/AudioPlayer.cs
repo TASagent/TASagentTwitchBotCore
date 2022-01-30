@@ -176,15 +176,15 @@ public class AudioPlayer : IAudioPlayer
     {
         using MMDeviceEnumerator enumerator = new MMDeviceEnumerator();
         return enumerator
-                .EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active)
-                .FirstOrDefault(x => x.FriendlyName == audioOutputDevice);
+            .EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active)
+            .FirstOrDefault(x => x.FriendlyName == audioOutputDevice);
     }
 
     private static bool IsOutputDeviceValid(string audioOutputDevice)
     {
         using MMDeviceEnumerator enumerator = new MMDeviceEnumerator();
         return enumerator
-                .EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active)
-                .Any(x => x.FriendlyName == audioOutputDevice);
+            .EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active)
+            .Any(x => x.FriendlyName == audioOutputDevice);
     }
 }

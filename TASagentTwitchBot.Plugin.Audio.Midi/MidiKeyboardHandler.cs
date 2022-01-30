@@ -7,11 +7,14 @@ using BGC.Audio;
 using BGC.Audio.NAudio;
 using BGC.Audio.Midi;
 
-namespace TASagentTwitchBot.Core.Audio;
+using TASagentTwitchBot.Core;
+using TASagentTwitchBot.Core.Audio;
+
+namespace TASagentTwitchBot.Plugin.Audio.Midi;
 
 public class MidiKeyboardHandler : IShutdownListener, IDisposable
 {
-    private readonly Config.BotConfiguration botConfig;
+    private readonly Core.Config.BotConfiguration botConfig;
 
     private readonly ICommunication communication;
     private readonly ISoundEffectSystem soundEffectsSystem;
@@ -40,7 +43,7 @@ public class MidiKeyboardHandler : IShutdownListener, IDisposable
     }
 
     public MidiKeyboardHandler(
-        Config.BotConfiguration botConfig,
+        Core.Config.BotConfiguration botConfig,
         ApplicationManagement applicationManagement,
         ICommunication communication,
         ISoundEffectSystem soundEffectsSystem)
@@ -120,18 +123,6 @@ public class MidiKeyboardHandler : IShutdownListener, IDisposable
                 currentMidiDevice = null;
                 currentMidiDeviceName = "";
             }
-
-            //try
-            //{
-            //    currentMidiDeviceOut?.Close();
-            //    currentMidiDeviceOut?.Dispose();
-            //    currentMidiDeviceOut = null;
-            //}
-            //catch (Exception ex)
-            //{
-            //    communication.SendWarningMessage($"Exception closing Midi Out Device: {ex}");
-            //    currentMidiDeviceOut = null;
-            //}
         }
 
         if (string.IsNullOrEmpty(name))

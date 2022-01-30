@@ -102,5 +102,4 @@ public class SettingsController : ControllerBase
     }
     public record ErrHEnabled(bool Enabled);
     public record DeviceRequest(string Device);
-    public record MidiRequest(string Effect, int Channel);
 }
