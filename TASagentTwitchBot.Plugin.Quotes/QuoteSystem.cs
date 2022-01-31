@@ -1,14 +1,16 @@
-﻿using BGC.Collections.Generic;
+﻿using Microsoft.Extensions.DependencyInjection;
+using BGC.Collections.Generic;
 
+using TASagentTwitchBot.Core;
 using TASagentTwitchBot.Core.Database;
 using TASagentTwitchBot.Core.Commands;
 
-namespace TASagentTwitchBot.Core.Quotes;
+namespace TASagentTwitchBot.Plugin.Quotes;
 
 public class QuoteSystem : ICommandContainer
 {
     //Subsystems
-    private readonly Config.BotConfiguration botConfig;
+    private readonly Core.Config.BotConfiguration botConfig;
     private readonly ICommunication communication;
 
     //Data
@@ -32,7 +34,7 @@ public class QuoteSystem : ICommandContainer
     private readonly Random randomizer;
 
     public QuoteSystem(
-        Config.BotConfiguration botConfig,
+        Core.Config.BotConfiguration botConfig,
         ICommunication communication,
         IServiceScopeFactory scopeFactory)
     {
@@ -73,7 +75,7 @@ public class QuoteSystem : ICommandContainer
         yield return "quote";
     }
 
-    private string QuoteHelpHandler(IRC.TwitchChatter chatter, string[] remainingCommand)
+    private string QuoteHelpHandler(Core.IRC.TwitchChatter chatter, string[] remainingCommand)
     {
         if (remainingCommand is null || remainingCommand.Length == 0)
         {
@@ -89,7 +91,7 @@ public class QuoteSystem : ICommandContainer
         }
     }
 
-    private async Task QuoteCommandHandler(IRC.TwitchChatter chatter, string[] remainingCommand)
+    private async Task QuoteCommandHandler(Core.IRC.TwitchChatter chatter, string[] remainingCommand)
     {
         if (remainingCommand is null || remainingCommand.Length == 0)
         {
@@ -109,7 +111,7 @@ public class QuoteSystem : ICommandContainer
         }
     }
 
-    private async Task HandleQuoteSetRequest(IRC.TwitchChatter chatter, string[] remainingCommand)
+    private async Task HandleQuoteSetRequest(Core.IRC.TwitchChatter chatter, string[] remainingCommand)
     {
         if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
         {
@@ -152,7 +154,7 @@ public class QuoteSystem : ICommandContainer
             $"@{chatter.User.TwitchUserName}, Quote setting not recognized ({string.Join(' ', remainingCommand)}).");
     }
 
-    private Task GetQuoteCommandHandler(IRC.TwitchChatter chatter, string[] remainingCommand)
+    private Task GetQuoteCommandHandler(Core.IRC.TwitchChatter chatter, string[] remainingCommand)
     {
         if (remainingCommand is not null && remainingCommand.Length == 1)
         {
@@ -178,7 +180,7 @@ public class QuoteSystem : ICommandContainer
         return GetRandomQuote(chatter.User);
     }
 
-    private Task AddQuoteCommandHandler(IRC.TwitchChatter chatter, string[] remainingCommand)
+    private Task AddQuoteCommandHandler(Core.IRC.TwitchChatter chatter, string[] remainingCommand)
     {
         if (remainingCommand is null || remainingCommand.Length == 0)
         {
@@ -195,7 +197,7 @@ public class QuoteSystem : ICommandContainer
         return AddQuote(chatter, addQuoteText);
     }
 
-    private Task RemoveQuoteCommandHandler(IRC.TwitchChatter chatter, string[] remainingCommand)
+    private Task RemoveQuoteCommandHandler(Core.IRC.TwitchChatter chatter, string[] remainingCommand)
     {
         if (remainingCommand is null || remainingCommand.Length != 1)
         {
@@ -228,7 +230,7 @@ public class QuoteSystem : ICommandContainer
     }
 
     private async Task MarkFakeNews(
-        IRC.TwitchChatter chatter,
+        Core.IRC.TwitchChatter chatter,
         int quoteId,
         string? commandText)
     {
@@ -240,7 +242,7 @@ public class QuoteSystem : ICommandContainer
         }
 
         using IServiceScope scope = scopeFactory.CreateScope();
-        BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+        IQuoteDatabaseContext db = scope.ServiceProvider.GetRequiredService<IQuoteDatabaseContext>();
 
         //Find Quote
         Quote? matchingQuote = await db.Quotes.FindAsync(quoteId);
@@ -271,7 +273,7 @@ public class QuoteSystem : ICommandContainer
     }
 
     private async Task MarkRealNews(
-        IRC.TwitchChatter chatter,
+        Core.IRC.TwitchChatter chatter,
         int quoteId)
     {
         //Only Admin can mark quotes as real news
@@ -282,7 +284,7 @@ public class QuoteSystem : ICommandContainer
         }
 
         using IServiceScope scope = scopeFactory.CreateScope();
-        BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+        IQuoteDatabaseContext db = scope.ServiceProvider.GetRequiredService<IQuoteDatabaseContext>();
 
         //Find Quote
         Quote? matchingQuote = await db.Quotes.FindAsync(quoteId);
@@ -306,10 +308,10 @@ public class QuoteSystem : ICommandContainer
         SendQuote(matchingQuote, "UPDATED AS REAL NEWS ");
     }
 
-    private async Task RemoveQuote(IRC.TwitchChatter chatter, int quoteId)
+    private async Task RemoveQuote(Core.IRC.TwitchChatter chatter, int quoteId)
     {
         using IServiceScope scope = scopeFactory.CreateScope();
-        BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+        IQuoteDatabaseContext db = scope.ServiceProvider.GetRequiredService<IQuoteDatabaseContext>();
 
         //Look Up Quote
         Quote? matchingQuote = await db.Quotes.FindAsync(quoteId);
@@ -356,7 +358,7 @@ public class QuoteSystem : ICommandContainer
     private async Task GetRandomQuote(User requestingUser)
     {
         using IServiceScope scope = scopeFactory.CreateScope();
-        BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+        IQuoteDatabaseContext db = scope.ServiceProvider.GetRequiredService<IQuoteDatabaseContext>();
 
         if (!db.Quotes.Any())
         {
@@ -373,7 +375,7 @@ public class QuoteSystem : ICommandContainer
         SendQuote(randomQuote);
     }
 
-    private async Task AddQuote(IRC.TwitchChatter chatter, string quoteText)
+    private async Task AddQuote(Core.IRC.TwitchChatter chatter, string quoteText)
     {
         //Adding
         string quote;
@@ -438,7 +440,7 @@ public class QuoteSystem : ICommandContainer
 
 
         using IServiceScope scope = scopeFactory.CreateScope();
-        BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+        IQuoteDatabaseContext db = scope.ServiceProvider.GetRequiredService<IQuoteDatabaseContext>();
 
         db.Quotes.Add(newQuote);
         await db.SaveChangesAsync();
@@ -447,10 +449,10 @@ public class QuoteSystem : ICommandContainer
         SendQuote(newQuote, "ADDED ");
     }
 
-    private async Task GetQuoteById(IRC.TwitchChatter chatter, int id)
+    private async Task GetQuoteById(Core.IRC.TwitchChatter chatter, int id)
     {
         using IServiceScope scope = scopeFactory.CreateScope();
-        BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+        IQuoteDatabaseContext db = scope.ServiceProvider.GetRequiredService<IQuoteDatabaseContext>();
 
         //Look Up Quote
         Quote? matchingQuote = await db.Quotes.FindAsync(id);
@@ -469,10 +471,10 @@ public class QuoteSystem : ICommandContainer
         SendQuote(matchingQuote);
     }
 
-    private async Task QuoteSearch(IRC.TwitchChatter chatter, string quoteText)
+    private async Task QuoteSearch(Core.IRC.TwitchChatter chatter, string quoteText)
     {
         using IServiceScope scope = scopeFactory.CreateScope();
-        BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+        IQuoteDatabaseContext db = scope.ServiceProvider.GetRequiredService<IQuoteDatabaseContext>();
 
         //Clear quotation marks
         quoteText = quoteText.Replace("\"", "").ToLowerInvariant();

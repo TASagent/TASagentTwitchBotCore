@@ -1,16 +1,15 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace TASagentTwitchBot.Core.Web.Controllers;
+namespace TASagentTwitchBot.Plugin.Quotes.Web;
 
 [ApiController]
 [Route("/TASagentBotAPI/[controller]")]
-[ConditionalFeature("Database")]
 public class QuotesController : ControllerBase
 {
-    private readonly Database.BaseDatabaseContext db;
+    private readonly IQuoteDatabaseContext db;
 
-    public QuotesController(Database.BaseDatabaseContext db)
+    public QuotesController(IQuoteDatabaseContext db)
     {
         this.db = db;
     }
@@ -28,7 +27,7 @@ public class QuotesController : ControllerBase
     public async Task<ActionResult<QuoteDTO>> GetQuote(
         int id)
     {
-        Database.Quote? quote = await db.Quotes.FindAsync(id);
+        Quote? quote = await db.Quotes.FindAsync(id);
 
         if (quote is null)
         {
@@ -38,7 +37,7 @@ public class QuotesController : ControllerBase
         return QuoteToDTO(quote);
     }
 
-    private static QuoteDTO QuoteToDTO(Database.Quote quote) =>
+    private static QuoteDTO QuoteToDTO(Quote quote) =>
         new QuoteDTO(
             quote.QuoteId,
             quote.QuoteText,

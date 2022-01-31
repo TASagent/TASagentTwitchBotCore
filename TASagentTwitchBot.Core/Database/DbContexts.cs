@@ -6,7 +6,6 @@ namespace TASagentTwitchBot.Core.Database;
 public abstract class BaseDatabaseContext : DbContext
 {
     public DbSet<User> Users { get; set; } = null!;
-    public DbSet<Quote> Quotes { get; set; } = null!;
     public DbSet<CustomTextCommand> CustomTextCommands { get; set; } = null!;
 
     protected override void OnConfiguring(DbContextOptionsBuilder options) =>
@@ -30,7 +29,6 @@ public class User
     public DateTime? LastSuccessfulTTS { get; set; }
 
     public Commands.AuthorizationLevel AuthorizationLevel { get; set; }
-    public List<Quote> QuotesCreated { get; } = new List<Quote>();
 
     public string? Color { get; set; }
 }
@@ -42,19 +40,4 @@ public class CustomTextCommand
     public string Command { get; set; } = null!;
     public string Text { get; set; } = null!;
     public bool Enabled { get; set; }
-}
-
-public class Quote
-{
-    public int QuoteId { get; set; }
-
-    public string QuoteText { get; set; } = null!;
-    public string Speaker { get; set; } = null!;
-    public DateTime CreateTime { get; set; }
-
-    public int CreatorId { get; set; }
-    public User Creator { get; set; } = null!;
-
-    public bool IsFakeNews { get; set; }
-    public string? FakeNewsExplanation { get; set; }
 }
