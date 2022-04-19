@@ -38,7 +38,7 @@ public class TTSReader : IDisposable
         {
             //Escape Sequence
             case '\\':
-                if (IsSpecialCharacter(Peek()))
+                if (CanRead && IsSpecialCharacter(Peek()))
                 {
                     //Escaped Character
                     //Advance reader

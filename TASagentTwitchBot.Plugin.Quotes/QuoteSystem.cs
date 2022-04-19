@@ -98,7 +98,12 @@ public class QuoteSystem : ICommandContainer
             //Get Random Quote
             await GetRandomQuote(chatter.User);
         }
-        else if (remainingCommand[0].StartsWith('#') && remainingCommand[0].Length > 1 && int.TryParse(remainingCommand[0][1..], out int quoteId))
+        else if (remainingCommand.Length == 1 && remainingCommand[0].StartsWith('#') && remainingCommand[0].Length > 1 && int.TryParse(remainingCommand[0][1..], out int quoteId))
+        {
+            //Get a quote by ID
+            await GetQuoteById(chatter, quoteId);
+        }
+        else if (remainingCommand.Length == 1 && int.TryParse(remainingCommand[0], out quoteId))
         {
             //Get a quote by ID
             await GetQuoteById(chatter, quoteId);

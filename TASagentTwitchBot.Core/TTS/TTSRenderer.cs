@@ -12,22 +12,25 @@ namespace TASagentTwitchBot.Core.TTS;
 
 public class TTSRenderer : ITTSRenderer
 {
+    protected readonly ICommunication communication;
+    protected readonly ISoundEffectSystem soundEffectSystem;
+    protected readonly ErrorHandler errorHandler;
+
     protected readonly TextToSpeechClient? googleClient = null;
     protected readonly AmazonPollyClient? amazonClient = null;
     protected readonly SpeechConfig? azureClient = null;
-
-    protected readonly ICommunication communication;
-    protected readonly ISoundEffectSystem soundEffectSystem;
 
     protected readonly TTSConfiguration ttsConfig;
 
     public TTSRenderer(
         TTSConfiguration ttsConfig,
         ICommunication communication,
+        ErrorHandler errorHandler,
         ISoundEffectSystem soundEffectSystem)
     {
         this.ttsConfig = ttsConfig;
         this.communication = communication;
+        this.errorHandler = errorHandler;
         this.soundEffectSystem = soundEffectSystem;
 
         //
@@ -170,6 +173,14 @@ public class TTSRenderer : ITTSRenderer
                 goto case TTSService.Google;
         }
 
-        return await TTSParser.ParseTTS(ttsText, ttsSystemRenderer, soundEffectSystem);
+        try
+        {
+            return await TTSParser.ParseTTS(ttsText, ttsSystemRenderer, soundEffectSystem);
+        }
+        catch (Exception ex)
+        {
+            errorHandler.LogCommandException(ex, $"!tts {ttsText}");
+            return null;
+        }
     }
 }

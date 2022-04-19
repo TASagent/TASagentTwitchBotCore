@@ -152,7 +152,15 @@ public class TTSWebRenderer : ITTSRenderer, IDisposable
                 goto case TTSService.Google;
         }
 
-        return await TTSParser.ParseTTS(ttsText, ttsSystemRenderer, soundEffectSystem);
+        try
+        {
+            return await TTSParser.ParseTTS(ttsText, ttsSystemRenderer, soundEffectSystem);
+        }
+        catch (Exception ex)
+        {
+            errorHandler.LogCommandException(ex, $"!tts {ttsText}");
+            return null;
+        }
     }
 
     public void ReceiveMessage(string message) => communication.SendDebugMessage($"TTS WebServer Message: {message}");
