@@ -9,15 +9,19 @@ namespace TASagentTwitchBot.Core.TTS;
 public class TTSWebRenderer : ITTSRenderer, IDisposable
 {
     private readonly TTSConfiguration ttsConfig;
+    private readonly Config.ServerConfig serverConfig;
 
     private readonly ICommunication communication;
     private readonly ISoundEffectSystem soundEffectSystem;
 
-    private readonly HubConnection? serverHubConnection;
+    private HubConnection? serverHubConnection;
     private readonly ErrorHandler errorHandler;
 
     private readonly Dictionary<string, OngoingDownload> ongoingDownloads = new Dictionary<string, OngoingDownload>();
     private readonly Dictionary<string, TaskCompletionSource<string?>> waitingDownloads = new Dictionary<string, TaskCompletionSource<string?>>();
+
+    private bool Initialized { get; set; } = false;
+    private Task<bool>? initializationTask = null;
 
     private bool disposedValue;
     private static string TTSFilesPath => BGC.IO.DataManagement.PathForDataDirectory("TTSFiles");
@@ -30,50 +34,72 @@ public class TTSWebRenderer : ITTSRenderer, IDisposable
         ErrorHandler errorHandler)
     {
         this.ttsConfig = ttsConfig;
+        this.serverConfig = serverConfig;
         this.communication = communication;
         this.soundEffectSystem = soundEffectSystem;
         this.errorHandler = errorHandler;
 
-        if (!string.IsNullOrEmpty(serverConfig.ServerAccessToken) &&
-            !string.IsNullOrEmpty(serverConfig.ServerAddress) &&
-            !string.IsNullOrEmpty(serverConfig.ServerUserName))
+        if (ttsConfig.Enabled)
         {
-            serverHubConnection = new HubConnectionBuilder()
-                .WithUrl($"{serverConfig.ServerAddress}/Hubs/BotTTSHub", options =>
-                {
-                    options.Headers.Add("User-Id", serverConfig.ServerUserName);
-                    options.Headers.Add("Authorization", $"Bearer {serverConfig.ServerAccessToken}");
-                })
-                .WithAutomaticReconnect()
-                .Build();
-
-            serverHubConnection.Closed += ServerHubConnectionClosed;
-
-            serverHubConnection.On<string>("ReceiveMessage", ReceiveMessage);
-            serverHubConnection.On<string>("ReceiveWarning", ReceiveWarning);
-            serverHubConnection.On<string>("ReceiveError", ReceiveError);
-
-            serverHubConnection.On<string, byte[], int, int>("ReceiveData", ReceiveData);
-            serverHubConnection.On<string, string>("CancelRequest", CancelRequest);
-
-            Initialize();
-        }
-        else
-        {
-            communication.SendErrorMessage($"TTSHub not configured, disabling TTS. Register at https://server.tas.wtf/ and contact TASagent. " +
-                $"Then update relevant details in Config/ServerConfig.json");
+            Task.Run(StartupInitialize);
         }
     }
 
-    public async void Initialize()
+    private async void StartupInitialize()
     {
+        initializationTask = Task.Run(Initialize);
+
+        if (!await initializationTask)
+        {
+            //Initialization Failed
+            communication.SendErrorMessage($"TTSWebRenderer failed to initialize properly. Disabling TTS Service.");
+            ttsConfig.Enabled = false;
+        }
+    }
+
+    protected async Task<bool> Initialize()
+    {
+        if (Initialized)
+        {
+            return true;
+        }
+
+        if (string.IsNullOrEmpty(serverConfig.ServerAccessToken) ||
+            string.IsNullOrEmpty(serverConfig.ServerAddress) ||
+            string.IsNullOrEmpty(serverConfig.ServerUserName))
+        {
+            communication.SendErrorMessage($"TTSHub not configured. Register at https://server.tas.wtf/ and contact TASagent. " +
+                $"Then update relevant details in Config/ServerConfig.json");
+
+            return false;
+        }
+
+        serverHubConnection = new HubConnectionBuilder()
+            .WithUrl($"{serverConfig.ServerAddress}/Hubs/BotTTSHub", options =>
+            {
+                options.Headers.Add("User-Id", serverConfig.ServerUserName);
+                options.Headers.Add("Authorization", $"Bearer {serverConfig.ServerAccessToken}");
+            })
+            .WithAutomaticReconnect()
+            .Build();
+
+        serverHubConnection.Closed += ServerHubConnectionClosed;
+
+        serverHubConnection.On<string>("ReceiveMessage", ReceiveMessage);
+        serverHubConnection.On<string>("ReceiveWarning", ReceiveWarning);
+        serverHubConnection.On<string>("ReceiveError", ReceiveError);
+
+        serverHubConnection.On<string, byte[], int, int>("ReceiveData", ReceiveData);
+        serverHubConnection.On<string, string>("CancelRequest", CancelRequest);
+
         try
         {
             await serverHubConnection!.StartAsync();
+            Initialized = true;
         }
         catch (HttpRequestException ex)
         {
-            if (ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            if (ex.StatusCode == HttpStatusCode.Forbidden)
             {
                 communication.SendErrorMessage($"TTSHub failed to connect due to permissions. Please contact TASagent to be given access.");
             }
@@ -89,6 +115,36 @@ public class TTSWebRenderer : ITTSRenderer, IDisposable
             errorHandler.LogSystemException(ex);
             communication.SendErrorMessage($"TTSHub failed to connect. Make sure settings are correct.");
         }
+
+        return Initialized;
+    }
+
+    public async Task<bool> SetTTSEnabled(bool enabled)
+    {
+        if (enabled == ttsConfig.Enabled)
+        {
+            //Already set
+            return true;
+        }
+
+        if (enabled && !Initialized)
+        {
+            //Turning it on, and not initialized
+            if (initializationTask is null)
+            {
+                initializationTask = Initialize();
+            }
+
+            if (!await initializationTask)
+            {
+                //Failed to initialize
+                communication.SendErrorMessage($"TTSWebRenderer failed to initialize properly. TTS will remain disabled.");
+                return false;
+            }
+        }
+
+        ttsConfig.Enabled = enabled;
+        return true;
     }
 
     private Task ServerHubConnectionClosed(Exception? arg)

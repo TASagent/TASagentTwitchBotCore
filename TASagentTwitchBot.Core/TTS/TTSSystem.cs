@@ -10,21 +10,18 @@ public class TTSSystem : ICommandContainer
 {
     //Subsystems
     private readonly IServiceScopeFactory scopeFactory;
-    private readonly Config.BotConfiguration botConfig;
     private readonly TTSConfiguration ttsConfig;
     private readonly ICommunication communication;
     private readonly IAudioEffectSystem audioEffectSystem;
     private readonly Notifications.ITTSHandler ttsHandler;
 
     public TTSSystem(
-        Config.BotConfiguration botConfig,
         TTSConfiguration ttsConfig,
         ICommunication communication,
         IAudioEffectSystem audioEffectSystem,
         Notifications.ITTSHandler ttsHandler,
         IServiceScopeFactory scopeFactory)
     {
-        this.botConfig = botConfig;
         this.ttsConfig = ttsConfig;
         this.communication = communication;
         this.audioEffectSystem = audioEffectSystem;
@@ -44,6 +41,7 @@ public class TTSSystem : ICommandContainer
         commandRegistrar.RegisterScopedCommand("disable", ttsConfig.Command.CommandName, HandleTTSDisableRequest);
         commandRegistrar.RegisterScopedCommand("enable", ttsConfig.Command.CommandName, HandleTTSEnableRequest);
 
+        //Helper Aliases
         commandRegistrar.RegisterScopedCommand("set", "voice", (chatter, remainingCommand) => HandleBadSetRequests(chatter, remainingCommand, "voice"));
         commandRegistrar.RegisterScopedCommand("set", "pitch", (chatter, remainingCommand) => HandleBadSetRequests(chatter, remainingCommand, "pitch"));
         commandRegistrar.RegisterScopedCommand("set", "speed", (chatter, remainingCommand) => HandleBadSetRequests(chatter, remainingCommand, "speed"));
@@ -59,6 +57,12 @@ public class TTSSystem : ICommandContainer
 
     private string HandleTTSHelpRequest(IRC.TwitchChatter chatter, string[] remainingCommand)
     {
+        if (!ttsConfig.Enabled)
+        {
+            //TTS disabled entirely
+            return "";
+        }
+
         if (chatter.User.AuthorizationLevel < AuthorizationLevel.Elevated)
         {
             return $"Looks like you're not authorized to use the {ttsConfig.FeatureName} system, @{chatter.User.TwitchUserName}";
@@ -480,6 +484,11 @@ public class TTSSystem : ICommandContainer
 
     private async Task HandleTTSGetRequest(IRC.TwitchChatter chatter, string[] remainingCommand)
     {
+        if (!ttsConfig.Enabled)
+        {
+            return;
+        }
+
         if (remainingCommand is null || remainingCommand.Length == 0)
         {
             communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, your TTS settings: {GetUserTTSSettings(chatter.User)}");
@@ -541,6 +550,12 @@ public class TTSSystem : ICommandContainer
 
     private void SetTTSSystemStatus(IRC.TwitchChatter chatter, bool enabled)
     {
+        if (!ttsConfig.Enabled)
+        {
+            //TTS disabled entirely
+            return;
+        }
+
         if (ttsConfig.Command.Enabled == enabled)
         {
             communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, the TTS system is already {(enabled ? "enabled" : "disabled")}");

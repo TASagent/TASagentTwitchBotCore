@@ -1,4 +1,6 @@
-﻿namespace TASagentTwitchBot.Core.Notifications;
+﻿using TASagentTwitchBot.Core.Database;
+
+namespace TASagentTwitchBot.Core.Notifications;
 
 
 public class ActivityProviderStubs :
@@ -10,9 +12,9 @@ public class ActivityProviderStubs :
     ITTSHandler
 {
 
-    public virtual void HandleCheer(Database.User cheerer, string message, int quantity, bool approved) { }
+    public virtual void HandleCheer(User cheerer, string message, int quantity, bool approved) { }
 
-    public virtual void HandleFollower(Database.User follower, bool approved) { }
+    public virtual void HandleFollower(User follower, bool approved) { }
 
     public virtual void HandleGiftSub(string senderId, string recipientId, int tier, int months, bool approved) { }
     public virtual void HandleAnonGiftSub(string recipientId, int tier, int months, bool approved) { }
@@ -21,7 +23,10 @@ public class ActivityProviderStubs :
 
     public virtual void HandleSubscription(string userId, string message, int monthCount, int tier, bool approved) { }
 
-    public virtual void HandleTTS(Database.User user, string message, bool approved) { }
+    public virtual void HandleTTS(User user, string message, bool approved) { }
+
+    //Always return Success for disabling, and Failure from enabling
+    Task<bool> ITTSHandler.SetTTSEnabled(bool enabled) => Task.FromResult(!enabled);
 }
 
 public sealed class RaidHandlerStub : IRaidHandler
@@ -37,12 +42,12 @@ public sealed class GiftSubHandlerStub : IGiftSubHandler
 
 public sealed class FollowerHandlerStub : IFollowerHandler
 {
-    public void HandleFollower(Database.User follower, bool approved) { }
+    public void HandleFollower(User follower, bool approved) { }
 }
 
 public sealed class CheerHandlerStub : ICheerHandler
 {
-    public void HandleCheer(Database.User cheerer, string message, int quantity, bool approved) { }
+    public void HandleCheer(User cheerer, string message, int quantity, bool approved) { }
 }
 
 public sealed class SubscriptionHandlerStub : ISubscriptionHandler
@@ -52,5 +57,8 @@ public sealed class SubscriptionHandlerStub : ISubscriptionHandler
 
 public sealed class TTSHandlerStub : ITTSHandler
 {
-    public void HandleTTS(Database.User user, string message, bool approved) { }
+    public void HandleTTS(User user, string message, bool approved) { }
+
+    //Always return Success for disabling, and Failure from enabling
+    Task<bool> ITTSHandler.SetTTSEnabled(bool enabled) => Task.FromResult(!enabled);
 }

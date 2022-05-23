@@ -42,4 +42,43 @@ public static class ServiceExtensions
     {
         return app.UseMvc(x => x.MapRoute("default", "{controller}/{action=Index}"));
     }
+
+    /// <summary>
+    /// Registers <typeparamref name="TService"/> and adds automatic redirects for several optional interfaces
+    /// </summary>
+    public static IServiceCollection AddTASSingleton<TService>(this IServiceCollection services) where TService : class
+    {
+        services.AddSingleton<TService>();
+
+        Type serviceType = typeof(TService);
+
+        if (serviceType.GetInterfaces().Contains(typeof(Scripting.IScriptedComponent)))
+        {
+            services.AddSingleton<Scripting.IScriptedComponent>(x => (Scripting.IScriptedComponent)x.GetRequiredService<TService>());
+        }
+
+        if (serviceType.GetInterfaces().Contains(typeof(Commands.ICommandContainer)))
+        {
+            services.AddSingleton<Commands.ICommandContainer>(x => (Commands.ICommandContainer)x.GetRequiredService<TService>());
+        }
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers <typeparamref name="TService"/> to fetch the existing registered scoped <typeparamref name="TImplementation"/> service class.
+    /// </summary>
+    public static IServiceCollection AddScopedRedirect<TService, TImplementation>(this IServiceCollection services)
+        where TService : class
+        where TImplementation : class, TService =>
+        services.AddScoped<TService>(x => x.GetRequiredService<TImplementation>());
+
+    /// <summary>
+    /// Registers <typeparamref name="TService"/> to fetch the existing registered singleton <typeparamref name="TImplementation"/> service class.
+    /// </summary>
+    public static IServiceCollection AddSingletonRedirect<TService, TImplementation>(this IServiceCollection services)
+        where TService : class
+        where TImplementation : class, TService => 
+        services.AddSingleton<TService>(x => x.GetRequiredService<TImplementation>());
+
 }

@@ -135,7 +135,7 @@ public class SFXController : ControllerBase
     }
 
     [HttpPost]
-    [AuthRequired(AuthDegree.Admin)]
+    [AuthRequired(AuthDegree.Privileged)]
     public IActionResult Upload(UploadSoundEffect soundEffectUpload)
     {
         if (string.IsNullOrEmpty(soundEffectUpload.Name))

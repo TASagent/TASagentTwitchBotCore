@@ -16,11 +16,13 @@ public class TTSRenderer : ITTSRenderer
     protected readonly ISoundEffectSystem soundEffectSystem;
     protected readonly ErrorHandler errorHandler;
 
-    protected readonly TextToSpeechClient? googleClient = null;
-    protected readonly AmazonPollyClient? amazonClient = null;
-    protected readonly SpeechConfig? azureClient = null;
+    protected TextToSpeechClient? googleClient = null;
+    protected AmazonPollyClient? amazonClient = null;
+    protected SpeechConfig? azureClient = null;
 
     protected readonly TTSConfiguration ttsConfig;
+
+    protected bool Initialized { get; set; } = false;
 
     public TTSRenderer(
         TTSConfiguration ttsConfig,
@@ -32,6 +34,24 @@ public class TTSRenderer : ITTSRenderer
         this.communication = communication;
         this.errorHandler = errorHandler;
         this.soundEffectSystem = soundEffectSystem;
+
+        if (ttsConfig.Enabled)
+        {
+            if (!Initialize())
+            {
+                //Initialization Failed
+                communication.SendErrorMessage($"TTSRenderer failed to initialize properly. Disabling TTS Service.");
+                ttsConfig.Enabled = false;
+            }
+        }
+    }
+
+    protected bool Initialize()
+    {
+        if (Initialized)
+        {
+            return true;
+        }
 
         //
         // Prepare Google TTS
@@ -114,11 +134,37 @@ public class TTSRenderer : ITTSRenderer
             }
         }
 
-        if (ttsConfig.Enabled && ttsConfig.GetASupportedService() == TTSService.MAX)
+        Initialized = ttsConfig.GetASupportedService() != TTSService.MAX;
+
+        if (!Initialized)
         {
-            communication.SendErrorMessage($"No TTS service enabled properly. Disabling Service.");
-            ttsConfig.Enabled = false;
+            communication.SendErrorMessage($"No TTS service succeeded in initializing.");
         }
+
+        return Initialized;
+    }
+
+    public Task<bool> SetTTSEnabled(bool enabled)
+    {
+        if (enabled == ttsConfig.Enabled)
+        {
+            //Already set
+            return Task.FromResult(true);
+        }
+
+        if (enabled && !Initialized)
+        {
+            //Turning it on, and not initialized
+            if (!Initialize())
+            {
+                //Failed to initialize
+                communication.SendErrorMessage($"TTSRenderer failed to initialize properly. TTS will remain disabled.");
+                return Task.FromResult(false);
+            }
+        }
+
+        ttsConfig.Enabled = enabled;
+        return Task.FromResult(true);
     }
 
     public async Task<AudioRequest?> TTSRequest(

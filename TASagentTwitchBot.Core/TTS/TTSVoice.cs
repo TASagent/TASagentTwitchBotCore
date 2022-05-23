@@ -442,6 +442,7 @@ public static class TTSVoiceExtensions
             "x-high" => TTSPitch.X_High,
             "default" => TTSPitch.Unassigned,
             "normal" => TTSPitch.Unassigned,
+            "unassigned" => TTSPitch.Unassigned,
             _ => TTSPitch.MAX,
         };
 
@@ -455,6 +456,7 @@ public static class TTSVoiceExtensions
             "x-fast" => TTSSpeed.X_Fast,
             "default" => TTSSpeed.Unassigned,
             "normal" => TTSSpeed.Unassigned,
+            "unassigned" => TTSSpeed.Unassigned,
             _ => TTSSpeed.MAX,
         };
 

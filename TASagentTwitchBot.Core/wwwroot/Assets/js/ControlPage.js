@@ -960,6 +960,105 @@
     });
   }
 
+  function FetchScripts() {
+    $.get({
+      url: "/TASagentBotAPI/Scripting/Scripts",
+      headers: { "Authorization": "PASS NONE" },
+      success: (scripts) => {
+        var scriptSelect = $("#select-Script");
+
+        scriptSelect.empty();
+
+        scripts.forEach((script) => {
+          scriptSelect.append($(`<option value="${script}">${script}</option>`));
+        });
+
+        UpdateCurrentScript();
+      },
+      beforeSend: auth.ApplyAuth,
+      error: (response) => {
+        if (response.status && response.status === 401) {
+          auth.SetAuthStatus("None");
+        } else if (response.status && response.status === 404) {
+          //No scripting module exists - Delete
+          $("#nav-settings-scripting-tab").remove();
+          $("#nav-settings-scripting").remove();
+        }
+      }
+    });
+  }
+
+  function UpdateCurrentScript() {
+    var scriptSelect = $("#select-Script");
+
+    if (scriptSelect.val() === "None" || scriptSelect.val() == null) {
+      return;
+    }
+
+    $.get({
+      url:`/TASagentBotAPI/Scripting/Script/${scriptSelect.val()}`,
+      headers: { "Authorization": "PASS NONE" },
+      success: (script) => {
+        $("#textarea-Script").val(script);
+      },
+      beforeSend: auth.ApplyAuth,
+      error: (response) => {
+        if (response.status && response.status === 401) {
+          auth.SetAuthStatus("None");
+        } else if (response.status && response.status === 404) {
+          //No scripting module exists - Delete
+          $("#nav-settings-scripting-tab").remove();
+          $("#nav-settings-scripting").remove();
+        }
+      }
+    });
+  }
+
+  function RevertToDefaultScript() {
+    var scriptSelect = $("#select-Script");
+
+    if (scriptSelect.val() === "None" || scriptSelect.val() == null) {
+      return;
+    }
+
+    $.get({
+      url: `/TASagentBotAPI/Scripting/DefaultScript/${scriptSelect.val()}`,
+      headers: { "Authorization": "PASS NONE" },
+      success: (script) => {
+        $("#textarea-Script").val(script);
+      },
+      beforeSend: auth.ApplyAuth,
+      error: (response) => {
+        if (response.status && response.status === 401) {
+          auth.SetAuthStatus("None");
+        } else if (response.status && response.status === 404) {
+          //No scripting module exists - Delete
+          $("#nav-settings-scripting-tab").remove();
+          $("#nav-settings-scripting").remove();
+        }
+      }
+    });
+  }
+
+  function SubmitScript() {
+    var scriptSelect = $("#select-Script");
+
+    if (scriptSelect.val() === "None" || scriptSelect.val() == null) {
+      return;
+    }
+
+    $.post({
+      url: `/TASagentBotAPI/Scripting/Script/${scriptSelect.val()}`,
+      headers: { "Authorization": "PASS NONE" },
+      contentType: "application/json;charset=utf-8",
+      data: JSON.stringify({
+        Script: $("#textarea-Script").val()
+      }),
+      beforeSend: auth.ApplyAuth,
+      error: auth.HandleErrorResponse
+    });
+  }
+
   $(document).ready(() => {
 
     auth.SetAuthStatus("None");
@@ -1165,6 +1264,12 @@
     var serialDeviceSelect = $("#select-SerialDevice");
     serialDeviceSelect.change(function () { SubmitSerialDeviceChanged(serialDeviceSelect.val()); });
 
+
+    $("#select-Script").change(UpdateCurrentScript);
+    $("#button-Reset-Script").click(UpdateCurrentScript);
+    $("#button-Default-Script").click(RevertToDefaultScript);
+    $("#button-Submit-Script").click(SubmitScript);
+
     //Trigger refresh on tab change
     //Tools tabs
     $("#nav-tools-miceffect-tab").click(RefreshMicEffect);
@@ -1178,6 +1283,8 @@
     $("#nav-settings-timer-tab").click(FetchTimerValues);
     $("#nav-settings-tts-tab").click(UpdateTTSSettings);
     $("#nav-settings-sfx-tab").click(UpdateSfx);
+    $("#nav-settings-scripting-tab").click(FetchScripts);
+
 
 
     RefreshMiscSettings();

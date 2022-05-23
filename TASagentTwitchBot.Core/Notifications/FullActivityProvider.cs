@@ -1,4 +1,5 @@
-﻿using System.Web;
+﻿using System.Text.Json;
+using System.Web;
 
 using TASagentTwitchBot.Core.TTS;
 
@@ -22,6 +23,8 @@ public class FullActivityProvider :
     protected readonly NotificationServer notificationServer;
     protected readonly Bits.CheerHelper cheerHelper;
 
+    protected readonly NotificationConfig notificationConfig;
+
     protected readonly Database.IUserHelper userHelper;
 
     protected readonly CancellationTokenSource generalTokenSource = new CancellationTokenSource();
@@ -31,6 +34,7 @@ public class FullActivityProvider :
     private bool disposedValue;
 
     public FullActivityProvider(
+        NotificationConfig notificationConfig,
         ICommunication communication,
         Audio.ISoundEffectSystem soundEffectSystem,
         Audio.IAudioPlayer audioPlayer,
@@ -41,6 +45,8 @@ public class FullActivityProvider :
         NotificationServer notificationServer,
         Database.IUserHelper userHelper)
     {
+        this.notificationConfig = notificationConfig;
+
         this.communication = communication;
 
         this.soundEffectSystem = soundEffectSystem;
@@ -96,6 +102,11 @@ public class FullActivityProvider :
         }
 
         communication.NotifyEvent($"Tier {tier} Sub: {subscriber.TwitchUserName}");
+
+        if (!notificationConfig.SubNotificationEnabled)
+        {
+            return;
+        }
 
         string chatResponse = await GetSubscriberChatResponse(subscriber, message, monthCount, tier);
         if (!string.IsNullOrWhiteSpace(chatResponse))
@@ -238,6 +249,11 @@ public class FullActivityProvider :
     {
         communication.NotifyEvent($"Cheer {quantity}: {cheerer.TwitchUserName}");
 
+        if (!notificationConfig.CheerNotificationEnabled)
+        {
+            return;
+        }
+
         string? chatResponse = await GetCheerChatResponse(cheerer, message, quantity);
         if (!string.IsNullOrWhiteSpace(chatResponse))
         {
@@ -350,6 +366,11 @@ public class FullActivityProvider :
 
         communication.NotifyEvent($"{count} Raid: {raider.TwitchUserName}");
 
+        if (!notificationConfig.RaidNotificationEnabled)
+        {
+            return;
+        }
+
         string chatResponse = await GetRaidChatResponse(raider, count);
         if (!string.IsNullOrWhiteSpace(chatResponse))
         {
@@ -440,6 +461,11 @@ public class FullActivityProvider :
         }
 
         communication.NotifyEvent($"Gift Sub from {sender.TwitchUserName} to {recipient.TwitchUserName}");
+
+        if (!notificationConfig.GiftSubNotificationEnabled)
+        {
+            return;
+        }
 
         string? chatResponse = await GetGiftSubChatResponse(sender, recipient, tier, months);
         if (!string.IsNullOrWhiteSpace(chatResponse))
@@ -563,6 +589,11 @@ public class FullActivityProvider :
 
         communication.NotifyEvent($"Gift Sub from Anon to {recipient.TwitchUserName}");
 
+        if (!notificationConfig.AnonGiftSubNotificationEnabled)
+        {
+            return;
+        }
+
         string? chatResponse = await GetAnonGiftSubChatResponse(recipient, tier, months);
         if (!string.IsNullOrWhiteSpace(chatResponse))
         {
@@ -682,6 +713,11 @@ public class FullActivityProvider :
             return;
         }
 
+        if (!notificationConfig.FollowNotificationEnabled)
+        {
+            return;
+        }
+
         string chatResponse = await GetFollowChatResponse(follower);
         if (!string.IsNullOrWhiteSpace(chatResponse))
         {
@@ -747,11 +783,18 @@ public class FullActivityProvider :
     #endregion IFollowerHandler
     #region ITTSHandler
 
+    Task<bool> ITTSHandler.SetTTSEnabled(bool enabled) => ttsRenderer.SetTTSEnabled(enabled);
+
     public virtual async void HandleTTS(
         Database.User user,
         string message,
         bool approved)
     {
+        if (!notificationConfig.TTSNotificationEnabled)
+        {
+            return;
+        }
+
         string? chatResponse = await GetTTSChatResponse(user, message);
         if (!string.IsNullOrWhiteSpace(chatResponse))
         {
@@ -875,5 +918,45 @@ public class FullActivityProvider :
 
         public override Task Execute() => fullActivityProvider.Execute(this);
         public override string ToString() => description;
+    }
+
+    public class NotificationConfig
+    {
+        private static string ConfigFilePath => BGC.IO.DataManagement.PathForDataFile("Config", "NotificationConfig.json");
+        private static readonly object _lock = new object();
+
+        public bool SubNotificationEnabled { get; set; } = true;
+        public bool CheerNotificationEnabled { get; set; } = true;
+        public bool RaidNotificationEnabled { get; set; } = true;
+        public bool GiftSubNotificationEnabled { get; set; } = true;
+        public bool AnonGiftSubNotificationEnabled { get; set; } = true;
+        public bool FollowNotificationEnabled { get; set; } = true;
+        public bool TTSNotificationEnabled { get; set; } = true;
+
+        public static NotificationConfig GetConfig()
+        {
+            NotificationConfig config;
+            if (File.Exists(ConfigFilePath))
+            {
+                //Load existing config
+                config = JsonSerializer.Deserialize<NotificationConfig>(File.ReadAllText(ConfigFilePath))!;
+            }
+            else
+            {
+                config = new NotificationConfig();
+            }
+
+            File.WriteAllText(ConfigFilePath, JsonSerializer.Serialize(config));
+
+            return config;
+        }
+
+        public void Serialize()
+        {
+            lock (_lock)
+            {
+                File.WriteAllText(ConfigFilePath, JsonSerializer.Serialize(this));
+            }
+        }
     }
 }

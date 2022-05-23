@@ -53,12 +53,18 @@ public class CommunicationHandler : ICommunication
 
     public void SendPublicChatMessage(string message)
     {
-        SendMessageHandlers?.Invoke(message);
+        if (!string.IsNullOrEmpty(message))
+        {
+            SendMessageHandlers?.Invoke(message);
+        }
     }
 
     public void SendChatWhisper(string username, string message)
     {
-        SendWhisperHandlers?.Invoke(username, message);
+        if (!string.IsNullOrEmpty(message))
+        {
+            SendWhisperHandlers?.Invoke(username, message);
+        }
     }
 
     public void DispatchChatMessage(IRC.TwitchChatter chatter)

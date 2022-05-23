@@ -4,6 +4,7 @@ public class TestCommandSystem : ICommandContainer
 {
     private readonly Config.BotConfiguration botConfig;
     private readonly ICommunication communication;
+    private readonly Notifications.IFollowerHandler followHandler;
     private readonly Notifications.ISubscriptionHandler subscriptionHandler;
     private readonly Notifications.IRaidHandler raidHandler;
     private readonly Notifications.ICheerHandler cheerHandler;
@@ -13,6 +14,7 @@ public class TestCommandSystem : ICommandContainer
     public TestCommandSystem(
         Config.BotConfiguration botConfig,
         ICommunication communication,
+        Notifications.IFollowerHandler followHandler,
         Notifications.ISubscriptionHandler subscriptionHandler,
         Notifications.IRaidHandler raidHandler,
         Notifications.ICheerHandler cheerHandler,
@@ -21,6 +23,7 @@ public class TestCommandSystem : ICommandContainer
         this.botConfig = botConfig;
 
         this.communication = communication;
+        this.followHandler = followHandler;
         this.subscriptionHandler = subscriptionHandler;
         this.raidHandler = raidHandler;
         this.cheerHandler = cheerHandler;
@@ -30,6 +33,7 @@ public class TestCommandSystem : ICommandContainer
 
     public void RegisterCommands(ICommandRegistrar commandRegistrar)
     {
+        commandRegistrar.RegisterGlobalCommand("testfollow", TestFollowHandler);
         commandRegistrar.RegisterGlobalCommand("testraid", TestRaidHandler);
         commandRegistrar.RegisterGlobalCommand("testsub", TestSubHandler);
         commandRegistrar.RegisterGlobalCommand("testcheer", TestCheerHandler);
@@ -38,6 +42,38 @@ public class TestCommandSystem : ICommandContainer
     public IEnumerable<string> GetPublicCommands()
     {
         yield break;
+    }
+
+    private async Task TestFollowHandler(IRC.TwitchChatter chatter, string[] remainingCommand)
+    {
+        if (chatter.User.AuthorizationLevel < AuthorizationLevel.Admin)
+        {
+            communication.SendPublicChatMessage($"You are not authorized to test follow notifications, @{chatter.User.TwitchUserName}.");
+            return;
+        }
+
+        Database.User? follower = null;
+
+        //Optional follower Name
+        if (remainingCommand.Length > 0)
+        {
+            follower = await userHelper.GetUserByTwitchLogin(remainingCommand[0]);
+        }
+
+        if (follower is null)
+        {
+            follower = await userHelper.GetUserByTwitchId(botConfig.BroadcasterId);
+        }
+
+        if (follower is null)
+        {
+            communication.SendPublicChatMessage($"Cannot get follow notifications to work right now.");
+            return;
+        }
+
+        followHandler.HandleFollower(follower, true);
+
+        return;
     }
 
     private async Task TestRaidHandler(IRC.TwitchChatter chatter, string[] remainingCommand)

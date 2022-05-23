@@ -85,10 +85,21 @@ public class TTSController : ControllerBase
 
     [HttpPost]
     [AuthRequired(AuthDegree.Admin)]
-    public IActionResult Settings(
+    public async Task<IActionResult> Settings(
         TTSSettings ttsSettings,
         [FromServices] TTSConfiguration ttsConfig)
     {
+        if (ttsConfig.Enabled != ttsSettings.Enabled)
+        {
+            //Attempt initialization if necessary
+            if (!await ttsHandler.SetTTSEnabled(ttsSettings.Enabled))
+            {
+                //Initialization failed
+                return StatusCode((int)HttpStatusCode.InternalServerError);
+            }
+        }
+
+        //Update Settings
         ttsConfig.Enabled = ttsSettings.Enabled;
         ttsConfig.BitThreshold = ttsSettings.BitThreshold;
         ttsConfig.Command.Enabled = ttsSettings.CommandEnabled;

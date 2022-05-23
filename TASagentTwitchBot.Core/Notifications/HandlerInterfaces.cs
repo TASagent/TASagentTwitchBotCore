@@ -28,5 +28,6 @@ public interface IFollowerHandler
 
 public interface ITTSHandler
 {
+    Task<bool> SetTTSEnabled(bool enabled); 
     void HandleTTS(Database.User user, string message, bool approved);
 }

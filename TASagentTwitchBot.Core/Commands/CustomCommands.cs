@@ -12,8 +12,6 @@ public class CustomCommands : ICommandContainer
 
     private ICommandRegistrar? commandRegistrar = null;
 
-    private readonly Regex findSubstitutionsRegex = new Regex(@"(?<!\\)\$\{(\d+)\}");
-
     public CustomCommands(
         ICommunication communication,
         IServiceScopeFactory scopeFactory)
