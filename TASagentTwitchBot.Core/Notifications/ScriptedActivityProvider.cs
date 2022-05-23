@@ -817,7 +817,7 @@ public partial class ScriptedActivityProvider :
         GC.SuppressFinalize(this);
     }
 
-    public class ScriptedActivityRequest : ActivityRequest
+    public class ScriptedActivityRequest : ActivityRequest, IAudioActivity, IOverlayActivity, IMarqueeMessageActivity
     {
         public NotificationMessage? NotificationMessage { get; }
         public Audio.AudioRequest? AudioRequest { get; }
