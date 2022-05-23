@@ -5,27 +5,27 @@ public interface ITTTASHandler
     void HandleTTTAS(Core.Database.User user, string message, bool approved);
 }
 
-public class TTTASFullHandler : ITTTASHandler
+public class TTTASHandler : ITTTASHandler
 {
     private readonly Core.ICommunication communication;
     private readonly Core.Notifications.IActivityDispatcher activityDispatcher;
-    private readonly Core.Notifications.FullActivityProvider fullActivityProvider;
+    private readonly Core.Notifications.IActivityHandler activityHandler;
     private readonly Core.Audio.ISoundEffectSystem soundEffectSystem;
     private readonly ITTTASRenderer tttasRenderer;
 
     private readonly TTTASConfiguration tttasConfig;
 
-    public TTTASFullHandler(
+    public TTTASHandler(
         Core.ICommunication communication,
-        Core.Notifications.FullActivityProvider fullActivityProvider,
         Core.Notifications.IActivityDispatcher activityDispatcher,
+        Core.Notifications.IActivityHandler activityHandler,
         Core.Audio.ISoundEffectSystem soundEffectSystem,
         ITTTASRenderer tttasRenderer,
         TTTASConfiguration tttasConfig)
     {
         this.communication = communication;
-        this.fullActivityProvider = fullActivityProvider;
         this.activityDispatcher = activityDispatcher;
+        this.activityHandler = activityHandler;
         this.soundEffectSystem = soundEffectSystem;
         this.tttasRenderer = tttasRenderer;
         this.tttasConfig = tttasConfig;
@@ -37,10 +37,9 @@ public class TTTASFullHandler : ITTTASHandler
         bool approved)
     {
         activityDispatcher.QueueActivity(
-            activity: new Core.Notifications.FullActivityProvider.FullActivityRequest(
-                fullActivityProvider: fullActivityProvider,
+            activity: new TTTASActivityRequest(
+                activityHandler: activityHandler,
                 description: $"{tttasConfig.FeatureNameBrief} {user.TwitchUserName}: {message}",
-                notificationMessage: null,
                 audioRequest: await GetTTTASAudioRequest(user, message),
                 marqueeMessage: new Core.Notifications.MarqueeMessage(user.TwitchUserName, message, user.Color)),
             approved: approved);
@@ -72,6 +71,23 @@ public class TTTASFullHandler : ITTTASHandler
                 tttasText: message);
         }
 
-        return Core.Notifications.FullActivityProvider.JoinRequests(300, soundEffectRequest, tttasRequest);
+        return Core.Audio.AudioTools.JoinRequests(300, soundEffectRequest, tttasRequest);
+    }
+
+    public class TTTASActivityRequest : Core.Notifications.ActivityRequest, Core.Notifications.IAudioActivity, Core.Notifications.IMarqueeMessageActivity
+    {
+        public Core.Audio.AudioRequest? AudioRequest { get; }
+        public Core.Notifications.MarqueeMessage? MarqueeMessage { get; }
+
+        public TTTASActivityRequest(
+            Core.Notifications.IActivityHandler activityHandler,
+            string description,
+            Core.Audio.AudioRequest? audioRequest = null,
+            Core.Notifications.MarqueeMessage? marqueeMessage = null)
+            : base(activityHandler, description)
+        {
+            AudioRequest = audioRequest;
+            MarqueeMessage = marqueeMessage;
+        }
     }
 }

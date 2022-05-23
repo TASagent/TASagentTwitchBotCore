@@ -4,6 +4,7 @@ namespace TASagentTwitchBot.Core.Notifications;
 
 
 public class ActivityProviderStubs :
+    IActivityHandler,
     IRaidHandler,
     IGiftSubHandler,
     IFollowerHandler,
@@ -11,6 +12,7 @@ public class ActivityProviderStubs :
     ISubscriptionHandler,
     ITTSHandler
 {
+    public virtual Task Execute(ActivityRequest activityRequest) => Task.CompletedTask;
 
     public virtual void HandleCheer(User cheerer, string message, int quantity, bool approved) { }
 

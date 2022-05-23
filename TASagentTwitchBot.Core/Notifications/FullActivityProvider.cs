@@ -5,7 +5,13 @@ using TASagentTwitchBot.Core.TTS;
 
 namespace TASagentTwitchBot.Core.Notifications;
 
+public interface IActivityHandler
+{
+    Task Execute(ActivityRequest activityRequest);
+}
+
 public class FullActivityProvider :
+    IActivityHandler,
     ISubscriptionHandler,
     ICheerHandler,
     IRaidHandler,
@@ -61,24 +67,24 @@ public class FullActivityProvider :
         this.userHelper = userHelper;
     }
 
-    protected virtual Task Execute(FullActivityRequest activityRequest)
+    public Task Execute(ActivityRequest activityRequest)
     {
         List<Task> taskList = new List<Task>();
 
-        if (activityRequest.NotificationMessage is not null)
+        if (activityRequest is IOverlayActivity overlayActivity && overlayActivity.NotificationMessage is not null)
         {
-            taskList.Add(notificationServer.ShowNotificationAsync(activityRequest.NotificationMessage));
+            taskList.Add(notificationServer.ShowNotificationAsync(overlayActivity.NotificationMessage));
         }
 
-        if (activityRequest.AudioRequest is not null)
+        if (activityRequest is IAudioActivity audioActivity && audioActivity.AudioRequest is not null)
         {
-            taskList.Add(audioPlayer.PlayAudioRequest(activityRequest.AudioRequest));
+            taskList.Add(audioPlayer.PlayAudioRequest(audioActivity.AudioRequest));
         }
 
-        if (activityRequest.MarqueeMessage is not null)
+        if (activityRequest is IMarqueeMessageActivity marqueeMessageActivity && marqueeMessageActivity.MarqueeMessage is not null)
         {
-            //Don't bother waiting on this one to complete
-            taskList.Add(notificationServer.ShowTTSMessageAsync(activityRequest.MarqueeMessage));
+            //Doesn't bother waiting on this one to complete, just triggers it.
+            taskList.Add(notificationServer.ShowTTSMessageAsync(marqueeMessageActivity.MarqueeMessage));
         }
 
         return Task.WhenAll(taskList).WithCancellation(generalTokenSource.Token);
@@ -116,7 +122,7 @@ public class FullActivityProvider :
 
         activityDispatcher.QueueActivity(
             activity: new FullActivityRequest(
-                fullActivityProvider: this,
+                activityHandler: this,
                 description: $"Sub: {subscriber.TwitchUserName}: {message}",
                 notificationMessage: await GetSubscriberNotificationRequest(subscriber, message, monthCount, tier),
                 audioRequest: await GetSubscriberAudioRequest(subscriber, message, monthCount, tier),
@@ -185,7 +191,7 @@ public class FullActivityProvider :
                 ttsText: message);
         }
 
-        return JoinRequests(300, soundEffectRequest, ttsRequest);
+        return Audio.AudioTools.JoinRequests(300, soundEffectRequest, ttsRequest);
     }
 
     protected virtual Task<MarqueeMessage?> GetSubscriberMarqueeMessage(
@@ -262,7 +268,7 @@ public class FullActivityProvider :
 
         activityDispatcher.QueueActivity(
             activity: new FullActivityRequest(
-                fullActivityProvider: this,
+                activityHandler: this,
                 description: $"User {cheerer.TwitchUserName} cheered {quantity} bits: {message}",
                 notificationMessage: await GetCheerNotificationRequest(cheerer, message, quantity),
                 audioRequest: await GetCheerAudioRequest(cheerer, message, quantity),
@@ -332,7 +338,7 @@ public class FullActivityProvider :
                 ttsText: message);
         }
 
-        return JoinRequests(300, soundEffectRequest, ttsRequest);
+        return Audio.AudioTools.JoinRequests(300, soundEffectRequest, ttsRequest);
     }
 
     protected virtual Task<MarqueeMessage?> GetCheerMarqueeMessage(
@@ -379,7 +385,7 @@ public class FullActivityProvider :
 
         activityDispatcher.QueueActivity(
             activity: new FullActivityRequest(
-                fullActivityProvider: this,
+                activityHandler: this,
                 description: $"Raid: {raider.TwitchUserName} with {count} viewers",
                 notificationMessage: await GetRaidNotificationRequest(raider, count),
                 audioRequest: await GetRaidAudioRequest(raider, count),
@@ -475,7 +481,7 @@ public class FullActivityProvider :
 
         activityDispatcher.QueueActivity(
             activity: new FullActivityRequest(
-                fullActivityProvider: this,
+                activityHandler: this,
                 description: $"Gift Sub To: {recipient.TwitchUserName}",
                 notificationMessage: await GetGiftSubNotificationRequest(sender, recipient, tier, months),
                 audioRequest: await GetGiftSubAudioRequest(sender, recipient, tier, months),
@@ -602,7 +608,7 @@ public class FullActivityProvider :
 
         activityDispatcher.QueueActivity(
             activity: new FullActivityRequest(
-                fullActivityProvider: this,
+                activityHandler: this,
                 description: $"Anon Gift Sub To: {recipient.TwitchUserName}",
                 notificationMessage: await GetAnonGiftSubNotificationRequest(recipient, tier, months),
                 audioRequest: await GetAnonGiftSubAudioRequest(recipient, tier, months),
@@ -726,7 +732,7 @@ public class FullActivityProvider :
 
         activityDispatcher.QueueActivity(
             activity: new FullActivityRequest(
-                fullActivityProvider: this,
+                activityHandler: this,
                 description: $"Follower: {follower.TwitchUserName}",
                 notificationMessage: await GetFollowNotificationRequest(follower),
                 audioRequest: await GetFollowAudioRequest(follower),
@@ -803,7 +809,7 @@ public class FullActivityProvider :
 
         activityDispatcher.QueueActivity(
             activity: new FullActivityRequest(
-                fullActivityProvider: this,
+                activityHandler: this,
                 description: $"TTS {user.TwitchUserName} : {message}",
                 notificationMessage: await GetTTSNotificationRequest(user, message),
                 audioRequest: await GetTTSAudioRequest(user, message),
@@ -847,30 +853,6 @@ public class FullActivityProvider :
 
     #endregion ITTSHandler
 
-    public static Audio.AudioRequest? JoinRequests(int delayMS, params Audio.AudioRequest?[] audioRequests)
-    {
-#pragma warning disable CS8620 // Argument cannot be used for parameter due to differences in the nullability of reference types.
-        List<Audio.AudioRequest> audioRequestList = new List<Audio.AudioRequest>(audioRequests?.Where(x => x is not null) ?? Array.Empty<Audio.AudioRequest?>());
-#pragma warning restore CS8620 // Argument cannot be used for parameter due to differences in the nullability of reference types.
-
-        if (audioRequestList.Count == 0)
-        {
-            return null;
-        }
-
-        if (audioRequestList.Count == 1)
-        {
-            return audioRequestList[0];
-        }
-
-        for (int i = audioRequestList.Count - 1; i > 0; i--)
-        {
-            audioRequestList.Insert(i, new Audio.AudioDelay(delayMS));
-        }
-
-        return new Audio.ConcatenatedAudioRequest(audioRequestList);
-    }
-
     protected virtual void Dispose(bool disposing)
     {
         if (!disposedValue)
@@ -892,32 +874,24 @@ public class FullActivityProvider :
         GC.SuppressFinalize(this);
     }
 
-    public class FullActivityRequest : ActivityRequest
+    public class FullActivityRequest : ActivityRequest, IAudioActivity, IOverlayActivity, IMarqueeMessageActivity
     {
-        private readonly FullActivityProvider fullActivityProvider;
         public NotificationMessage? NotificationMessage { get; }
         public Audio.AudioRequest? AudioRequest { get; }
         public MarqueeMessage? MarqueeMessage { get; }
 
-        private readonly string description;
-
         public FullActivityRequest(
-            FullActivityProvider fullActivityProvider,
+            IActivityHandler activityHandler,
             string description,
             NotificationMessage? notificationMessage = null,
             Audio.AudioRequest? audioRequest = null,
             MarqueeMessage? marqueeMessage = null)
+            : base(activityHandler, description)
         {
-            this.fullActivityProvider = fullActivityProvider;
-            this.description = description;
-
             NotificationMessage = notificationMessage;
             AudioRequest = audioRequest;
             MarqueeMessage = marqueeMessage;
         }
-
-        public override Task Execute() => fullActivityProvider.Execute(this);
-        public override string ToString() => description;
     }
 
     public class NotificationConfig

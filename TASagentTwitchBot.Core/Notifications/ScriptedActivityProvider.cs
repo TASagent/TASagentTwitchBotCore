@@ -9,6 +9,7 @@ using TASagentTwitchBot.Core.Scripting;
 namespace TASagentTwitchBot.Core.Notifications;
 
 public partial class ScriptedActivityProvider :
+    IActivityHandler,
     ISubscriptionHandler,
     ICheerHandler,
     IRaidHandler,
@@ -223,24 +224,24 @@ public partial class ScriptedActivityProvider :
 
     #endregion IScriptedComponent
 
-    private Task Execute(ScriptedActivityRequest activityRequest)
+    public Task Execute(ActivityRequest activityRequest)
     {
         List<Task> taskList = new List<Task>();
 
-        if (activityRequest.NotificationMessage is not null)
+        if (activityRequest is IOverlayActivity overlayActivity && overlayActivity.NotificationMessage is not null)
         {
-            taskList.Add(notificationServer.ShowNotificationAsync(activityRequest.NotificationMessage));
+            taskList.Add(notificationServer.ShowNotificationAsync(overlayActivity.NotificationMessage));
         }
 
-        if (activityRequest.AudioRequest is not null)
+        if (activityRequest is IAudioActivity audioActivity && audioActivity.AudioRequest is not null)
         {
-            taskList.Add(audioPlayer.PlayAudioRequest(activityRequest.AudioRequest));
+            taskList.Add(audioPlayer.PlayAudioRequest(audioActivity.AudioRequest));
         }
 
-        if (activityRequest.MarqueeMessage is not null)
+        if (activityRequest is IMarqueeMessageActivity marqueeMessageActivity && marqueeMessageActivity.MarqueeMessage is not null)
         {
             //Don't bother waiting on this one to complete
-            taskList.Add(notificationServer.ShowTTSMessageAsync(activityRequest.MarqueeMessage));
+            taskList.Add(notificationServer.ShowTTSMessageAsync(marqueeMessageActivity.MarqueeMessage));
         }
 
         return Task.WhenAll(taskList).WithCancellation(generalTokenSource.Token);
@@ -277,8 +278,8 @@ public partial class ScriptedActivityProvider :
                 ScriptingUser user = ScriptingUser.FromDB(subscriber);
                 NotificationSub sub = new NotificationSub(tier, monthCount, message);
 
-                NotificationData notificationData = subScript.ExecuteFunction<NotificationData>(
-                    "GetNotificationData", subRuntimeContext, user, sub);
+                NotificationData notificationData = await subScript.ExecuteFunctionAsync<NotificationData>(
+                    "GetNotificationData", 2_000, subRuntimeContext, user, sub);
 
                 if (!string.IsNullOrWhiteSpace(notificationData.ChatMessage))
                 {
@@ -297,7 +298,7 @@ public partial class ScriptedActivityProvider :
 
                 activityDispatcher.QueueActivity(
                     activity: new ScriptedActivityRequest(
-                        scriptedActivityProvider: this,
+                        activityHandler: this,
                         description: $"Sub: {subscriber.TwitchUserName}: {message}",
                         notificationMessage: new ImageNotificationMessage(
                             image: notificationData.Image,
@@ -341,8 +342,8 @@ public partial class ScriptedActivityProvider :
                 ScriptingUser user = ScriptingUser.FromDB(cheerer);
                 NotificationCheer cheer = new NotificationCheer(quantity, message);
 
-                NotificationData notificationData = cheerScript.ExecuteFunction<NotificationData>(
-                    "GetNotificationData", cheerRuntimeContext, user, cheer);
+                NotificationData notificationData = await cheerScript.ExecuteFunctionAsync<NotificationData>(
+                    "GetNotificationData", 2_000, cheerRuntimeContext, user, cheer);
 
                 if (!string.IsNullOrWhiteSpace(notificationData.ChatMessage))
                 {
@@ -361,7 +362,7 @@ public partial class ScriptedActivityProvider :
 
                 activityDispatcher.QueueActivity(
                     activity: new ScriptedActivityRequest(
-                        scriptedActivityProvider: this,
+                        activityHandler: this,
                         description: $"Cheer {quantity}: {cheerer.TwitchUserName}: {message}",
                         notificationMessage: new ImageNotificationMessage(
                             image: notificationData.Image,
@@ -412,8 +413,8 @@ public partial class ScriptedActivityProvider :
             {
                 ScriptingUser user = ScriptingUser.FromDB(raider);
 
-                NotificationData notificationData = raidScript.ExecuteFunction<NotificationData>(
-                    "GetNotificationData", raidRuntimeContext, user, count);
+                NotificationData notificationData = await raidScript.ExecuteFunctionAsync<NotificationData>(
+                    "GetNotificationData", 2_000, raidRuntimeContext, user, count);
 
                 if (!string.IsNullOrWhiteSpace(notificationData.ChatMessage))
                 {
@@ -432,7 +433,7 @@ public partial class ScriptedActivityProvider :
 
                 activityDispatcher.QueueActivity(
                     activity: new ScriptedActivityRequest(
-                        scriptedActivityProvider: this,
+                        activityHandler: this,
                         description: $"Raid: {raider.TwitchUserName} with {count} viewers",
                         notificationMessage: new ImageNotificationMessage(
                             image: notificationData.Image,
@@ -495,8 +496,8 @@ public partial class ScriptedActivityProvider :
 
                 NotificationGiftSub notificationGiftSub = new NotificationGiftSub(tier, months);
 
-                NotificationData notificationData = giftSubScript.ExecuteFunction<NotificationData>(
-                    "GetNotificationData", giftSubRuntimeContext, sender, recipient, notificationGiftSub);
+                NotificationData notificationData = await giftSubScript.ExecuteFunctionAsync<NotificationData>(
+                    "GetNotificationData", 2_000, giftSubRuntimeContext, sender, recipient, notificationGiftSub);
 
                 if (!string.IsNullOrWhiteSpace(notificationData.ChatMessage))
                 {
@@ -515,7 +516,7 @@ public partial class ScriptedActivityProvider :
 
                 activityDispatcher.QueueActivity(
                     activity: new ScriptedActivityRequest(
-                        scriptedActivityProvider: this,
+                        activityHandler: this,
                         description: $"Gift Sub From {sender.TwitchUserName} To {recipient.TwitchUserName}",
                         notificationMessage: new ImageNotificationMessage(
                             image: notificationData.Image,
@@ -565,8 +566,8 @@ public partial class ScriptedActivityProvider :
 
                 NotificationGiftSub notificationGiftSub = new NotificationGiftSub(tier, months);
 
-                NotificationData notificationData = giftSubScript.ExecuteFunction<NotificationData>(
-                    "GetAnonNotificationData", giftSubRuntimeContext, recipient, notificationGiftSub);
+                NotificationData notificationData = await giftSubScript.ExecuteFunctionAsync<NotificationData>(
+                    "GetAnonNotificationData", 2_000, giftSubRuntimeContext, recipient, notificationGiftSub);
 
                 if (!string.IsNullOrWhiteSpace(notificationData.ChatMessage))
                 {
@@ -585,7 +586,7 @@ public partial class ScriptedActivityProvider :
 
                 activityDispatcher.QueueActivity(
                     activity: new ScriptedActivityRequest(
-                        scriptedActivityProvider: this,
+                        activityHandler: this,
                         description: $"Gift Sub From Anon To {recipient.TwitchUserName}",
                         notificationMessage: new ImageNotificationMessage(
                             image: notificationData.Image,
@@ -626,8 +627,8 @@ public partial class ScriptedActivityProvider :
             {
                 ScriptingUser notificationFollower = ScriptingUser.FromDB(follower);
 
-                NotificationData notificationData = followScript.ExecuteFunction<NotificationData>(
-                    "GetNotificationData", followRuntimeContext, notificationFollower);
+                NotificationData notificationData = await followScript.ExecuteFunctionAsync<NotificationData>(
+                    "GetNotificationData", 2_000, followRuntimeContext, notificationFollower);
 
                 if (!string.IsNullOrWhiteSpace(notificationData.ChatMessage))
                 {
@@ -646,7 +647,7 @@ public partial class ScriptedActivityProvider :
 
                 activityDispatcher.QueueActivity(
                     activity: new ScriptedActivityRequest(
-                        scriptedActivityProvider: this,
+                        activityHandler: this,
                         description: $"Follower: {follower.TwitchUserName}",
                         notificationMessage: new ImageNotificationMessage(
                             image: notificationData.Image,
@@ -684,7 +685,7 @@ public partial class ScriptedActivityProvider :
 
         activityDispatcher.QueueActivity(
             activity: new ScriptedActivityRequest(
-                scriptedActivityProvider: this,
+                activityHandler: this,
                 description: $"TTS {user.TwitchUserName} : {message}",
                 notificationMessage: null,
                 audioRequest: await ttsRenderer.TTSRequest(
@@ -699,24 +700,6 @@ public partial class ScriptedActivityProvider :
     }
 
     #endregion ITTSHandler
-
-    public static Audio.AudioRequest? JoinRequests(List<Audio.AudioRequest?> audioRequests)
-    {
-        List<Audio.AudioRequest> audioRequestList = new List<Audio.AudioRequest>(audioRequests.Where(x => x is not null)!);
-
-        if (audioRequestList.Count == 0)
-        {
-            return null;
-        }
-
-        if (audioRequestList.Count == 1)
-        {
-            return audioRequestList[0];
-        }
-
-        return new Audio.ConcatenatedAudioRequest(audioRequestList);
-    }
-
 
     private static string TransformImageText(List<NotificationText> imageText)
     {
@@ -780,7 +763,7 @@ public partial class ScriptedActivityProvider :
             }
         }
 
-        return JoinRequests(transformedAudioRequests);
+        return Audio.AudioTools.JoinRequests(0, transformedAudioRequests);
     }
 
     private readonly Dictionary<string, ScriptType> scriptLookup = new Dictionary<string, ScriptType>();
@@ -834,34 +817,24 @@ public partial class ScriptedActivityProvider :
         GC.SuppressFinalize(this);
     }
 
-
-
     public class ScriptedActivityRequest : ActivityRequest
     {
-        private readonly ScriptedActivityProvider scriptedActivityProvider;
         public NotificationMessage? NotificationMessage { get; }
         public Audio.AudioRequest? AudioRequest { get; }
         public MarqueeMessage? MarqueeMessage { get; }
 
-        private readonly string description;
-
         public ScriptedActivityRequest(
-            ScriptedActivityProvider scriptedActivityProvider,
+            IActivityHandler activityHandler,
             string description,
             NotificationMessage? notificationMessage = null,
             Audio.AudioRequest? audioRequest = null,
             MarqueeMessage? marqueeMessage = null)
+            : base(activityHandler, description)
         {
-            this.scriptedActivityProvider = scriptedActivityProvider;
-            this.description = description;
-
             NotificationMessage = notificationMessage;
             AudioRequest = audioRequest;
             MarqueeMessage = marqueeMessage;
         }
-
-        public override Task Execute() => scriptedActivityProvider.Execute(this);
-        public override string ToString() => description;
     }
 
     public class NotificationSub

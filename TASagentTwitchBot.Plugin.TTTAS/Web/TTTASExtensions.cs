@@ -15,7 +15,7 @@ public static class TTTASExtensions
         return services
             .AddSingleton<ITTTASProvider, TTTASProvider>()
             .AddSingleton<ITTTASRenderer, TTTASRenderer>()
-            .AddSingleton<ITTTASHandler, TTTASFullHandler>()
+            .AddSingleton<ITTTASHandler, TTTASHandler>()
             .AddSingleton<Core.Commands.ICommandContainer, TTTASCommandSystem>()
             .AddSingleton<Core.PubSub.IRedemptionContainer, TTTASRedemptionHandler>();
     }
