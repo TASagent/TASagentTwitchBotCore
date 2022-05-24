@@ -102,7 +102,7 @@ Voila!
 
 ## Customizing the bot
 
-There are several major subsystems to help streamline customization, and it's simple to create new ones. A lot of the action takes place in the in the [Dependency Injection system](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/dependency-injection) that's part of ASP.NET. Classes are registered in `TASagentTwitchBot.Web.StartupCore`, and when an instance of a class is required, it is instantiated (along with all of its constructor pre-requisites). As a result, no _cycles_ are allowed (where Class A and Class B both require one-another).
+There are several major subsystems to help streamline customization, and it's simple to create new ones. A lot of the action takes place in the in the [Dependency Injection system](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/dependency-injection) that's part of ASP.NET. Classes are registered in `Program.cs`, and when an instance of a class is required, it is instantiated (along with all of its constructor pre-requisites). As a result, no _cycles_ are allowed (where Class A and Class B both require one-another).
 
 When multiple classes are registered for an interface or class, only the last one to be registered will be instantiated.
 
@@ -162,6 +162,20 @@ However, classes are (deliberately) not automatically registered as the handler 
 ### Commands
 
 New commands just need to extend the `ICommandSystem` interface, and get registered to that interface in the `Startup` class.
+
+### Scripting
+
+A Scripting subsystem is utilized by several modules, like the `ScriptedActivityProvider` and `ScriptedCommands`. The scripts can be edited on the ControlPage.
+
+Each script has a predefined entry-point. You can best conceptualize each script as living inside of an implicit anonymous class, with syntax similar to C#. Other methods and script-instanced variables can be defined.
+
+A variable or container defined outside of a function is persistent across all invocations of the script, but is scoped to only the script.  If the variable is declared with the `global` keyword, then it can be accessed in _all_ scripts that declare it with the `global` keyword, and only the assignment in the first declaration to run is executed.  So a dozen scripts that all say `global int exampleInt = -1;` will all access the same `exampleInt`, but it will only be set to `-1` the first time one is run.
+
+#### Supported Containers
+
+For the time being, these are the supported containers: `List<T>`, `Queue<T>`, `Stack<T>`, `RingBuffer<T>`, `DepletableList<T>`, `DepletableBag<T>`, `Dictionary<TKey,TValue>`, `HashSet<T>`.
+
+New classes can be registered for access in the scripting language with the `ClassRegistrar`, see the `ScriptedActivityProvider` for examples.
 
 ### Channel Point Redemptions
 
