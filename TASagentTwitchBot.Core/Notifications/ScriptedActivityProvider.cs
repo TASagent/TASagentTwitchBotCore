@@ -497,7 +497,7 @@ public partial class ScriptedActivityProvider :
                 NotificationGiftSub notificationGiftSub = new NotificationGiftSub(tier, months);
 
                 NotificationData notificationData = await giftSubScript.ExecuteFunctionAsync<NotificationData>(
-                    "GetNotificationData", 2_000, giftSubRuntimeContext, sender, recipient, notificationGiftSub);
+                    "GetNotificationData", 2_000, giftSubRuntimeContext, notificationSender, notificationRecipient, notificationGiftSub);
 
                 if (!string.IsNullOrWhiteSpace(notificationData.ChatMessage))
                 {
@@ -567,7 +567,7 @@ public partial class ScriptedActivityProvider :
                 NotificationGiftSub notificationGiftSub = new NotificationGiftSub(tier, months);
 
                 NotificationData notificationData = await giftSubScript.ExecuteFunctionAsync<NotificationData>(
-                    "GetAnonNotificationData", 2_000, giftSubRuntimeContext, recipient, notificationGiftSub);
+                    "GetAnonNotificationData", 2_000, giftSubRuntimeContext, notificationRecipient, notificationGiftSub);
 
                 if (!string.IsNullOrWhiteSpace(notificationData.ChatMessage))
                 {
