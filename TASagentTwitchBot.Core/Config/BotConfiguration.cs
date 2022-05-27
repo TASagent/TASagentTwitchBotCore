@@ -39,7 +39,7 @@ public class BotConfiguration
 
     public CommandConfiguration CommandConfiguration { get; set; } = new CommandConfiguration();
 
-    public static BotConfiguration GetConfig()
+    public static BotConfiguration GetConfig(BotConfiguration defaultConfig)
     {
         BotConfiguration config;
         if (File.Exists(ConfigFilePath))
@@ -49,7 +49,7 @@ public class BotConfiguration
         }
         else
         {
-            config = new BotConfiguration();
+            config = defaultConfig;
         }
 
         config.AuthConfiguration.RegenerateAuthStrings();

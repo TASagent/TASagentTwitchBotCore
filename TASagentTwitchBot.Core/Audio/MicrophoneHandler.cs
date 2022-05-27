@@ -104,7 +104,10 @@ public class MicrophoneHandler : IMicrophoneHandler, IShutdownListener, IDisposa
 
         ResetVoiceStream();
 
-        communication.SendDebugMessage($"New Voice Effect: {effect.GetEffectsChain()}");
+        if (botConfig.MicConfiguration.Enabled)
+        {
+            communication.SendDebugMessage($"New Voice Effect: {effect.GetEffectsChain()}");
+        }
     }
 
     public bool UpdateVoiceOutputDevice(string device)
@@ -203,7 +206,7 @@ public class MicrophoneHandler : IMicrophoneHandler, IShutdownListener, IDisposa
         {
             //Set up device
 #if DEBUG && USE_STANDARD_DEBUG_OUTPUT
-                targetOutputDevice = GetDefaultOutputDevice();
+            targetOutputDevice = GetDefaultOutputDevice();
 #else
             targetOutputDevice = GetOutputDevice(botConfig.VoiceOutputDevice);
 #endif

@@ -173,6 +173,13 @@ public class MidiKeyboardHandler : IShutdownListener, IDisposable
         communication.SendErrorMessage($"Midi Error received: {e.MidiEvent}");
     }
 
+    public void BindToCustomBinding(MidiBinding binding)
+    {
+        bindings[1].Dispose();
+        bindings[1] = binding;
+        RecreateAudioStream();
+    }
+
     public bool BindToSoundEffect(string soundEffectName)
     {
         if (string.IsNullOrWhiteSpace(soundEffectName))
@@ -447,7 +454,7 @@ public class MidiKeyboardHandler : IShutdownListener, IDisposable
 
     #region Bindings
 
-    private abstract class MidiBinding : IDisposable
+    public abstract class MidiBinding : IDisposable
     {
         private bool disposedValue;
 
