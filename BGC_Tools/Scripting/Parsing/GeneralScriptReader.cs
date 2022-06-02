@@ -7,7 +7,7 @@ namespace BGC.Scripting;
 /// <summary>
 /// Inspiration taken from LightJson.Serialization
 /// </summary>
-public sealed class ScriptReader : IDisposable
+public sealed class GeneralScriptReader : IDisposable
 {
     private readonly TextReader textReader;
 
@@ -17,14 +17,12 @@ public sealed class ScriptReader : IDisposable
     /// <summary>Indicates whether there are still characters to be read.</summary>
     public bool CanRead => textReader.Peek() != -1;
 
-    public ScriptReader(string script)
+    public GeneralScriptReader(string script, int line = 0, int column = 0)
     {
         textReader = new StringReader(script);
-    }
 
-    public ScriptReader(TextReader script)
-    {
-        textReader = script;
+        this.line = line;
+        this.column = column;
     }
 
     public IEnumerable<Token> GetTokens()
@@ -34,6 +32,7 @@ public sealed class ScriptReader : IDisposable
 
         while (CanRead)
         {
+            //Standard Parsing
             yield return ReadNextToken();
 
             //Skip to next meaningful character
@@ -45,6 +44,7 @@ public sealed class ScriptReader : IDisposable
 
     private Token ReadNextToken()
     {
+
         char next = Peek();
 
         switch (next)
@@ -63,7 +63,10 @@ public sealed class ScriptReader : IDisposable
 
             case '\'':
             case '"':
-                return ParseStringLiteral();
+                return ParseString();
+
+            case '$':
+                return ReadInterpolatedString();
 
             case '-':
             case '=':
@@ -168,9 +171,9 @@ public sealed class ScriptReader : IDisposable
         return new InlineCommentToken(startLine, startColumn, commentBuilder.ToString());
     }
 
-    private Token ParseStringLiteral()
+    private Token ParseString()
     {
-        //Kill open Quote
+        //Consume OpenQuote
         char openQuote = Read();
 
         StringBuilder stringBuilder = new StringBuilder();
@@ -215,6 +218,161 @@ public sealed class ScriptReader : IDisposable
         }
 
         return new LiteralToken<string>(startLine, startColumn, stringBuilder.ToString());
+    }
+
+    //Substitute string interpolation for a string.Format invocation
+    private Token ReadInterpolatedString()
+    {
+        //Consume $
+        Read();
+        char temp;
+
+        //Consume "
+        temp = Read();
+        if (temp != '"')
+        {
+            throw new ScriptParsingException(line, column, $"Interpolated string must begin with $\". Found: {temp}");
+        }
+
+        StringBuilder stringBuilder = new StringBuilder();
+        List<List<Token>> arguments = new List<List<Token>>();
+
+        int startLine = line;
+        int startColumn = column - 2;
+
+        while (CanRead && (temp = Read()) != '"')
+        {
+            if (CanRead && temp == '\\')
+            {
+                //Escaped Character
+                switch (temp = Read())
+                {
+                    case '\\':
+                    case '\'':
+                    case '\"':
+                        stringBuilder.Append(temp);
+                        break;
+
+                    case 'n':
+                        stringBuilder.Append('\n');
+                        break;
+
+                    case 'r':
+                        stringBuilder.Append('\r');
+                        break;
+
+                    default:
+                        throw new ScriptParsingException(line, column, $"Unexpected escaped character {temp}");
+                }
+            }
+            else if (CanRead && temp == '{')
+            {
+                stringBuilder.Append('{');
+                if (Peek() == '{')
+                {
+                    //Escaped {
+                    Read();
+                    stringBuilder.Append('{');
+                }
+                else
+                {
+                    //Found Argument
+                    stringBuilder.Append(arguments.Count);
+                    arguments.Add(ParseStringInterpolationArgument(out char finalCharacter));
+                    stringBuilder.Append(finalCharacter);
+                }
+            }
+            else if (temp == '\n' || temp == '\r')
+            {
+                throw new ScriptParsingException(line, column, $"Line ended before string terminated: {stringBuilder}");
+            }
+            else
+            {
+                stringBuilder.Append(temp);
+            }
+        }
+
+        //Reached the end of the string
+        return new InterpolatedString(
+            line: startLine,
+            column: startColumn,
+            formatString: stringBuilder.ToString(),
+            arguments: arguments);
+    }
+
+    private List<Token> ParseStringInterpolationArgument(out char finalCharacter)
+    {
+        SkipWhitespace();
+
+        List<Token> argument = new List<Token>();
+
+        Stack<Separator> separatorStack = new Stack<Separator>();
+        separatorStack.Push(Separator.CloseCurlyBoi);
+
+        while (CanRead)
+        {
+            Token nextToken = ReadNextToken();
+
+            SkipWhitespace();
+
+            if (nextToken is SeparatorToken separatorToken)
+            {
+                switch (separatorToken.separator)
+                {
+                    case Separator.Colon:
+                    case Separator.Comma:
+                        //End at a Colon or Comma, which indicates we're starting a format string
+                        if (separatorStack.Count == 1)
+                        {
+                            finalCharacter = separatorToken.ToString().Single();
+                            return argument;
+                        }
+                        break;
+
+                    case Separator.OpenCurlyBoi:
+                        separatorStack.Push(Separator.CloseCurlyBoi);
+                        break;
+
+                    case Separator.OpenParen:
+                        separatorStack.Push(Separator.CloseParen);
+                        break;
+
+                    case Separator.OpenIndexer:
+                        separatorStack.Push(Separator.CloseIndexer);
+                        break;
+
+                    case Separator.CloseIndexer:
+                    case Separator.CloseParen:
+                    case Separator.CloseCurlyBoi:
+                        //End if we close the CurlyBoi
+                        Separator expectedSeparator = separatorStack.Pop();
+                        if (expectedSeparator != separatorToken.separator)
+                        {
+                            throw new ScriptParsingException(
+                                separatorToken,
+                                $"Found unexpected separator in Interpolated String argument: Found {separatorToken.separator}. Expected {expectedSeparator}.");
+                        }
+                        if (expectedSeparator == Separator.CloseCurlyBoi && separatorStack.Count == 0)
+                        {
+                            finalCharacter = '}';
+                            return argument;
+                        }
+                        break;
+
+                    default:
+                        break;
+                }
+
+                //Otherwise, accumulate token
+                argument.Add(nextToken);
+            }
+            else
+            {
+                argument.Add(nextToken);
+            }
+        }
+
+        throw new ScriptParsingException(line, column, "Reached the end of an interpolated string in an invalid state.");
     }
 
     private Token ParseOperatorOrComment()
@@ -389,11 +547,6 @@ public sealed class ScriptReader : IDisposable
             case "NaN": return new LiteralToken<double>(line, startingColumn, double.NaN);
             case "null": return new NullLiteralToken(line, startingColumn);
 
-            //Static Types
-            case "System": return new KeywordToken(line, startingColumn, Keyword.System);
-            case "Debug": return new KeywordToken(line, startingColumn, Keyword.Debug);
-            case "Math": return new KeywordToken(line, startingColumn, Keyword.Math);
-
             case "new": return new KeywordToken(line, startingColumn, Keyword.New);
 
             //Conditionals
@@ -420,25 +573,6 @@ public sealed class ScriptReader : IDisposable
             case "const": return new KeywordToken(line, startingColumn, Keyword.Const);
 
             case "void": return new TypeToken(line, startingColumn, "void", typeof(void));
-
-            //Value Types
-            case "bool": return new TypeToken(line, startingColumn, "bool", typeof(bool));
-            case "double": return new TypeToken(line, startingColumn, "double", typeof(double));
-            case "int": return new TypeToken(line, startingColumn, "int", typeof(int));
-            case "string": return new TypeToken(line, startingColumn, "string", typeof(string));
-
-            //Container Types
-            case "List": return new TypeToken(line, startingColumn, "List", typeof(List<>), true);
-            case "Queue": return new TypeToken(line, startingColumn, "Queue", typeof(Queue<>), true);
-            case "Stack": return new TypeToken(line, startingColumn, "Stack", typeof(Stack<>), true);
-            case "DepletableBag": return new TypeToken(line, startingColumn, "DepletableBag", typeof(DepletableBag<>), true);
-            case "DepletableList": return new TypeToken(line, startingColumn, "DepletableList", typeof(DepletableList<>), true);
-            case "RingBuffer": return new TypeToken(line, startingColumn, "RingBuffer", typeof(RingBuffer<>), true);
-            case "Dictionary": return new TypeToken(line, startingColumn, "Dictionary", typeof(Dictionary<,>), true);
-            case "HashSet": return new TypeToken(line, startingColumn, "HashSet", typeof(HashSet<>), true);
-
-            //Other Types
-            case "Random": return new TypeToken(line, startingColumn, "Random", typeof(Random));
 
             default:
                 Type? registeredType = ClassRegistrar.LookUpClass(token);
@@ -555,101 +689,4 @@ public sealed class ScriptReader : IDisposable
     }
 
     #endregion
-
-    //public void UsedOnlyForAOTCodeGeneration()
-    //{
-    //    new Collections.Generic.RingBuffer<bool>(1);
-    //    new Collections.Generic.RingBuffer<bool>(new[] { false });
-    //    new Collections.Generic.RingBuffer<double>(1);
-    //    new Collections.Generic.RingBuffer<double>(new[] { 1.0 });
-    //    new Collections.Generic.RingBuffer<int>(1);
-    //    new Collections.Generic.RingBuffer<int>(new[] { 1 });
-    //    new Collections.Generic.RingBuffer<string>(1);
-    //    new Collections.Generic.RingBuffer<string>(new[] { "" });
-
-    //    new List<bool>();
-    //    new List<bool>(1);
-    //    new List<bool>(new[] { false });
-    //    new List<double>();
-    //    new List<double>(1);
-    //    new List<double>(new[] { 1.0 });
-    //    new List<int>();
-    //    new List<int>(1);
-    //    new List<int>(new[] { 1 });
-    //    new List<string>();
-    //    new List<string>(1);
-    //    new List<string>(new[] { "" });
-
-    //    new Queue<bool>();
-    //    new Queue<bool>(1);
-    //    new Queue<bool>(new[] { false });
-    //    new Queue<double>();
-    //    new Queue<double>(1);
-    //    new Queue<double>(new[] { 1.0 });
-    //    new Queue<int>();
-    //    new Queue<int>(1);
-    //    new Queue<int>(new[] { 1 });
-    //    new Queue<string>();
-    //    new Queue<string>(1);
-    //    new Queue<string>(new[] { "" });
-
-    //    new Stack<bool>();
-    //    new Stack<bool>(1);
-    //    new Stack<bool>(new[] { false });
-    //    new Stack<double>();
-    //    new Stack<double>(1);
-    //    new Stack<double>(new[] { 1.0 });
-    //    new Stack<int>();
-    //    new Stack<int>(1);
-    //    new Stack<int>(new[] { 1 });
-    //    new Stack<string>();
-    //    new Stack<string>(1);
-    //    new Stack<string>(new[] { "" });
-
-    //    new Collections.Generic.DepletableBag<bool>();
-    //    new Collections.Generic.DepletableBag<bool>(new[] { false });
-    //    new Collections.Generic.DepletableBag<double>();
-    //    new Collections.Generic.DepletableBag<double>(new[] { 1.0 });
-    //    new Collections.Generic.DepletableBag<int>();
-    //    new Collections.Generic.DepletableBag<int>(new[] { 1 });
-    //    new Collections.Generic.DepletableBag<string>();
-    //    new Collections.Generic.DepletableBag<string>(new[] { "" });
-
-    //    new Collections.Generic.DepletableList<bool>();
-    //    new Collections.Generic.DepletableList<bool>(new[] { false });
-    //    new Collections.Generic.DepletableList<double>();
-    //    new Collections.Generic.DepletableList<double>(new[] { 1.0 });
-    //    new Collections.Generic.DepletableList<int>();
-    //    new Collections.Generic.DepletableList<int>(new[] { 1 });
-    //    new Collections.Generic.DepletableList<string>();
-    //    new Collections.Generic.DepletableList<string>(new[] { "" });
-
-    //    new Dictionary<bool, bool>();
-    //    new Dictionary<bool, int>();
-    //    new Dictionary<bool, double>();
-    //    new Dictionary<bool, string>();
-
-    //    new Dictionary<int, bool>();
-    //    new Dictionary<int, int>();
-    //    new Dictionary<int, double>();
-    //    new Dictionary<int, string>();
-
-    //    new Dictionary<double, bool>();
-    //    new Dictionary<double, int>();
-    //    new Dictionary<double, double>();
-    //    new Dictionary<double, string>();
-
-    //    new Dictionary<string, bool>();
-    //    new Dictionary<string, int>();
-    //    new Dictionary<string, double>();
-    //    new Dictionary<string, string>();
-
-    //    new HashSet<bool>();
-    //    new HashSet<int>();
-    //    new HashSet<double>();
-    //    new HashSet<string>();
-
-    //    // Include an exception so we can be sure to know if this method is ever called.
-    //    throw new InvalidOperationException("This method is used for AOT code generation only. Do not call it at runtime.");
-    //}
 }

@@ -26,11 +26,6 @@ public enum Keyword
     Extern,
     Const,
 
-    //Static Types
-    System,
-    Debug,
-    Math,
-
     //Construction keyword
     New,
 

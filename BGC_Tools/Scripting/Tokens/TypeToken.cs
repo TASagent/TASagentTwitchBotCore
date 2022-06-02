@@ -3,23 +3,21 @@
 public class TypeToken : Token
 {
     public readonly Type type;
-    public readonly bool genericType;
     public readonly string alias;
+    public bool IsGenericType => type.ContainsGenericParameters;
 
-    public TypeToken(int line, int column, string alias, Type type, bool genericType = false)
+    public TypeToken(int line, int column, string alias, Type type)
         : base(line, column)
     {
         this.type = type;
         this.alias = alias;
-        this.genericType = genericType;
     }
 
-    public TypeToken(Token source, string alias, Type type, bool genericType = false)
+    public TypeToken(Token source, string alias, Type type)
         : base(source)
     {
         this.type = type;
         this.alias = alias;
-        this.genericType = genericType;
     }
 
     public override string ToString() => type.ToString();

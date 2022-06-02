@@ -161,7 +161,7 @@ public static class ParsingExtensions
             type = classToken.type;
             tokens.CautiousAdvance(checkEOF);
 
-            if (classToken.genericType)
+            if (classToken.IsGenericType)
             {
                 type = type.MakeGenericType(tokens.ReadTypeArguments());
             }
@@ -177,6 +177,15 @@ public static class ParsingExtensions
         return type;
     }
 
+    public static Type[]? TryReadTypeArguments(this IEnumerator<Token> tokens)
+    {
+        if (!tokens.TestWithoutSkipping(Operator.IsLessThan))
+        {
+            return null;
+        }
+
+        return tokens.ReadTypeArguments();
+    }
 
     public static Type[] ReadTypeArguments(this IEnumerator<Token> tokens)
     {

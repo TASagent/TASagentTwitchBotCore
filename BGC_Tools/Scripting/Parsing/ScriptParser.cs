@@ -11,10 +11,11 @@ public static class ScriptParser
         params FunctionSignature[] expectedFunctions)
     {
         Script scriptObject;
-        using (ScriptReader reader = new ScriptReader(script))
+        using (GeneralScriptReader reader = new GeneralScriptReader(script))
         {
             IEnumerator<Token> tokens = reader
                 .GetTokens()
+                .ExpandInterpolatedStrings()
                 .DropComments()
                 .HandleElseIf()
                 .HandleAmbiguousMinus()
@@ -30,9 +31,28 @@ public static class ScriptParser
         return scriptObject;
     }
 
+    private static IEnumerable<Token> ExpandInterpolatedStrings(this IEnumerable<Token> tokens)
+    {
+        foreach (Token token in tokens)
+        {
+            if (token is InterpolatedString interpolatedString)
+            {
+                foreach (Token rewrittenToken in interpolatedString.RewriteToken().ExpandInterpolatedStrings())
+                {
+                    yield return rewrittenToken;
+                }
+            }
+            else
+            {
+                yield return token;
+            }
+        }
+    }
+
     //Check that all parens are matched
     private static IEnumerable<Token> CheckParens(this IEnumerable<Token> tokens)
     {
+        //var temp = tokens.ToList();
         Stack<Separator> invocationStack = new Stack<Separator>();
 
         foreach (Token token in tokens)
@@ -85,7 +105,7 @@ public static class ScriptParser
         if (invocationStack.Count != 0)
         {
             throw new ScriptParsingException(
-                source: tokens.LastOrDefault() ?? new EOFToken(0,0),
+                source: tokens.LastOrDefault() ?? new EOFToken(0, 0),
                 message: $"Mismatched Parentheses found!");
         }
     }

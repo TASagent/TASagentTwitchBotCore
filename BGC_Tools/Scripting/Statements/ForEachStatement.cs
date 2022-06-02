@@ -27,7 +27,23 @@ public class ForEachStatement : Statement
                 message: $"Collection of ForEach statement is not an Enumerable collection: {containerExpression.GetValueType().Name}");
         }
 
-        if (!loopVariable.GetValueType().AssignableFromType(containerExpression.GetValueType().GetGenericArguments()[0]))
+        //Find the IEnumerable interfaces
+        Type containerType = containerExpression.GetValueType();
+        Type? enumerableType = null;
+        foreach (Type containerInterface in containerType.GetInterfaces())
+        {
+            if (containerInterface.IsGenericType && containerInterface.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            {
+                //Found an IEnumerable<T> Implementation
+                if (loopVariable.GetValueType().AssignableFromType(containerInterface.GetGenericArguments()[0]))
+                {
+                    enumerableType = containerInterface.GetGenericArguments()[0];
+                    break;
+                }
+            }
+        }
+
+        if (enumerableType is null)
         {
             throw new ScriptParsingException(
                 source: keywordToken,

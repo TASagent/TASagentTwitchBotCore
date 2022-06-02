@@ -274,16 +274,6 @@ public abstract class Statement : IExecutable
                     source: kwToken,
                     message: $"The Const keyword can only appear at the start of a declaration: {kwToken}");
 
-            case Keyword.System:
-            case Keyword.Debug:
-            case Keyword.Math:
-                {
-                    IExecutable identifierStatement =
-                        Expression.ParseNextExecutableExpression(tokens, context);
-                    tokens.AssertAndSkip(Separator.Semicolon, false);
-                    return identifierStatement;
-                }
-
             case Keyword.ElseIf:
             case Keyword.Else:
                 throw new ScriptParsingException(
