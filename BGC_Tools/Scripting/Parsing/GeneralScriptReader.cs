@@ -302,8 +302,6 @@ public sealed class GeneralScriptReader : IDisposable
 
     private List<Token> ParseStringInterpolationArgument(out char finalCharacter)
     {
-        SkipWhitespace();
-
         List<Token> argument = new List<Token>();
 
         Stack<Separator> separatorStack = new Stack<Separator>();
@@ -311,9 +309,10 @@ public sealed class GeneralScriptReader : IDisposable
 
         while (CanRead)
         {
+            SkipWhitespace();
+
             Token nextToken = ReadNextToken();
 
-            SkipWhitespace();
 
             if (nextToken is SeparatorToken separatorToken)
             {

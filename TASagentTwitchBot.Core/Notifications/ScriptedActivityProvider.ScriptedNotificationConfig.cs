@@ -146,7 +146,7 @@ NotificationData GetNotificationData(User user, Sub sub)
 {
     NotificationData notificationData = new NotificationData();
 
-    notificationData.ChatMessage = ""How Cow! Thanks for the "" + GetTierText(sub.Tier) + ""sub, "" + user.TwitchUserName + GetChatMonthText(sub.CumulativeMonths) + ""!"";
+    notificationData.ChatMessage = $""How Cow! Thanks for the {GetTierText(sub.Tier)} sub, @{user.TwitchUserName}{GetChatMonthText(sub.CumulativeMonths)}!"";
 
     //Empty string uses a random image
     notificationData.Image = """";
@@ -158,10 +158,10 @@ NotificationData GetNotificationData(User user, Sub sub)
 
     notificationData.Audio.Add(new SoundEffect(""SMW PowerUp""));
     notificationData.Audio.Add(new Pause(300));
-    notificationData.Audio.Add(new TTS(""Brian"", ""Medium"", ""Medium"", """", user.TwitchUserName + "" has subbed"" + GetTTSMonthText(sub.CumulativeMonths)));
+    notificationData.Audio.Add(new TTS(""Brian"", ""Medium"", ""Medium"", """", $""{user.TwitchUserName} has subbed {GetTTSMonthText(sub.CumulativeMonths)}""));
     notificationData.Audio.Add(new Pause(300));
     
-    if (sub.Message != null && sub.Message.Length > 0)
+    if (!string.IsNullOrEmpty(sub.Message))
     {
         notificationData.Audio.Add(new TTS(user, sub.Message));
         notificationData.ShowMarqueeMessage = true;
@@ -200,19 +200,19 @@ string GetImageTextIntro(Sub sub)
     {
         switch (sub.Tier)
         {
-            case 0: return ""Thank you for subscribing for "" + sub.CumulativeMonths + "" months with Prime Gaming, "";
-            case 1: return ""Thank you for subscribing for "" + sub.CumulativeMonths + "" months, "";
-            case 2: return ""Thank you for subscribing at Tier 2 for "" + sub.CumulativeMonths + "" months, "";
-            case 3: return ""Thank you for subscribing at Tier 3 for "" + sub.CumulativeMonths + "" months, "";
+            case 0: return $""Thank you for subscribing for {sub.CumulativeMonths} months with Prime Gaming, "";
+            case 1: return $""Thank you for subscribing for {sub.CumulativeMonths} months, "";
+            case 2: return $""Thank you for subscribing at Tier 2 for {sub.CumulativeMonths} months, "";
+            case 3: return $""Thank you for subscribing at Tier 3 for {sub.CumulativeMonths} months, "";
         }
     }
 
     return ""Thank you, "";
 }
 
-string GetChatMonthText(int cumulativeMonths) => (cumulativeMonths <= 1) ? """" : ("", and for "" + cumulativeMonths.ToString() + "" months"");
+string GetChatMonthText(int cumulativeMonths) => (cumulativeMonths <= 1) ? """" : ($"", and for {cumulativeMonths} months"");
 
-string GetTTSMonthText(int cumulativeMonths) => (cumulativeMonths <= 1) ? """" : ("" for "" + cumulativeMonths.ToString() + "" months"");";
+string GetTTSMonthText(int cumulativeMonths) => (cumulativeMonths <= 1) ? """" : ($"" for {cumulativeMonths} months"");";
 
 
         private const string DEFAULT_CHEER_SCRIPT =
@@ -229,13 +229,13 @@ NotificationData GetNotificationData(User user, Cheer cheer)
     notificationData.Image = """";
 
     notificationData.ImageText.Add(new Text(user.TwitchUserName, user.Color));
-    notificationData.ImageText.Add(new Text("" has cheered "" + cheer.Quantity + (cheer.Quantity == 1 ? "" bit: "" : "" bits: "") + cheer.Message, ""#FFFFFF""));
+    notificationData.ImageText.Add(new Text($"" has cheered {cheer.Quantity} {(cheer.Quantity == 1 ? "" bit: "" : "" bits: "")} {cheer.Message}"", ""#FFFFFF""));
 
 
     notificationData.Audio.Add(new SoundEffect(""FF7 Purchase""));
     notificationData.Audio.Add(new Pause(500));
     
-    if (cheer.Message != null && cheer.Message.Length > 0)
+    if (!string.IsNullOrEmpty(cheer.Message))
     {
         notificationData.Audio.Add(new TTS(user, cheer.Message));
         notificationData.ShowMarqueeMessage = true;
@@ -254,17 +254,14 @@ NotificationData GetNotificationData(User user, int raiders)
     NotificationData notificationData = new NotificationData();
 
     //No chat message
-    notificationData.ChatMessage = ""Wow! "" + user.TwitchUserName + "" has Raided with "" + raiders + "" viewers! PogChamp"";
+    notificationData.ChatMessage = $""Wow! {user.TwitchUserName} has Raided with {raiders} viewers! PogChamp"";
 
     //Empty string uses random image
     notificationData.Image = """";
 
-    string raiderString = raiders >= 5 ? (raiders + "" raiders"") : (""Raiders"");
-
-    notificationData.ImageText.Add(new Text(""WOW! "" + raiderString + "" incoming from "", ""#FFFFFF""));
+    notificationData.ImageText.Add(new Text($""WOW! {(raiders >= 5 ? ($""{raiders} raiders"") : (""raiders""))} incoming from "", ""#FFFFFF""));
     notificationData.ImageText.Add(new Text(user.TwitchUserName, user.Color));
     notificationData.ImageText.Add(new Text(""!"", ""#FFFFFF""));
-
 
     notificationData.Audio.Add(new SoundEffect(""SMW CastleClear""));
 
@@ -286,7 +283,7 @@ NotificationData GetNotificationData(User sender, User recipient, GiftSub sub)
 
     notificationData.ImageText.Add(new Text(""Thank you, "", ""#FFFFFF""));
     notificationData.ImageText.Add(new Text(sender.TwitchUserName, sender.Color));
-    notificationData.ImageText.Add(new Text("" for gifting "" + GetMessageMiddleSegment(sub) + "" to "", ""#FFFFFF""));
+    notificationData.ImageText.Add(new Text($"" for gifting {GetMessageMiddleSegment(sub)} to "", ""#FFFFFF""));
     notificationData.ImageText.Add(new Text(recipient.TwitchUserName, recipient.Color));
     notificationData.ImageText.Add(new Text(""!"", ""#FFFFFF""));
 
@@ -308,7 +305,7 @@ NotificationData GetAnonNotificationData(User recipient, GiftSub sub)
 
     notificationData.ImageText.Add(new Text(""Thank you, "", ""#FFFFFF""));
     notificationData.ImageText.Add(new Text(""Anonymous"", ""#0000FF""));
-    notificationData.ImageText.Add(new Text("" for gifting "" + GetMessageMiddleSegment(sub) + "" to "", ""#FFFFFF""));
+    notificationData.ImageText.Add(new Text($"" for gifting {GetMessageMiddleSegment(sub)} to "", ""#FFFFFF""));
     notificationData.ImageText.Add(new Text(recipient.TwitchUserName, recipient.Color));
     notificationData.ImageText.Add(new Text(""!"", ""#FFFFFF""));
 
@@ -336,11 +333,11 @@ string GetMessageMiddleSegment(GiftSub sub)
     {
         switch (sub.Tier)
         {
-            case 0: return sub.Months + ""months"";
-            case 1: return sub.Months + ""months"";
-            case 2: return sub.Months + ""months of tier 2"";
-            case 3: return sub.Months + ""months of tier 3"";
-            default: return sub.Months + ""months"";
+            case 0: return $""{sub.Months} months"";
+            case 1: return $""{sub.Months} months"";
+            case 2: return $""{sub.Months} months of tier 2"";
+            case 3: return $""{sub.Months} months of tier 3"";
+            default: return $""{sub.Months} months"";
         }
     }
 }";
@@ -349,6 +346,7 @@ string GetMessageMiddleSegment(GiftSub sub)
         private const string DEFAULT_FOLLOW_SCRIPT =
 @"//Default Follow Script
 
+//Used for preventing notifying on double-follow
 HashSet<string> followedUserIds = new HashSet<string>();
 
 NotificationData GetNotificationData(User follower)
@@ -360,7 +358,7 @@ NotificationData GetNotificationData(User follower)
     if (notificationData.ShowNotification)
     {
         //Remove the reference to the user to make it anonymous
-        notificationData.ChatMessage = ""Thanks for following, @"" + follower.TwitchUserName;
+        notificationData.ChatMessage = $""Thanks for following, @{follower.TwitchUserName}"";
 
         //Empty string uses random image
         notificationData.Image = """";

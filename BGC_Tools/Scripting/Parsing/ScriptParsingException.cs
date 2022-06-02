@@ -18,4 +18,6 @@ public class ScriptParsingException : Exception
         this.line = line;
         this.column = column;
     }
+
+    public override string Message => $"Script parsing exception on Line {line}, Column {column}: {base.Message}";
 }
