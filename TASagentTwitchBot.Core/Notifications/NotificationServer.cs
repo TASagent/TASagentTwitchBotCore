@@ -65,9 +65,8 @@ public class NotificationServer
         }
     }
 
-    public async Task ShowTTSMessageAsync(MarqueeMessage message)
+    public async Task ShowTTSMessageAsync(string message)
     {
-        await _ttsMarqueeHubContext.Clients.All.SendAsync("ReceiveTTSNotification",
-            message.GetMessage());
+        await _ttsMarqueeHubContext.Clients.All.SendAsync("ReceiveTTSNotification", message);
     }
 }

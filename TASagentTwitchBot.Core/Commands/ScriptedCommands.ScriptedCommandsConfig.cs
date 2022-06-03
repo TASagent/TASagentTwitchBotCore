@@ -62,25 +62,21 @@ public partial class ScriptedCommands
                 ScriptContext = newScript.PrepareScript(globalContext);
             }
 
-            public Task<MessageData> Execute(ScriptingUser user, List<string> remainingCommand) =>
-                Script!.ExecuteFunctionAsync<MessageData>("HandleMessage", 2_000, ScriptContext!, user, remainingCommand);
+            public Task Execute(ScriptingUser user, List<string> remainingCommand) =>
+                Script!.ExecuteFunctionAsync("HandleMessage", 2_000, ScriptContext!, user, remainingCommand);
         }
 
         public static readonly FunctionSignature[] commandFunctions = new FunctionSignature[] {
-            new FunctionSignature("HandleMessage", typeof(MessageData),
+            new FunctionSignature("HandleMessage", typeof(void),
                 new VariableData("user", typeof(ScriptingUser)),
                 new VariableData("remainingCommand", typeof(List<string>)))};
 
-        public const string DEFAULT_SCRIPT =
-@"//Default Command Script
+        public const string DEFAULT_SCRIPT = @"//Default Command Script
+extern ICommunication communication;
 
-MessageData HandleMessage(User user, List<string> remainingCommand)
+void HandleMessage(User user, List<string> remainingCommand)
 {
-    MessageData messageData = new MessageData();
-
-    messageData.ChatMessage =  ""Hello World, @"" + user.TwitchUserName;
-
-    return messageData;
+    communication.SendPublicChatMessage($""@{user.TwitchUserName}, Hello World"");
 }";
 
     }

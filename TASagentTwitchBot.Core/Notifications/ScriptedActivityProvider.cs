@@ -88,8 +88,12 @@ public partial class ScriptedActivityProvider :
         this.userHelper = userHelper;
     }
 
-    public static void RegisterRequiredScriptingClasses()
+    #region IScriptedComponent
+
+    void IScriptedComponent.Initialize(IScriptRegistrar scriptRegistrar)
     {
+        globalRuntimeContext = scriptRegistrar.GlobalSharedRuntimeContext;
+
         ClassRegistrar.TryRegisterClass<ScriptingUser>("User");
         ClassRegistrar.TryRegisterClass<NotificationSub>("Sub");
         ClassRegistrar.TryRegisterClass<NotificationCheer>("Cheer");
@@ -99,14 +103,10 @@ public partial class ScriptedActivityProvider :
         ClassRegistrar.TryRegisterClass<NotificationPause>("Pause");
         ClassRegistrar.TryRegisterClass<NotificationTTS>("TTS");
         ClassRegistrar.TryRegisterClass<NotificationText>("Text");
-        ClassRegistrar.TryRegisterClass<NotificationData>("NotificationData");
-    }
 
-    #region IScriptedComponent
-
-    void IScriptedComponent.Initialize(IScriptRegistrar scriptRegistrar)
-    {
-        globalRuntimeContext = scriptRegistrar.GlobalSharedRuntimeContext;
+        ClassRegistrar.TryRegisterClass<IAlert>();
+        ClassRegistrar.TryRegisterClass<StandardAlert>();
+        ClassRegistrar.TryRegisterClass<NoAlert>();
 
         //Prepare Scripts
         SetScript(ScriptType.Subscription, notificationConfig.SubNotificationScript, true);
@@ -238,13 +238,80 @@ public partial class ScriptedActivityProvider :
             taskList.Add(audioPlayer.PlayAudioRequest(audioActivity.AudioRequest));
         }
 
-        if (activityRequest is IMarqueeMessageActivity marqueeMessageActivity && marqueeMessageActivity.MarqueeMessage is not null)
+        if (activityRequest is IMarqueeMessageActivity marqueeMessageActivity && !string.IsNullOrEmpty(marqueeMessageActivity.MarqueeMessage))
         {
             //Don't bother waiting on this one to complete
             taskList.Add(notificationServer.ShowTTSMessageAsync(marqueeMessageActivity.MarqueeMessage));
         }
 
         return Task.WhenAll(taskList).WithCancellation(generalTokenSource.Token);
+    }
+
+    protected delegate Task<string> GetDefaultImageAsync();
+    protected delegate string GetDefaultImage();
+
+    protected async Task HandleAlertData(
+        IAlert alertData,
+        string description,
+        GetDefaultImageAsync getDefaultImage,
+        bool approved)
+    {
+        switch (alertData)
+        {
+            case StandardAlert standardAlertData:
+                activityDispatcher.QueueActivity(
+                    activity: new ScriptedActivityRequest(
+                        activityHandler: this,
+                        description: description,
+                        notificationMessage: new ImageNotificationMessage(
+                            image: string.IsNullOrEmpty(standardAlertData.ImageOverride) ? (await getDefaultImage()) : standardAlertData.ImageOverride,
+                            duration: 1_000 * standardAlertData.Duration,
+                            message: TransformImageText(standardAlertData.ImageText)),
+                        audioRequest: await TransformNotificationAudio(standardAlertData.Audio),
+                        marqueeMessage: TransformMarqueeText(standardAlertData.MarqueText)),
+                    approved: approved);
+                break;
+
+            case NoAlert _:
+                //Do nothing
+                break;
+
+            default:
+                communication.SendErrorMessage($"Unhandled alertData type: {alertData}");
+                break;
+        }
+    }
+
+    protected async Task HandleAlertData(
+        IAlert alertData,
+        string description,
+        GetDefaultImage getDefaultImage,
+        bool approved)
+    {
+        switch (alertData)
+        {
+            case StandardAlert standardAlertData:
+                activityDispatcher.QueueActivity(
+                    activity: new ScriptedActivityRequest(
+                        activityHandler: this,
+                        description: description,
+                        notificationMessage: new ImageNotificationMessage(
+                            image: string.IsNullOrEmpty(standardAlertData.ImageOverride) ? getDefaultImage() : standardAlertData.ImageOverride,
+                            duration: 1_000 * standardAlertData.Duration,
+                            message: TransformImageText(standardAlertData.ImageText)),
+                        audioRequest: await TransformNotificationAudio(standardAlertData.Audio),
+                        marqueeMessage: TransformMarqueeText(standardAlertData.MarqueText)),
+                    approved: approved);
+                break;
+
+            case NoAlert _:
+                //Do nothing
+                break;
+
+            default:
+                communication.SendErrorMessage($"Unhandled alertData type: {alertData}");
+                break;
+        }
     }
 
     #region ISubscriptionHandler
@@ -278,34 +345,13 @@ public partial class ScriptedActivityProvider :
                 ScriptingUser user = ScriptingUser.FromDB(subscriber);
                 NotificationSub sub = new NotificationSub(tier, monthCount, message);
 
-                NotificationData notificationData = await subScript.ExecuteFunctionAsync<NotificationData>(
-                    "GetNotificationData", 2_000, subRuntimeContext, user, sub);
+                IAlert alertData = await subScript.ExecuteFunctionAsync<IAlert>(
+                    "GetAlertData", 2_000, subRuntimeContext, user, sub);
 
-                if (!string.IsNullOrWhiteSpace(notificationData.ChatMessage))
-                {
-                    communication.SendPublicChatMessage(notificationData.ChatMessage);
-                }
-
-                if (!notificationData.ShowNotification)
-                {
-                    return;
-                }
-
-                if (string.IsNullOrEmpty(notificationData.Image))
-                {
-                    notificationData.Image = notificationServer.GetNextImageURL();
-                }
-
-                activityDispatcher.QueueActivity(
-                    activity: new ScriptedActivityRequest(
-                        activityHandler: this,
-                        description: $"Sub: {subscriber.TwitchUserName}: {message}",
-                        notificationMessage: new ImageNotificationMessage(
-                            image: notificationData.Image,
-                            duration: 5000,
-                            message: TransformImageText(notificationData.ImageText)),
-                        audioRequest: await TransformNotificationAudio(notificationData.Audio),
-                        marqueeMessage: notificationData.ShowMarqueeMessage ? new MarqueeMessage(user.TwitchUserName, message, user.Color) : null),
+                await HandleAlertData(
+                    alertData: alertData,
+                    description: $"Sub: {subscriber.TwitchUserName} \"{message}\"",
+                    getDefaultImage: notificationServer.GetNextImageURL,
                     approved: approved);
             }
             catch (Exception ex)
@@ -342,34 +388,13 @@ public partial class ScriptedActivityProvider :
                 ScriptingUser user = ScriptingUser.FromDB(cheerer);
                 NotificationCheer cheer = new NotificationCheer(quantity, message);
 
-                NotificationData notificationData = await cheerScript.ExecuteFunctionAsync<NotificationData>(
-                    "GetNotificationData", 2_000, cheerRuntimeContext, user, cheer);
+                IAlert alertData = await cheerScript.ExecuteFunctionAsync<IAlert>(
+                    "GetAlertData", 2_000, cheerRuntimeContext, user, cheer);
 
-                if (!string.IsNullOrWhiteSpace(notificationData.ChatMessage))
-                {
-                    communication.SendPublicChatMessage(notificationData.ChatMessage);
-                }
-
-                if (!notificationData.ShowNotification)
-                {
-                    return;
-                }
-
-                if (string.IsNullOrEmpty(notificationData.Image))
-                {
-                    notificationData.Image = (await cheerHelper.GetCheerImageURL(message, quantity))!;
-                }
-
-                activityDispatcher.QueueActivity(
-                    activity: new ScriptedActivityRequest(
-                        activityHandler: this,
-                        description: $"Cheer {quantity}: {cheerer.TwitchUserName}: {message}",
-                        notificationMessage: new ImageNotificationMessage(
-                            image: notificationData.Image,
-                            duration: 10_000,
-                            message: TransformImageText(notificationData.ImageText)),
-                        audioRequest: await TransformNotificationAudio(notificationData.Audio),
-                        marqueeMessage: notificationData.ShowMarqueeMessage ? new MarqueeMessage(user.TwitchUserName, message, user.Color) : null),
+                await HandleAlertData(
+                    alertData: alertData,
+                    description: $"Cheer {quantity}: {cheerer.TwitchUserName} \"{message}\"",
+                    getDefaultImage: () => cheerHelper.GetCheerImageURL(message, quantity)!,
                     approved: approved);
             }
             catch (Exception ex)
@@ -413,34 +438,13 @@ public partial class ScriptedActivityProvider :
             {
                 ScriptingUser user = ScriptingUser.FromDB(raider);
 
-                NotificationData notificationData = await raidScript.ExecuteFunctionAsync<NotificationData>(
-                    "GetNotificationData", 2_000, raidRuntimeContext, user, count);
+                IAlert alertData = await raidScript.ExecuteFunctionAsync<IAlert>(
+                    "GetAlertData", 2_000, raidRuntimeContext, user, count);
 
-                if (!string.IsNullOrWhiteSpace(notificationData.ChatMessage))
-                {
-                    communication.SendPublicChatMessage(notificationData.ChatMessage);
-                }
-
-                if (!notificationData.ShowNotification)
-                {
-                    return;
-                }
-
-                if (string.IsNullOrEmpty(notificationData.Image))
-                {
-                    notificationData.Image = notificationServer.GetNextImageURL()!;
-                }
-
-                activityDispatcher.QueueActivity(
-                    activity: new ScriptedActivityRequest(
-                        activityHandler: this,
-                        description: $"Raid: {raider.TwitchUserName} with {count} viewers",
-                        notificationMessage: new ImageNotificationMessage(
-                            image: notificationData.Image,
-                            duration: 10_000,
-                            message: TransformImageText(notificationData.ImageText)),
-                        audioRequest: await TransformNotificationAudio(notificationData.Audio),
-                        marqueeMessage: null),
+                await HandleAlertData(
+                    alertData: alertData,
+                    description: $"Raid: {raider.TwitchUserName} with {count} viewers",
+                    getDefaultImage: notificationServer.GetNextImageURL,
                     approved: approved);
             }
             catch (Exception ex)
@@ -496,34 +500,13 @@ public partial class ScriptedActivityProvider :
 
                 NotificationGiftSub notificationGiftSub = new NotificationGiftSub(tier, months);
 
-                NotificationData notificationData = await giftSubScript.ExecuteFunctionAsync<NotificationData>(
-                    "GetNotificationData", 2_000, giftSubRuntimeContext, notificationSender, notificationRecipient, notificationGiftSub);
+                IAlert alertData = await giftSubScript.ExecuteFunctionAsync<IAlert>(
+                    "GetAlertData", 2_000, giftSubRuntimeContext, notificationSender, notificationRecipient, notificationGiftSub);
 
-                if (!string.IsNullOrWhiteSpace(notificationData.ChatMessage))
-                {
-                    communication.SendPublicChatMessage(notificationData.ChatMessage);
-                }
-
-                if (!notificationData.ShowNotification)
-                {
-                    return;
-                }
-
-                if (string.IsNullOrEmpty(notificationData.Image))
-                {
-                    notificationData.Image = notificationServer.GetNextImageURL()!;
-                }
-
-                activityDispatcher.QueueActivity(
-                    activity: new ScriptedActivityRequest(
-                        activityHandler: this,
-                        description: $"Gift Sub From {sender.TwitchUserName} To {recipient.TwitchUserName}",
-                        notificationMessage: new ImageNotificationMessage(
-                            image: notificationData.Image,
-                            duration: 5_000,
-                            message: TransformImageText(notificationData.ImageText)),
-                        audioRequest: await TransformNotificationAudio(notificationData.Audio),
-                        marqueeMessage: null),
+                await HandleAlertData(
+                    alertData: alertData,
+                    description: $"Gift Sub From {sender.TwitchUserName} To {recipient.TwitchUserName}",
+                    getDefaultImage: notificationServer.GetNextImageURL,
                     approved: approved);
             }
             catch (Exception ex)
@@ -566,34 +549,13 @@ public partial class ScriptedActivityProvider :
 
                 NotificationGiftSub notificationGiftSub = new NotificationGiftSub(tier, months);
 
-                NotificationData notificationData = await giftSubScript.ExecuteFunctionAsync<NotificationData>(
-                    "GetAnonNotificationData", 2_000, giftSubRuntimeContext, notificationRecipient, notificationGiftSub);
+                IAlert alertData = await giftSubScript.ExecuteFunctionAsync<IAlert>(
+                    "GetAnonAlertData", 2_000, giftSubRuntimeContext, notificationRecipient, notificationGiftSub);
 
-                if (!string.IsNullOrWhiteSpace(notificationData.ChatMessage))
-                {
-                    communication.SendPublicChatMessage(notificationData.ChatMessage);
-                }
-
-                if (!notificationData.ShowNotification)
-                {
-                    return;
-                }
-
-                if (string.IsNullOrEmpty(notificationData.Image))
-                {
-                    notificationData.Image = notificationServer.GetNextImageURL()!;
-                }
-
-                activityDispatcher.QueueActivity(
-                    activity: new ScriptedActivityRequest(
-                        activityHandler: this,
-                        description: $"Gift Sub From Anon To {recipient.TwitchUserName}",
-                        notificationMessage: new ImageNotificationMessage(
-                            image: notificationData.Image,
-                            duration: 5_000,
-                            message: TransformImageText(notificationData.ImageText)),
-                        audioRequest: await TransformNotificationAudio(notificationData.Audio),
-                        marqueeMessage: null),
+                await HandleAlertData(
+                    alertData: alertData,
+                    description: $"Gift Sub From Anon To {recipient.TwitchUserName}",
+                    getDefaultImage: notificationServer.GetNextImageURL,
                     approved: approved);
             }
             catch (Exception ex)
@@ -627,34 +589,13 @@ public partial class ScriptedActivityProvider :
             {
                 ScriptingUser notificationFollower = ScriptingUser.FromDB(follower);
 
-                NotificationData notificationData = await followScript.ExecuteFunctionAsync<NotificationData>(
-                    "GetNotificationData", 2_000, followRuntimeContext, notificationFollower);
+                IAlert alertData = await followScript.ExecuteFunctionAsync<IAlert>(
+                    "GetAlertData", 2_000, followRuntimeContext, notificationFollower);
 
-                if (!string.IsNullOrWhiteSpace(notificationData.ChatMessage))
-                {
-                    communication.SendPublicChatMessage(notificationData.ChatMessage);
-                }
-
-                if (!notificationData.ShowNotification)
-                {
-                    return;
-                }
-
-                if (string.IsNullOrEmpty(notificationData.Image))
-                {
-                    notificationData.Image = notificationServer.GetNextImageURL()!;
-                }
-
-                activityDispatcher.QueueActivity(
-                    activity: new ScriptedActivityRequest(
-                        activityHandler: this,
-                        description: $"Follower: {follower.TwitchUserName}",
-                        notificationMessage: new ImageNotificationMessage(
-                            image: notificationData.Image,
-                            duration: 4_000,
-                            message: TransformImageText(notificationData.ImageText)),
-                        audioRequest: await TransformNotificationAudio(notificationData.Audio),
-                        marqueeMessage: null),
+                await HandleAlertData(
+                    alertData: alertData,
+                    description: $"Follower: {follower.TwitchUserName}",
+                    getDefaultImage: notificationServer.GetNextImageURL,
                     approved: approved);
             }
             catch (Exception ex)
@@ -695,7 +636,9 @@ public partial class ScriptedActivityProvider :
                     speedPreference: user.TTSSpeedPreference,
                     effectsChain: audioEffectSystem.SafeParse(user.TTSEffectsChain),
                     ttsText: message),
-                marqueeMessage: new MarqueeMessage(user.TwitchUserName, message, user.Color)),
+                marqueeMessage: TransformMarqueeText(new List<NotificationText>() {
+                    new NotificationText(user.TwitchUserName, string.IsNullOrWhiteSpace(user.Color) ? "#0000FF" : user.Color),
+                    new NotificationText($": {message}", "#FFFFFF")})),
             approved: approved);
     }
 
@@ -710,6 +653,25 @@ public partial class ScriptedActivityProvider :
             sb.Append($"<span style=\"color: {text.Color}\">{HttpUtility.HtmlEncode(text.Text)}</span>");
         }
 
+        return sb.ToString();
+    }
+
+    private static string TransformMarqueeText(List<NotificationText> marqueeText)
+    {
+        if (marqueeText.Count == 0)
+        {
+            return "";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.Append("<h1>");
+
+        foreach (NotificationText text in marqueeText)
+        {
+            sb.Append($"<span style=\"color: {text.Color}\">{HttpUtility.HtmlEncode(text.Text)}</span>");
+        }
+
+        sb.Append("</h1>");
         return sb.ToString();
     }
 
@@ -821,14 +783,14 @@ public partial class ScriptedActivityProvider :
     {
         public NotificationMessage? NotificationMessage { get; }
         public Audio.AudioRequest? AudioRequest { get; }
-        public MarqueeMessage? MarqueeMessage { get; }
+        public string? MarqueeMessage { get; }
 
         public ScriptedActivityRequest(
             IActivityHandler activityHandler,
             string description,
             NotificationMessage? notificationMessage = null,
             Audio.AudioRequest? audioRequest = null,
-            MarqueeMessage? marqueeMessage = null)
+            string? marqueeMessage = null)
             : base(activityHandler, description)
         {
             NotificationMessage = notificationMessage;
@@ -837,13 +799,49 @@ public partial class ScriptedActivityProvider :
         }
     }
 
+    public interface IAlert
+    {
+
+    }
+
+    public class StandardAlert : IAlert
+    {
+        /// <summary>
+        /// Duration of the alert, in seconds
+        /// </summary>
+        public double Duration { get; set; } = 5.0;
+        public string ImageOverride { get; set; } = "";
+
+        public List<NotificationText> ImageText { get; set; } = new List<NotificationText>();
+
+        public List<NotificationAudio> Audio { get; set; } = new List<NotificationAudio>();
+
+        public List<NotificationText> MarqueText { get; set; } = new List<NotificationText>();
+
+        public StandardAlert() { }
+
+        public StandardAlert(
+            string imageOverride,
+            List<NotificationText> imageText,
+            List<NotificationAudio> audio,
+            List<NotificationText> marqueText)
+        {
+            ImageOverride = imageOverride;
+            ImageText = imageText;
+            Audio = audio;
+            MarqueText = marqueText;
+        }
+    }
+
+    public class NoAlert : IAlert
+    {
+
+    }
+
     public class NotificationSub
     {
-        [ScriptingAccess]
         public int Tier { get; set; } = 0;
-        [ScriptingAccess]
         public int CumulativeMonths { get; set; } = 0;
-        [ScriptingAccess]
         public string Message { get; set; } = "";
 
         public NotificationSub() { }
@@ -858,9 +856,7 @@ public partial class ScriptedActivityProvider :
 
     public class NotificationCheer
     {
-        [ScriptingAccess]
         public int Quantity { get; set; } = 0;
-        [ScriptingAccess]
         public string Message { get; set; } = "";
 
         public NotificationCheer() { }
@@ -874,9 +870,7 @@ public partial class ScriptedActivityProvider :
 
     public class NotificationGiftSub
     {
-        [ScriptingAccess]
         public int Tier { get; set; } = 0;
-        [ScriptingAccess]
         public int Months { get; set; } = 0;
 
         public NotificationGiftSub() { }
@@ -895,7 +889,6 @@ public partial class ScriptedActivityProvider :
 
     public class NotificationSoundEffect : NotificationAudio
     {
-        [ScriptingAccess]
         public string SoundEffectName { get; set; } = "";
 
         public NotificationSoundEffect() { }
@@ -908,7 +901,6 @@ public partial class ScriptedActivityProvider :
 
     public class NotificationPause : NotificationAudio
     {
-        [ScriptingAccess]
         public int PauseDurationMS { get; set; } = 1000;
 
         public NotificationPause() { }
@@ -922,19 +914,10 @@ public partial class ScriptedActivityProvider :
 
     public class NotificationTTS : NotificationAudio
     {
-        [ScriptingAccess]
         public string TTSVoice { get; set; } = "";
-
-        [ScriptingAccess]
         public string TTSPitch { get; set; } = "";
-
-        [ScriptingAccess]
         public string TTSSpeed { get; set; } = "";
-
-        [ScriptingAccess]
         public string TTSEffect { get; set; } = "";
-
-        [ScriptingAccess]
         public string Message { get; set; } = "";
 
         public NotificationTTS() { }
@@ -968,9 +951,7 @@ public partial class ScriptedActivityProvider :
 
     public class NotificationText
     {
-        [ScriptingAccess]
         public string Text { get; set; } = "";
-        [ScriptingAccess]
         public string Color { get; set; } = "";
 
         public NotificationText() { }
@@ -980,44 +961,11 @@ public partial class ScriptedActivityProvider :
             Text = text;
             Color = color;
         }
-    }
 
-    public class NotificationData
-    {
-        [ScriptingAccess]
-        public bool ShowNotification { get; set; } = true;
-
-        [ScriptingAccess]
-        public string ChatMessage { get; set; } = "";
-
-        [ScriptingAccess]
-        public string Image { get; set; } = "";
-
-        [ScriptingAccess]
-        public List<NotificationText> ImageText { get; set; } = new List<NotificationText>();
-
-        [ScriptingAccess]
-        public List<NotificationAudio> Audio { get; set; } = new List<NotificationAudio>();
-
-        [ScriptingAccess]
-        public bool ShowMarqueeMessage { get; set; } = false;
-
-        public NotificationData() { }
-
-        public NotificationData(
-            string chatMessage,
-            bool showNotification,
-            string image,
-            List<NotificationText> imageText,
-            List<NotificationAudio> audio,
-            bool showMarqueeMessage)
+        public NotificationText(ScriptingUser user)
         {
-            ChatMessage = chatMessage;
-            ShowNotification = showNotification;
-            Image = image;
-            ImageText = imageText;
-            Audio = audio;
-            ShowMarqueeMessage = showMarqueeMessage;
+            Text = user.TwitchUserName;
+            Color = user.Color;
         }
     }
 }

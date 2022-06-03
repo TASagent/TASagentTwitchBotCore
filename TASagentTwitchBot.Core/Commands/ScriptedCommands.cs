@@ -3,7 +3,6 @@ using System.Text.RegularExpressions;
 
 using BGC.Scripting;
 using BGC.Scripting.Parsing;
-using TASagentTwitchBot.Core.Database;
 using TASagentTwitchBot.Core.Scripting;
 
 namespace TASagentTwitchBot.Core.Commands;
@@ -25,12 +24,6 @@ public partial class ScriptedCommands : ICommandContainer, IScriptedComponent
     {
         this.scriptedCommandsConfig = scriptedCommandsConfig;
         this.communication = communication;
-    }
-
-    public static void RegisterRequiredScriptingClasses()
-    {
-        ClassRegistrar.TryRegisterClass<ScriptingUser>("User");
-        ClassRegistrar.TryRegisterClass<MessageData>();
     }
 
     public void RegisterCommands(ICommandRegistrar commandRegistrar)
@@ -74,6 +67,8 @@ public partial class ScriptedCommands : ICommandContainer, IScriptedComponent
         this.scriptRegistrar = scriptRegistrar;
 
         globalRuntimeContext = scriptRegistrar.GlobalSharedRuntimeContext;
+
+        ClassRegistrar.TryRegisterClass<ScriptingUser>("User");
 
         foreach (ScriptedCommandsConfig.ScriptedCommand? script in scriptedCommandsConfig.ScriptedCommands)
         {
@@ -167,14 +162,9 @@ public partial class ScriptedCommands : ICommandContainer, IScriptedComponent
 
         try
         {
-            MessageData data = await script.Execute(
+            await script.Execute(
                 user: ScriptingUser.FromDB(chatter.User),
                 remainingCommand: remainingCommand.ToList());
-
-            if (!string.IsNullOrEmpty(data.ChatMessage))
-            {
-                communication.SendPublicChatMessage(data.ChatMessage);
-            }
         }
         catch (Exception ex)
         {
@@ -409,21 +399,5 @@ public partial class ScriptedCommands : ICommandContainer, IScriptedComponent
         }
 
         return Task.CompletedTask;
-    }
-
-    public class MessageData
-    {
-        [ScriptingAccess]
-        public string ChatMessage { get; set; } = "";
-
-        public MessageData()
-        {
-
-        }
-
-        public MessageData(string message)
-        {
-            ChatMessage = message;
-        }
     }
 }

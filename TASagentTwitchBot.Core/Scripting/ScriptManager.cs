@@ -1,4 +1,5 @@
 ﻿using BGC.Scripting;
+using BGC.Scripting.Parsing;
 
 namespace TASagentTwitchBot.Core.Scripting;
 
@@ -41,6 +42,15 @@ public class ScriptManager : IScriptManager, IScriptRegistrar
     {
         this.communication = communication;
         this.scriptedComponents = scriptedComponents.ToList();
+
+        Initialize();
+    }
+
+    private void Initialize()
+    {
+        ClassRegistrar.TryRegisterClass<ICommunication>("ICommunication", limited: true);
+        GlobalRuntimeContext globalRuntimeContext = (this as IScriptRegistrar).GlobalSharedRuntimeContext;
+        globalRuntimeContext.AddOrSetValue("communication", typeof(ICommunication), communication);
 
         foreach (IScriptedComponent scriptedComponent in scriptedComponents)
         {

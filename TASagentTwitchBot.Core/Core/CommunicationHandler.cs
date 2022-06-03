@@ -1,4 +1,6 @@
-﻿namespace TASagentTwitchBot.Core;
+﻿using BGC.Scripting.Parsing;
+
+namespace TASagentTwitchBot.Core;
 
 public interface ICommunication
 {
@@ -18,15 +20,25 @@ public interface ICommunication
     event ReceiveNotificationHandler? ReceiveNotificationHandlers;
     event ReceiveNotificationHandler? ReceivePendingNotificationHandlers;
 
+    [ScriptingAccess]
     void SendPublicChatMessage(string message);
+
+    [ScriptingAccess]
     void SendChatWhisper(string username, string message);
+
     void DispatchChatMessage(IRC.TwitchChatter chatter);
 
     void NotifyEvent(string message);
     void NotifyNotification(int id, string message);
     void NotifyPendingNotification(int id, string message);
+
+    [ScriptingAccess]
     void SendDebugMessage(string message);
+
+    [ScriptingAccess]
     void SendWarningMessage(string message);
+
+    [ScriptingAccess]
     void SendErrorMessage(string message);
 }
 

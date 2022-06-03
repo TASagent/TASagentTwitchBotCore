@@ -81,7 +81,7 @@ public class FullActivityProvider :
             taskList.Add(audioPlayer.PlayAudioRequest(audioActivity.AudioRequest));
         }
 
-        if (activityRequest is IMarqueeMessageActivity marqueeMessageActivity && marqueeMessageActivity.MarqueeMessage is not null)
+        if (activityRequest is IMarqueeMessageActivity marqueeMessageActivity && !string.IsNullOrWhiteSpace(marqueeMessageActivity.MarqueeMessage))
         {
             //Doesn't bother waiting on this one to complete, just triggers it.
             taskList.Add(notificationServer.ShowTTSMessageAsync(marqueeMessageActivity.MarqueeMessage));
@@ -194,18 +194,13 @@ public class FullActivityProvider :
         return Audio.AudioTools.JoinRequests(300, soundEffectRequest, ttsRequest);
     }
 
-    protected virtual Task<MarqueeMessage?> GetSubscriberMarqueeMessage(
+    protected virtual Task<string?> GetSubscriberMarqueeMessage(
         Database.User subscriber,
         string message,
         int monthCount,
         int tier)
     {
-        if (string.IsNullOrWhiteSpace(message))
-        {
-            return Task.FromResult<MarqueeMessage?>(null);
-        }
-
-        return Task.FromResult<MarqueeMessage?>(new MarqueeMessage(subscriber.TwitchUserName, message, subscriber.Color));
+        return Task.FromResult(GetStandardMarqueeMessage(subscriber, message));
     }
 
     protected virtual string GetSubscriberNotificationMessage(
@@ -341,17 +336,12 @@ public class FullActivityProvider :
         return Audio.AudioTools.JoinRequests(300, soundEffectRequest, ttsRequest);
     }
 
-    protected virtual Task<MarqueeMessage?> GetCheerMarqueeMessage(
+    protected virtual Task<string?> GetCheerMarqueeMessage(
         Database.User cheerer,
         string message,
         int quantity)
     {
-        if (string.IsNullOrWhiteSpace(message))
-        {
-            return Task.FromResult<MarqueeMessage?>(null);
-        }
-
-        return Task.FromResult<MarqueeMessage?>(new MarqueeMessage(cheerer.TwitchUserName, message, cheerer.Color));
+        return Task.FromResult(GetStandardMarqueeMessage(cheerer, message));
     }
 
     #endregion ICheerHandler
@@ -434,11 +424,11 @@ public class FullActivityProvider :
         return Task.FromResult(soundEffectRequest);
     }
 
-    protected virtual Task<MarqueeMessage?> GetRaidMarqueeMessage(
+    protected virtual Task<string?> GetRaidMarqueeMessage(
         Database.User raider,
         int count)
     {
-        return Task.FromResult<MarqueeMessage?>(null);
+        return Task.FromResult<string?>(null);
     }
 
     #endregion IRaidHandler
@@ -536,13 +526,13 @@ public class FullActivityProvider :
         return Task.FromResult(soundEffectRequest);
     }
 
-    protected virtual Task<MarqueeMessage?> GetGiftSubMarqueeMessage(
+    protected virtual Task<string?> GetGiftSubMarqueeMessage(
         Database.User sender,
         Database.User recipient,
         int tier,
         int months)
     {
-        return Task.FromResult<MarqueeMessage?>(null);
+        return Task.FromResult<string?>(null);
     }
 
     protected virtual string GetGiftSubNotificationMessage(
@@ -660,12 +650,12 @@ public class FullActivityProvider :
         return Task.FromResult(soundEffectRequest);
     }
 
-    protected virtual Task<MarqueeMessage?> GetAnonGiftSubMarqueeMessage(
+    protected virtual Task<string?> GetAnonGiftSubMarqueeMessage(
         Database.User recipient,
         int tier,
         int months)
     {
-        return Task.FromResult<MarqueeMessage?>(null);
+        return Task.FromResult<string?>(null);
     }
 
     protected virtual string GetAnonGiftSubNotificationMessage(
@@ -775,9 +765,9 @@ public class FullActivityProvider :
         return Task.FromResult(soundEffectRequest);
     }
 
-    protected virtual Task<MarqueeMessage?> GetFollowMarqueeMessage(Database.User follower)
+    protected virtual Task<string?> GetFollowMarqueeMessage(Database.User follower)
     {
-        return Task.FromResult<MarqueeMessage?>(null);
+        return Task.FromResult<string?>(null);
     }
 
     protected virtual string GetFollowNotificationMessage(Database.User follower)
@@ -844,14 +834,24 @@ public class FullActivityProvider :
             ttsText: message);
     }
 
-    protected virtual Task<MarqueeMessage> GetTTSMarqueeMessage(
+    protected virtual Task<string?> GetTTSMarqueeMessage(
         Database.User user,
         string message)
     {
-        return Task.FromResult(new MarqueeMessage(user.TwitchUserName, message, user.Color));
+        return Task.FromResult(GetStandardMarqueeMessage(user, message));
     }
 
     #endregion ITTSHandler
+
+    protected virtual string? GetStandardMarqueeMessage(Database.User user, string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return null;
+        }
+
+        return $"<h1><span style=\"color: {(string.IsNullOrWhiteSpace(user.Color) ? "#0000FF" : user.Color)}\" >{HttpUtility.HtmlEncode(user.TwitchUserName)}</span>: {HttpUtility.HtmlEncode(message)}</h1>";
+    }
 
     protected virtual void Dispose(bool disposing)
     {
@@ -878,14 +878,14 @@ public class FullActivityProvider :
     {
         public NotificationMessage? NotificationMessage { get; }
         public Audio.AudioRequest? AudioRequest { get; }
-        public MarqueeMessage? MarqueeMessage { get; }
+        public string? MarqueeMessage { get; }
 
         public FullActivityRequest(
             IActivityHandler activityHandler,
             string description,
             NotificationMessage? notificationMessage = null,
             Audio.AudioRequest? audioRequest = null,
-            MarqueeMessage? marqueeMessage = null)
+            string? marqueeMessage = null)
             : base(activityHandler, description)
         {
             NotificationMessage = notificationMessage;

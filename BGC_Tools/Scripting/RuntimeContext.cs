@@ -144,7 +144,7 @@ public class GlobalRuntimeContext : RuntimeContext
             throw new ScriptRuntimeException($"Unable to return value of type {returnValueType.Name} as a {typeof(T).Name}");
         }
 
-        if (typeof(T) == returnValueType)
+        if (typeof(T).IsAssignableFrom(returnValueType))
         {
             T temp = (T)stashedReturnValue!;
             stashedReturnValue = null;
@@ -164,12 +164,12 @@ public class GlobalRuntimeContext : RuntimeContext
     {
         if (valueDictionary.ContainsKey(key))
         {
-            if (!type.AssignableFromType(valueDictionary[key].valueType))
+            if (!valueDictionary[key].valueType.AssignableFromType(type))
             {
                 throw new ScriptRuntimeException($"Value {key} set as {type.Name} when it was {valueDictionary[key].valueType.Name}");
             }
 
-            if (type == valueDictionary[key].valueType)
+            if (valueDictionary[key].valueType.IsAssignableFrom(type))
             {
                 valueDictionary[key] = valueDictionary[key].UpdateValue(value);
             }

@@ -307,6 +307,29 @@ public class Script
     /// </summary>
     /// <exception cref="ScriptRuntimeException"></exception>
     /// <exception cref="OperationCanceledException"></exception>
+    public Task ExecuteFunctionAsync(
+        string functionName,
+        int timeoutMS,
+        ScriptRuntimeContext context,
+        params object[] arguments)
+    {
+        if (!scriptFunctions.ContainsKey(functionName))
+        {
+            throw new ScriptRuntimeException($"Unable to find function {functionName} for external invocation.");
+        }
+
+        return Task.Run(() =>
+        {
+            using CancellationTokenSource tokenSource = new CancellationTokenSource(timeoutMS);
+            scriptFunctions[functionName].Execute(context, tokenSource.Token, arguments);
+        });
+    }
+
+    /// <summary>
+    /// Executes the named function
+    /// </summary>
+    /// <exception cref="ScriptRuntimeException"></exception>
+    /// <exception cref="OperationCanceledException"></exception>
     public Task<T> ExecuteFunctionAsync<T>(
         string functionName,
         int timeoutMS,
@@ -352,6 +375,35 @@ public class Script
         {
             scriptFunctions[functionName].Execute(context, linkedSource.Token, arguments);
             return context.PopReturnValue<T>();
+        },
+        linkedSource.Token);
+    }
+
+    /// <summary>
+    /// Executes the named function
+    /// </summary>
+    /// <exception cref="ScriptRuntimeException"></exception>
+    /// <exception cref="OperationCanceledException"></exception>
+#pragma warning disable CA1068 // CancellationToken parameters must come last
+    public Task ExecuteFunctionAsync(
+#pragma warning restore CA1068 // CancellationToken parameters must come last
+        string functionName,
+        int timeoutMS,
+        CancellationToken ct,
+        ScriptRuntimeContext context,
+        params object[] arguments)
+    {
+        if (!scriptFunctions.ContainsKey(functionName))
+        {
+            throw new ScriptRuntimeException($"Unable to find function {functionName} for external invocation.");
+        }
+
+        using CancellationTokenSource tokenSource = new CancellationTokenSource(timeoutMS);
+        using CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(tokenSource.Token, ct);
+
+        return Task.Run(() =>
+        {
+            scriptFunctions[functionName].Execute(context, linkedSource.Token, arguments);
         },
         linkedSource.Token);
     }

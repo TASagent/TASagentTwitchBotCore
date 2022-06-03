@@ -34,5 +34,5 @@ public interface IOverlayActivity
 
 public interface IMarqueeMessageActivity
 {
-    MarqueeMessage? MarqueeMessage { get; }
+    string? MarqueeMessage { get; }
 }

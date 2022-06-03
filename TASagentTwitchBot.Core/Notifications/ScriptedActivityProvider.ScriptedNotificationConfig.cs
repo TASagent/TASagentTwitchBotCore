@@ -112,62 +112,65 @@ public partial class ScriptedActivityProvider
         };
 
         private static readonly FunctionSignature[] subscriptionFunctions = new FunctionSignature[] {
-            new FunctionSignature("GetNotificationData", typeof(NotificationData),
+            new FunctionSignature("GetAlertData", typeof(IAlert),
                 new VariableData("user", typeof(ScriptingUser)),
                 new VariableData("sub", typeof(NotificationSub)))};
 
         private static readonly FunctionSignature[] cheerFunctions = new FunctionSignature[] {
-            new FunctionSignature("GetNotificationData", typeof(NotificationData),
+            new FunctionSignature("GetAlertData", typeof(IAlert),
                 new VariableData("user", typeof(ScriptingUser)),
                 new VariableData("cheer", typeof(NotificationCheer)))};
 
         private static readonly FunctionSignature[] raidFunctions = new FunctionSignature[] {
-            new FunctionSignature("GetNotificationData", typeof(NotificationData),
+            new FunctionSignature("GetAlertData", typeof(IAlert),
                 new VariableData("user", typeof(ScriptingUser)),
                 new VariableData("raiders", typeof(int)))};
 
         private static readonly FunctionSignature[] giftSubFunctions = new FunctionSignature[] {
-            new FunctionSignature("GetNotificationData", typeof(NotificationData),
+            new FunctionSignature("GetAlertData", typeof(IAlert),
                 new VariableData("sender", typeof(ScriptingUser)),
                 new VariableData("recipient", typeof(ScriptingUser)),
                 new VariableData("sub", typeof(NotificationGiftSub))),
-            new FunctionSignature("GetAnonNotificationData", typeof(NotificationData),
+            new FunctionSignature("GetAnonAlertData", typeof(IAlert),
                 new VariableData("recipient", typeof(ScriptingUser)),
                 new VariableData("sub", typeof(NotificationGiftSub)))};
 
         private static readonly FunctionSignature[] followFunctions = new FunctionSignature[] {
-            new FunctionSignature("GetNotificationData", typeof(NotificationData),
+            new FunctionSignature("GetAlertData", typeof(IAlert),
                 new VariableData("follower", typeof(ScriptingUser)))};
 
         private const string DEFAULT_SUB_SCRIPT =
 @"//Default Sub Script
+extern ICommunication communication;
 
-NotificationData GetNotificationData(User user, Sub sub)
+IAlert GetAlertData(User user, Sub sub)
 {
-    NotificationData notificationData = new NotificationData();
+    StandardAlert alertData = new StandardAlert();
 
-    notificationData.ChatMessage = $""How Cow! Thanks for the {GetTierText(sub.Tier)} sub, @{user.TwitchUserName}{GetChatMonthText(sub.CumulativeMonths)}!"";
+    communication.SendPublicChatMessage($""How Cow! Thanks for the {GetTierText(sub.Tier)} sub, @{user.TwitchUserName}{GetChatMonthText(sub.CumulativeMonths)}!"");
 
-    //Empty string uses a random image
-    notificationData.Image = """";
+    //Show image for 5 seconds
+    alertData.Duration = 5.0;
 
-    notificationData.ImageText.Add(new Text(GetImageTextIntro(sub), ""#FFFFFF""));
-    notificationData.ImageText.Add(new Text(user.TwitchUserName, user.Color));
-    notificationData.ImageText.Add(new Text(""!"", ""#FFFFFF""));
+    alertData.ImageText.Add(new Text(GetImageTextIntro(sub), ""#FFFFFF""));
+    alertData.ImageText.Add(new Text(user));
+    alertData.ImageText.Add(new Text(""!"", ""#FFFFFF""));
 
 
-    notificationData.Audio.Add(new SoundEffect(""SMW PowerUp""));
-    notificationData.Audio.Add(new Pause(300));
-    notificationData.Audio.Add(new TTS(""Brian"", ""Medium"", ""Medium"", """", $""{user.TwitchUserName} has subbed {GetTTSMonthText(sub.CumulativeMonths)}""));
-    notificationData.Audio.Add(new Pause(300));
+    alertData.Audio.Add(new SoundEffect(""SMW PowerUp""));
+    alertData.Audio.Add(new Pause(300));
+    alertData.Audio.Add(new TTS(""Brian"", ""Medium"", ""Medium"", """", $""{user.TwitchUserName} has subbed {GetTTSMonthText(sub.CumulativeMonths)}""));
+    alertData.Audio.Add(new Pause(300));
     
     if (!string.IsNullOrEmpty(sub.Message))
     {
-        notificationData.Audio.Add(new TTS(user, sub.Message));
-        notificationData.ShowMarqueeMessage = true;
+        alertData.Audio.Add(new TTS(user, sub.Message));
+
+        alertData.MarqueText.Add(new Text(user));
+        alertData.MarqueText.Add(new Text($"": {sub.Message}"", ""#FFFFFF""));
     }
 
-    return notificationData;
+    return alertData;
 }
 
 
@@ -217,102 +220,97 @@ string GetTTSMonthText(int cumulativeMonths) => (cumulativeMonths <= 1) ? """" :
 
         private const string DEFAULT_CHEER_SCRIPT =
 @"//Default Cheer Script
+extern ICommunication communication;
 
-NotificationData GetNotificationData(User user, Cheer cheer)
+IAlert GetAlertData(User user, Cheer cheer)
 {
-    NotificationData notificationData = new NotificationData();
+    StandardAlert alertData = new StandardAlert();
 
-    //No chat message
-    notificationData.ChatMessage = """";
+    //Show image for 10 seconds
+    alertData.Duration = 10.0;
 
-    //Empty string uses appropriate Bit animation
-    notificationData.Image = """";
+    alertData.ImageText.Add(new Text(user));
+    alertData.ImageText.Add(new Text($"" has cheered {cheer.Quantity} {(cheer.Quantity == 1 ? "" bit: "" : "" bits: "")} {cheer.Message}"", ""#FFFFFF""));
 
-    notificationData.ImageText.Add(new Text(user.TwitchUserName, user.Color));
-    notificationData.ImageText.Add(new Text($"" has cheered {cheer.Quantity} {(cheer.Quantity == 1 ? "" bit: "" : "" bits: "")} {cheer.Message}"", ""#FFFFFF""));
-
-
-    notificationData.Audio.Add(new SoundEffect(""FF7 Purchase""));
-    notificationData.Audio.Add(new Pause(500));
+    alertData.Audio.Add(new SoundEffect(""FF7 Purchase""));
+    alertData.Audio.Add(new Pause(500));
     
     if (!string.IsNullOrEmpty(cheer.Message))
     {
-        notificationData.Audio.Add(new TTS(user, cheer.Message));
-        notificationData.ShowMarqueeMessage = true;
+        alertData.Audio.Add(new TTS(user, cheer.Message));
+
+        alertData.MarqueText.Add(new Text(user));
+        alertData.MarqueText.Add(new Text($"": {cheer.Message}"", ""#FFFFFF""));
     }
 
-    return notificationData;
+    return alertData;
 }";
 
 
 
         private const string DEFAULT_RAID_SCRIPT =
 @"//Default Raid Script
+extern ICommunication communication;
 
-NotificationData GetNotificationData(User user, int raiders)
+IAlert GetAlertData(User user, int raiders)
 {
-    NotificationData notificationData = new NotificationData();
+    StandardAlert alertData = new StandardAlert();
 
-    //No chat message
-    notificationData.ChatMessage = $""Wow! {user.TwitchUserName} has Raided with {raiders} viewers! PogChamp"";
+    //Send Chat Message
+    communication.SendPublicChatMessage($""Wow! {user.TwitchUserName} has Raided with {raiders} viewers! PogChamp"");
 
-    //Empty string uses random image
-    notificationData.Image = """";
+    //Show image for 10 seconds
+    alertData.Duration = 10.0;
 
-    notificationData.ImageText.Add(new Text($""WOW! {(raiders >= 5 ? ($""{raiders} raiders"") : (""raiders""))} incoming from "", ""#FFFFFF""));
-    notificationData.ImageText.Add(new Text(user.TwitchUserName, user.Color));
-    notificationData.ImageText.Add(new Text(""!"", ""#FFFFFF""));
+    alertData.ImageText.Add(new Text($""WOW! {(raiders >= 5 ? ($""{raiders} raiders"") : (""raiders""))} incoming from "", ""#FFFFFF""));
+    alertData.ImageText.Add(new Text(user));
+    alertData.ImageText.Add(new Text(""!"", ""#FFFFFF""));
 
-    notificationData.Audio.Add(new SoundEffect(""SMW CastleClear""));
+    alertData.Audio.Add(new SoundEffect(""SMW CastleClear""));
 
-    return notificationData;
+    return alertData;
 }";
 
         private const string DEFAULT_GIFTSUB_SCRIPT =
 @"//Default GiftSub Script
+extern ICommunication communication;
 
-NotificationData GetNotificationData(User sender, User recipient, GiftSub sub)
+IAlert GetAlertData(User sender, User recipient, GiftSub sub)
 {
-    NotificationData notificationData = new NotificationData();
+    StandardAlert alertData = new StandardAlert();
 
-    //No chat message
-    notificationData.ChatMessage = """";
+    //Show image for 5 seconds
+    alertData.Duration = 5.0;
 
-    //Empty string uses appropriate Bit animation
-    notificationData.Image = """";
+    alertData.ImageText.Add(new Text(""Thank you, "", ""#FFFFFF""));
+    alertData.ImageText.Add(new Text(sender));
+    alertData.ImageText.Add(new Text($"" for gifting {GetMessageMiddleSegment(sub)} to "", ""#FFFFFF""));
+    alertData.ImageText.Add(new Text(recipient));
+    alertData.ImageText.Add(new Text(""!"", ""#FFFFFF""));
 
-    notificationData.ImageText.Add(new Text(""Thank you, "", ""#FFFFFF""));
-    notificationData.ImageText.Add(new Text(sender.TwitchUserName, sender.Color));
-    notificationData.ImageText.Add(new Text($"" for gifting {GetMessageMiddleSegment(sub)} to "", ""#FFFFFF""));
-    notificationData.ImageText.Add(new Text(recipient.TwitchUserName, recipient.Color));
-    notificationData.ImageText.Add(new Text(""!"", ""#FFFFFF""));
+    alertData.Audio.Add(new SoundEffect(""SMW PowerUp""));
+    alertData.Audio.Add(new Pause(500));
 
-    notificationData.Audio.Add(new SoundEffect(""SMW PowerUp""));
-    notificationData.Audio.Add(new Pause(500));
-
-    return notificationData;
+    return alertData;
 }
 
-NotificationData GetAnonNotificationData(User recipient, GiftSub sub)
+IAlert GetAnonAlertData(User recipient, GiftSub sub)
 {
-    NotificationData notificationData = new NotificationData();
+    StandardAlert alertData = new StandardAlert();
 
-    //No chat message
-    notificationData.ChatMessage = """";
+    //Show image for 5 seconds
+    alertData.Duration = 5.0;
 
-    //Empty string uses appropriate Bit animation
-    notificationData.Image = """";
+    alertData.ImageText.Add(new Text(""Thank you, "", ""#FFFFFF""));
+    alertData.ImageText.Add(new Text(""Anonymous"", ""#0000FF""));
+    alertData.ImageText.Add(new Text($"" for gifting {GetMessageMiddleSegment(sub)} to "", ""#FFFFFF""));
+    alertData.ImageText.Add(new Text(recipient));
+    alertData.ImageText.Add(new Text(""!"", ""#FFFFFF""));
 
-    notificationData.ImageText.Add(new Text(""Thank you, "", ""#FFFFFF""));
-    notificationData.ImageText.Add(new Text(""Anonymous"", ""#0000FF""));
-    notificationData.ImageText.Add(new Text($"" for gifting {GetMessageMiddleSegment(sub)} to "", ""#FFFFFF""));
-    notificationData.ImageText.Add(new Text(recipient.TwitchUserName, recipient.Color));
-    notificationData.ImageText.Add(new Text(""!"", ""#FFFFFF""));
-
-    notificationData.Audio.Add(new SoundEffect(""SMW PowerUp""));
-    notificationData.Audio.Add(new Pause(500));
+    alertData.Audio.Add(new SoundEffect(""SMW PowerUp""));
+    alertData.Audio.Add(new Pause(500));
     
-    return notificationData;
+    return alertData;
 }
 
 
@@ -342,36 +340,36 @@ string GetMessageMiddleSegment(GiftSub sub)
     }
 }";
 
-
         private const string DEFAULT_FOLLOW_SCRIPT =
 @"//Default Follow Script
+extern ICommunication communication;
 
 //Used for preventing notifying on double-follow
 HashSet<string> followedUserIds = new HashSet<string>();
 
-NotificationData GetNotificationData(User follower)
+IAlert GetAlertData(User follower)
 {
-    NotificationData notificationData = new NotificationData();
-
-    notificationData.ShowNotification = followedUserIds.Add(follower.TwitchUserId);
-
-    if (notificationData.ShowNotification)
+    if (followedUserIds.Add(follower.TwitchUserId))
     {
+        //Remove the references to the user below to make it anonymous
+        communication.SendPublicChatMessage($""Thanks for following, @{follower.TwitchUserName}"");
+
+        StandardAlert alertData = new StandardAlert();
+
+        //Show image for 4 seconds
+        alertData.Duration = 4.0;
+
         //Remove the reference to the user to make it anonymous
-        notificationData.ChatMessage = $""Thanks for following, @{follower.TwitchUserName}"";
+        alertData.ImageText.Add(new Text(""Thanks for following, "", ""#FFFFFF""));
+        alertData.ImageText.Add(new Text(follower));
+        alertData.ImageText.Add(new Text(""!"", ""#FFFFFF""));
 
-        //Empty string uses random image
-        notificationData.Image = """";
+        alertData.Audio.Add(new SoundEffect(""SMW MessageBlock""));
 
-        //Remove the reference to the user to make it anonymous
-        notificationData.ImageText.Add(new Text(""Thanks for following, "", ""#FFFFFF""));
-        notificationData.ImageText.Add(new Text(follower.TwitchUserName, follower.Color));
-        notificationData.ImageText.Add(new Text(""!"", ""#FFFFFF""));
-
-        notificationData.Audio.Add(new SoundEffect(""SMW MessageBlock""));
+        return alertData;
     }
 
-    return notificationData;
+    return new NoAlert();
 }";
     }
 }

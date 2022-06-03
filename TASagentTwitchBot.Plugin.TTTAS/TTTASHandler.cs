@@ -1,4 +1,6 @@
-﻿namespace TASagentTwitchBot.Plugin.TTTAS;
+﻿using System.Web;
+
+namespace TASagentTwitchBot.Plugin.TTTAS;
 
 public interface ITTTASHandler
 {
@@ -41,7 +43,7 @@ public class TTTASHandler : ITTTASHandler
                 activityHandler: activityHandler,
                 description: $"{tttasConfig.FeatureNameBrief} {user.TwitchUserName}: {message}",
                 audioRequest: await GetTTTASAudioRequest(user, message),
-                marqueeMessage: new Core.Notifications.MarqueeMessage(user.TwitchUserName, message, user.Color)),
+                marqueeMessage: GetStandardMarqueeMessage(user, message)),
             approved: approved);
     }
 
@@ -77,17 +79,27 @@ public class TTTASHandler : ITTTASHandler
     public class TTTASActivityRequest : Core.Notifications.ActivityRequest, Core.Notifications.IAudioActivity, Core.Notifications.IMarqueeMessageActivity
     {
         public Core.Audio.AudioRequest? AudioRequest { get; }
-        public Core.Notifications.MarqueeMessage? MarqueeMessage { get; }
+        public string? MarqueeMessage { get; }
 
         public TTTASActivityRequest(
             Core.Notifications.IActivityHandler activityHandler,
             string description,
             Core.Audio.AudioRequest? audioRequest = null,
-            Core.Notifications.MarqueeMessage? marqueeMessage = null)
+            string? marqueeMessage = null)
             : base(activityHandler, description)
         {
             AudioRequest = audioRequest;
             MarqueeMessage = marqueeMessage;
         }
+    }
+
+    private string? GetStandardMarqueeMessage(Core.Database.User user, string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return null;
+        }
+
+        return $"<h1><span style=\"color: {(string.IsNullOrWhiteSpace(user.Color) ? "#0000FF" : user.Color)}\" >{HttpUtility.HtmlEncode(user.TwitchUserName)}</span>: {HttpUtility.HtmlEncode(message)}</h1>";
     }
 }
