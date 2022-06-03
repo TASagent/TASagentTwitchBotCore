@@ -17,6 +17,7 @@ public static class ScriptParser
                 .GetTokens()
                 .ExpandInterpolatedStrings()
                 .DropComments()
+                .HandleArrays()
                 .HandleElseIf()
                 .HandleAmbiguousMinus()
                 .HandleCasting()
@@ -205,6 +206,85 @@ public static class ScriptParser
             }
 
             priorToken = token;
+        }
+    }
+
+    /// <summary>
+    /// Replaces AmbiguousMinus, AmbiguousLessThan, and AmbiguousGreaterThan
+    /// </summary>
+    private static IEnumerable<Token> HandleArrays(this IEnumerable<Token> tokens)
+    {
+        TypeToken? priorTypeToken = null;
+        SeparatorToken? openBracketToken = null;
+
+        foreach (Token token in tokens)
+        {
+            if (openBracketToken is not null)
+            {
+                //Accumulated "Type["
+                if (token is SeparatorToken closeBracketToken && closeBracketToken.separator == Separator.CloseIndexer)
+                {
+                    //stashing "Type[]"
+                    priorTypeToken = new TypeToken(
+                        source: priorTypeToken!,
+                        alias: $"{priorTypeToken!.alias}[]",
+                        type: priorTypeToken.type.MakeArrayType());
+
+                    openBracketToken = null;
+                    continue;
+                }
+                else
+                {
+                    //Output "Type" and "["
+                    yield return priorTypeToken!;
+                    priorTypeToken = null;
+
+                    yield return openBracketToken;
+                    openBracketToken = null;
+
+                    //Continue on in case token is a type
+                }
+            }
+            
+            if (priorTypeToken is not null)
+            {
+                //Accumulated "Type"
+                if (token is SeparatorToken sepToken && sepToken.separator == Separator.OpenIndexer)
+                {
+                    //stashing "["
+                    openBracketToken = sepToken;
+
+                    continue;
+                }
+                else
+                {
+                    //Output "Type" and "["
+                    yield return priorTypeToken!;
+                    priorTypeToken = null;
+
+                    //Continue on in case token is a type
+                }
+            }
+            
+            if (token is TypeToken typeToken)
+            {
+                priorTypeToken = typeToken;
+                continue;
+            }
+            else
+            {
+                yield return token;
+            }
+        }
+
+        if (priorTypeToken is not null)
+        {
+            yield return priorTypeToken;
+        }
+
+        if (openBracketToken is not null)
+        {
+            yield return openBracketToken;
         }
     }
 

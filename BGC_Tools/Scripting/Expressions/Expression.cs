@@ -326,38 +326,87 @@ public static class Expression
                 {
                     tokens.CautiousAdvance();
                     Type newObjectType = tokens.ReadTypeAndAdvance();
-
-                    IValueGetter[] args = ParseArguments(tokens, context);
-
-                    if (tokens.TestWithoutSkipping(Separator.OpenCurlyBoi))
+                    
+                    if (tokens.TestWithoutSkipping(Separator.OpenIndexer) || newObjectType.IsArray)
                     {
-                        Type? itemType = newObjectType.GetInitializerItemType();
-                        if (itemType == null)
+                        //Array
+                        IValueGetter? countValue = null;
+                        IValueGetter[]? initializerValues = null;
+
+                        if (tokens.TestAndConditionallySkip(Separator.OpenIndexer))
                         {
-                            throw new ScriptParsingException(
-                                source: keywordToken,
-                                message: $"Initializer Lists only function on collections. " +
-                                    $"Did you enter the wrong type, or possibly omit a semicolon at the end of the expression?");
+                            newObjectType = newObjectType.MakeArrayType();
+                            IExpression? indexerExpression = ParseNextExpression(tokens, context);
+                            countValue = indexerExpression as IValueGetter;
+
+                            if (countValue is null)
+                            {
+                                throw new ScriptParsingException(
+                                    source: tokens.Current,
+                                    message: $"Index operation requires value type: {indexerExpression}");
+                            }
+                            tokens.AssertAndSkip(Separator.CloseIndexer);
                         }
 
-                        //Initializer Syntax
-                        IValueGetter[] items = ParseItems(tokens, itemType, context);
+                        if (tokens.TestWithoutSkipping(Separator.OpenCurlyBoi))
+                        {
+                            //Initializer List
+                            Type? itemType = newObjectType.GetInitializerItemType();
+                            if (itemType == null)
+                            {
+                                throw new ScriptParsingException(
+                                    source: keywordToken,
+                                    message: $"Initializer Lists only function on collections. " +
+                                        $"Did you enter the wrong type, or possibly omit a semicolon at the end of the expression?");
+                            }
+                            //Initializer Syntax
+                            initializerValues = ParseItems(tokens, itemType, context);
+                        }
 
                         units.Add(new ParsedValuedUnit(
-                            value: new ConstructInitializedCollectionExpression(
-                                objectType: newObjectType,
-                                args: args,
-                                items: items,
-                                source: keywordToken),
+                            value: new ConstructArrayExpression(
+                                arrayType: newObjectType,
+                                arg: countValue,
+                                initializer: initializerValues,
+                                token: keywordToken),
                             firstToken: keywordToken));
                     }
                     else
                     {
-                        units.Add(new ParsedValuedUnit(
-                            value: new ConstructObjectExpression(
-                                objectType: newObjectType,
-                                args: args),
-                            firstToken: keywordToken));
+                        //Non-Array
+
+                        IValueGetter[] args = ParseArguments(tokens, context);
+
+                        if (tokens.TestWithoutSkipping(Separator.OpenCurlyBoi))
+                        {
+                            Type? itemType = newObjectType.GetInitializerItemType();
+                            if (itemType == null)
+                            {
+                                throw new ScriptParsingException(
+                                    source: keywordToken,
+                                    message: $"Initializer Lists only function on collections. " +
+                                        $"Did you enter the wrong type, or possibly omit a semicolon at the end of the expression?");
+                            }
+
+                            //Initializer Syntax
+                            IValueGetter[] items = ParseItems(tokens, itemType, context);
+
+                            units.Add(new ParsedValuedUnit(
+                                value: new ConstructInitializedCollectionExpression(
+                                    objectType: newObjectType,
+                                    args: args,
+                                    items: items,
+                                    source: keywordToken),
+                                firstToken: keywordToken));
+                        }
+                        else
+                        {
+                            units.Add(new ParsedValuedUnit(
+                                value: new ConstructObjectExpression(
+                                    objectType: newObjectType,
+                                    args: args),
+                                firstToken: keywordToken));
+                        }
                     }
                 }
                 break;
@@ -573,7 +622,7 @@ public static class Expression
                 //Swap the ParsingUnit for the calculated value
                 units[i] = new ParsedValuedUnit(
                     value: new IndexerOperation(
-                        valueArg: units[i].AsValueGetter!,
+                        containerArg: units[i].AsValueGetter!,
                         indexArg: indexAccessUnit.arg,
                         source: units[i].FirstToken),
                     firstToken: units[i].FirstToken);

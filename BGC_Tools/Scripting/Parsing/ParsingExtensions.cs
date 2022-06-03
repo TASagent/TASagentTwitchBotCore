@@ -239,6 +239,11 @@ public static class ParsingExtensions
 
     public static Type? GetIndexingType(this Type valueType)
     {
+        if (valueType.IsArray)
+        {
+            return typeof(int);
+        }
+
         if (!valueType.IsGenericType)
         {
             return null;
@@ -256,11 +261,17 @@ public static class ParsingExtensions
             return valueType.GetGenericArguments()[0];
         }
 
+
         return null;
     }
 
     public static Type? GetIndexingReturnType(this Type valueType)
     {
+        if (valueType.IsArray)
+        {
+            return valueType.GetElementType();
+        }
+
         if (!valueType.IsGenericType)
         {
             return null;
@@ -283,6 +294,11 @@ public static class ParsingExtensions
 
     public static bool IsInitializerSupportedCollection(this Type valueType)
     {
+        if (valueType.IsArray)
+        {
+            return true;
+        }
+
         if (!valueType.IsGenericType)
         {
             return false;
@@ -307,6 +323,12 @@ public static class ParsingExtensions
 
     public static Type? GetInitializerItemType(this Type valueType)
     {
+        if (valueType.IsArray)
+        {
+            return valueType.GetElementType();
+        }
+
+
         if (!valueType.IsInitializerSupportedCollection())
         {
             return null;

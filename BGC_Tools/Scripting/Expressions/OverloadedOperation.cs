@@ -12,29 +12,29 @@ public static class OverloadedOperation
         Type[] types = new Type[] { arg1.GetValueType(), arg2.GetValueType() };
         IValueGetter[] valueGetters = new IValueGetter[] { arg1, arg2 };
 
-        IExpression? overloadExpression = ClassRegistrar.GetStaticMethodExpression(
-            type: types[0],
-            genericMethodArguments: null,
-            args: valueGetters,
-            methodName: GetOverloadName(operatorToken.operatorType),
-            source: operatorToken);
-
-        if (overloadExpression is null)
+        if (ClassRegistrar.GetStaticMethodExpression(
+                type: types[0],
+                genericMethodArguments: null,
+                args: valueGetters,
+                methodName: GetOverloadName(operatorToken.operatorType),
+                source: operatorToken) is IExpression firstOverload)
         {
-            overloadExpression = ClassRegistrar.GetStaticMethodExpression(
+            return firstOverload;
+        }
+
+        if (types[0] != types[1] &&
+            ClassRegistrar.GetStaticMethodExpression(
                 type: types[1],
                 genericMethodArguments: null,
                 args: valueGetters,
                 methodName: GetOverloadName(operatorToken.operatorType),
-                source: operatorToken);
-        }
-
-        if (overloadExpression is not null)
+                source: operatorToken) is IExpression secondOverload)
         {
-            return overloadExpression;
+            return secondOverload;
         }
 
-        if (operatorToken.operatorType == Operator.IsEqualTo || operatorToken.operatorType == Operator.IsNotEqualTo)
+        if (operatorToken.operatorType == Operator.IsEqualTo ||
+            operatorToken.operatorType == Operator.IsNotEqualTo)
         {
             //Fall back to standard equality comparison
             return EqualityCompairsonOperation.CreateEqualityComparisonOperator(
@@ -75,5 +75,7 @@ public static class OverloadedOperation
 
         Operator.AndEquals => "op_BitwiseAndAssignment",
         Operator.OrEquals => "op_BitwiseOrAssignment",
+
+        _ => ""
     };
 }

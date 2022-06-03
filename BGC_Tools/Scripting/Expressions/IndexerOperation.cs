@@ -4,30 +4,31 @@ namespace BGC.Scripting;
 
 public class IndexerOperation : IValue, IValueGetter, IValueSetter
 {
-    private readonly IValueGetter valueArg;
+    private readonly IValueGetter containerArg;
     private readonly IValueGetter indexArg;
+    private readonly Type containerType;
     private readonly Type indexerType;
     private readonly Type getType;
-    private readonly MethodInfo indexGetter;
-    private readonly MethodInfo indexSetter;
+    private readonly MethodInfo? indexGetter;
+    private readonly MethodInfo? indexSetter;
 
     public IndexerOperation(
-        IValueGetter valueArg,
+        IValueGetter containerArg,
         IValueGetter indexArg,
         Token source)
     {
-        Type valueType = valueArg.GetValueType();
+        containerType = containerArg.GetValueType();
 
-        indexerType = valueType.GetIndexingType()!;
+        indexerType = containerType.GetIndexingType()!;
 
         if (indexerType == null)
         {
             throw new ScriptParsingException(
                 source: source,
-                message: $"Indexer used on non-Indexable type: type {valueType.Name}");
+                message: $"Indexer used on non-Indexable type: type {containerType.Name}");
         }
 
-        getType = valueType.GetIndexingReturnType()!;
+        getType = containerType.GetIndexingReturnType()!;
 
         if (!indexerType.AssignableFromType(indexArg.GetValueType()))
         {
@@ -36,24 +37,27 @@ public class IndexerOperation : IValue, IValueGetter, IValueSetter
                 message: $"Indexer value must be of type {indexerType.Name}: type {indexArg.GetValueType().Name}");
         }
 
-        this.valueArg = valueArg;
+        this.containerArg = containerArg;
         this.indexArg = indexArg;
 
-        indexGetter = valueType.GetMethod("get_Item", new Type[] { indexerType })!;
-        indexSetter = valueType.GetMethod("set_Item", new Type[] { indexerType, getType! })!;
-
-        if (indexGetter == null)
+        if (!containerType.IsArray)
         {
-            throw new ScriptParsingException(
-                source: source,
-                message: $"Failed to get indexGetter for type: type {valueType.Name}");
-        }
+            indexGetter = containerType.GetMethod("get_Item", new Type[] { indexerType })!;
+            indexSetter = containerType.GetMethod("set_Item", new Type[] { indexerType, getType! })!;
 
-        if (indexSetter == null)
-        {
-            throw new ScriptParsingException(
-                source: source,
-                message: $"Failed to get indexSetter for type: type {valueType.Name}");
+            if (indexGetter == null)
+            {
+                throw new ScriptParsingException(
+                    source: source,
+                    message: $"Failed to get indexGetter for type: type {containerType.Name}");
+            }
+
+            if (indexSetter == null)
+            {
+                throw new ScriptParsingException(
+                    source: source,
+                    message: $"Failed to get indexSetter for type: type {containerType.Name}");
+            }
         }
     }
 
@@ -66,14 +70,28 @@ public class IndexerOperation : IValue, IValueGetter, IValueSetter
             throw new ScriptRuntimeException($"Tried to retrieve result of Indexing with type {getType.Name} as type {returnType.Name}");
         }
 
-        object? index = indexArg.GetAs<object>(context);
+        object? value;
 
-        if (!indexerType.IsAssignableFrom(indexArg.GetValueType()))
+        if (!containerType.IsArray)
         {
-            index = Convert.ChangeType(index, indexerType);
-        }
+            object? index = indexArg.GetAs<object>(context);
 
-        object? value = indexGetter.Invoke(valueArg.GetAs<object>(context), new object[] { index! });
+            if (!indexerType.IsAssignableFrom(indexArg.GetValueType()))
+            {
+                index = Convert.ChangeType(index, indexerType);
+            }
+
+            value = indexGetter!.Invoke(containerArg.GetAs<object>(context), new object[] { index! });
+
+        }
+        else
+        {
+            Array array = containerArg.GetAs<Array>(context)!;
+
+            int index = indexArg.GetAs<int>(context);
+
+            value = array.GetValue(index);
+        }
 
         if (!returnType.IsAssignableFrom(getType))
         {
@@ -92,19 +110,29 @@ public class IndexerOperation : IValue, IValueGetter, IValueSetter
             throw new ScriptRuntimeException($"Tried to set result of Indexing with type {getType.Name} as type {valueType.Name}");
         }
 
-        object? index = indexArg.GetAs<object>(context);
-
-        if (!indexerType.IsAssignableFrom(indexArg.GetValueType()))
-        {
-            index = Convert.ChangeType(index, indexerType);
-        }
-
         if (!getType.IsAssignableFrom(valueType))
         {
             value = Convert.ChangeType(value, getType);
         }
 
-        indexSetter.Invoke(valueArg.GetAs<object>(context), new object[] { index!, value! });
+        if (!containerType.IsArray)
+        {
+            object? index = indexArg.GetAs<object>(context);
+
+            if (!indexerType.IsAssignableFrom(indexArg.GetValueType()))
+            {
+                index = Convert.ChangeType(index, indexerType);
+            }
+
+            indexSetter!.Invoke(containerArg.GetAs<object>(context), new object[] { index!, value! });
+        }
+        else
+        {
+            Array array = containerArg.GetAs<Array>(context)!;
+            int index = indexArg.GetAs<int>(context);
+            array.SetValue(value, index);
+        }
+
     }
 
     public void SetAs<T>(RuntimeContext context, T? value)
@@ -116,20 +144,29 @@ public class IndexerOperation : IValue, IValueGetter, IValueSetter
             throw new ScriptRuntimeException($"Tried to set result of Indexing with type {getType.Name} as type {setType.Name}");
         }
 
-        object? index = indexArg.GetAs<object>(context);
+        object? convertedValue = value;
 
-        if (!indexerType.IsAssignableFrom(indexArg.GetValueType()))
+        if (!getType.IsAssignableFrom(setType))
         {
-            index = Convert.ChangeType(index, indexerType);
+            convertedValue = Convert.ChangeType(value, getType);
         }
 
-        if (getType.IsAssignableFrom(setType))
+        if (!containerType.IsArray)
         {
-            indexSetter.Invoke(valueArg.GetAs<object>(context), new object[] { index!, value! });
+            object? index = indexArg.GetAs<object>(context);
+
+            if (!indexerType.IsAssignableFrom(indexArg.GetValueType()))
+            {
+                index = Convert.ChangeType(index, indexerType);
+            }
+
+            indexSetter!.Invoke(containerArg.GetAs<object>(context), new object[] { index!, convertedValue! });
         }
         else
         {
-            indexSetter.Invoke(valueArg.GetAs<object>(context), new object[] { index!, Convert.ChangeType(value, getType)! });
+            Array array = containerArg.GetAs<Array>(context)!;
+            int index = indexArg.GetAs<int>(context);
+            array.SetValue(convertedValue, index);
         }
     }
 
