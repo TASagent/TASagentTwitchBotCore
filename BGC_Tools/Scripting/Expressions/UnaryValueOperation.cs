@@ -6,7 +6,6 @@ public class UnaryValueOperation : IValueGetter, IExecutable
     private readonly Operator operatorType;
     private readonly Type valueType;
 
-    private readonly bool increment;
     private readonly bool prefix;
 
     public UnaryValueOperation(
@@ -16,7 +15,7 @@ public class UnaryValueOperation : IValueGetter, IExecutable
     {
         Type argType = arg.GetValueType();
 
-        if (!(argType == typeof(double) || argType == typeof(int)))
+        if (!argType.IsExtendedPrimitive() || argType == typeof(string))
         {
             throw new ScriptParsingException(
                 source: operatorToken,
@@ -27,85 +26,38 @@ public class UnaryValueOperation : IValueGetter, IExecutable
         this.prefix = prefix;
         valueType = argType;
         operatorType = operatorToken.operatorType;
-
-        switch (operatorType)
-        {
-            case Operator.Increment:
-                increment = true;
-                break;
-
-            case Operator.Decrement:
-                increment = false;
-                break;
-
-            default:
-                throw new ArgumentException($"Unexpected Operator: {operatorType}");
-        }
     }
 
-    private void Modify(RuntimeContext context)
-    {
-        int diff = increment ? 1 : -1;
-
-        if (valueType == typeof(int))
-        {
-            //Modify as Integer
-            arg.SetAs(context, arg.GetAs<int>(context) + diff);
-        }
-        else
-        {
-            //Modify as Double
-            arg.SetAs(context, arg.GetAs<double>(context) + diff);
-        }
-    }
 
     public T GetAs<T>(RuntimeContext context)
     {
         Type returnType = typeof(T);
 
-        if (returnType == typeof(object))
-        {
-            returnType = valueType;
-        }
-
-        if (!(returnType == typeof(int) || returnType == typeof(double)))
+        if (!returnType.AssignableOrConvertableFromType(valueType))
         {
             throw new ScriptRuntimeException($"Tried to retrieve result of applying {operatorType} to {arg} of type {valueType.Name} as type {returnType.Name}");
         }
 
-        if (returnType == typeof(int) && valueType != typeof(int))
-        {
-            throw new ScriptRuntimeException($"Tried to implicitly cast the results of {this} to type {returnType.Name}");
-        }
-
-        if (returnType == typeof(int))
-        {
-            if (prefix)
-            {
-                Modify(context);
-                return (T)(object)arg.GetAs<int>(context);
-            }
-            else
-            {
-                //PostFix
-                int outputValue = arg.GetAs<int>(context);
-                Modify(context);
-                return (T)(object)outputValue;
-            }
-        }
+        object value;
 
         if (prefix)
         {
             Modify(context);
-            return (T)(object)arg.GetAs<double>(context);
+            value = arg.GetAs<object>(context)!;
         }
         else
         {
             //PostFix
-            double outputValue = arg.GetAs<double>(context);
+            value = arg.GetAs<object>(context)!;
             Modify(context);
-            return (T)(object)outputValue;
         }
+
+        if (!returnType.IsAssignableFrom(valueType))
+        {
+            value = Convert.ChangeType(value, returnType);
+        }
+
+        return (T)value;
     }
 
     public FlowState Execute(
@@ -118,4 +70,24 @@ public class UnaryValueOperation : IValueGetter, IExecutable
     }
 
     public Type GetValueType() => valueType;
+
+    private void Modify(RuntimeContext context)
+    {
+        dynamic value = arg.GetAs<object>(context)!;
+
+        switch (operatorType)
+        {
+            case Operator.Increment:
+                value++;
+                break;
+
+            case Operator.Decrement:
+                value--;
+                break;
+
+            default: throw new ArgumentException($"Unexpected Operator {operatorType}");
+        }
+
+        arg.Set(context, value);
+    }
 }

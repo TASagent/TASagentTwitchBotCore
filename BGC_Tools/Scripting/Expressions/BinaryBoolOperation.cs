@@ -63,7 +63,7 @@ public class BinaryBoolOperation : IValueGetter
 
     public T GetAs<T>(RuntimeContext context)
     {
-        if (!typeof(T).AssignableFromType(typeof(bool)))
+        if (!typeof(T).AssignableOrConvertableFromType(typeof(bool)))
         {
             throw new ScriptRuntimeException($"Tried to retrieve result of applying {operatorType} as type {typeof(T).Name}");
         }

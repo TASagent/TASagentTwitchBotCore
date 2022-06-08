@@ -48,7 +48,7 @@ public abstract class RegisteredMethodOperation : IValueGetter, IExecutable
     {
         Type returnType = typeof(T);
 
-        if (!returnType.AssignableFromType(this.returnType))
+        if (!returnType.AssignableOrConvertableFromType(this.returnType))
         {
             throw new ScriptRuntimeException($"Tried to retrieve result of Method Invocation with type {this.returnType.Name} as type {returnType.Name}");
         }
@@ -126,7 +126,7 @@ public abstract class RegisteredMethodOperation : IValueGetter, IExecutable
 
         for (int i = 0; i < parameterTypes.Length; i++)
         {
-            if (!parameters[i].ParameterType.AssignableFromType(parameterTypes[i]))
+            if (!parameters[i].ParameterType.AssignableOrConvertableFromType(parameterTypes[i]))
             {
                 return false;
             }

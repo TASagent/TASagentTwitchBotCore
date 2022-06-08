@@ -13,30 +13,7 @@ public class PlusEqualsOperation : Statement
     {
         assigneeType = assignee.GetValueType();
 
-        if (assigneeType == typeof(string))
-        {
-            //Concatenation operator
-        }
-        else if (assigneeType == typeof(int) || assigneeType == typeof(double))
-        {
-            //Addition operator
-            Type valueType = value.GetValueType();
-
-            if (!(valueType == typeof(int) || valueType == typeof(double)))
-            {
-                throw new ScriptParsingException(
-                    source: source,
-                    message: $"Value {value} for Operator {source} is not a numerical value: type {valueType.Name}");
-            }
-
-            if (assigneeType == typeof(int) && valueType == typeof(double))
-            {
-                throw new ScriptParsingException(
-                    source: source,
-                    message: $"Unable to implicity cast Value {value} to type int for assignment to assignee {assignee}.");
-            }
-        }
-        else
+        if (assigneeType != typeof(string))
         {
             throw new ScriptParsingException(
                 source: source,
@@ -51,23 +28,12 @@ public class PlusEqualsOperation : Statement
         ScopeRuntimeContext context,
         CancellationToken ct)
     {
-        if (assigneeType == typeof(int))
+        if (assigneeType != typeof(string))
         {
-            assignee.SetAs(context, assignee.GetAs<int>(context) + value.GetAs<int>(context));
+            throw new ScriptRuntimeException($"Incompatible types for operator {Operator.PlusEquals}: {assignee} of type {assigneeType.Name} and {value} of type {value.GetValueType().Name}");
         }
-        else if (assigneeType == typeof(double))
-        {
-            assignee.SetAs(context, assignee.GetAs<double>(context) + value.GetAs<double>(context));
-        }
-        else if (assigneeType == typeof(string))
-        {
-            assignee.SetAs(context, assignee.GetAs<string>(context) + GetStringValue(value, context));
-        }
-        else
-        {
-            throw new ScriptRuntimeException(
-                $"Incompatible types for operator {Operator.PlusEquals}: {assignee} of type {assigneeType.Name} and {value} of type {value.GetValueType().Name}");
-        }
+
+        assignee.SetAs(context, assignee.GetAs<string>(context) + GetStringValue(value, context));
 
         return FlowState.Nominal;
     }
@@ -80,19 +46,7 @@ public class PlusEqualsOperation : Statement
         {
             return arg.GetAs<string>(context)!;
         }
-        else if (argType == typeof(double))
-        {
-            return arg.GetAs<double>(context).ToString();
-        }
-        else if (argType == typeof(int))
-        {
-            return arg.GetAs<int>(context).ToString();
-        }
-        else if (argType == typeof(bool))
-        {
-            return arg.GetAs<bool>(context).ToString();
-        }
 
-        throw new ScriptRuntimeException($"Unsupported type for Stringification: type {argType.Name}");
+        return arg.GetAs<object>(context)!.ToString()!;
     }
 }

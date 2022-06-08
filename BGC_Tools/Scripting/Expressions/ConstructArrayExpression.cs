@@ -30,7 +30,7 @@ public class ConstructArrayExpression : IValueGetter
         {
             for (int i = 0; i < initializer.Length; i++)
             {
-                if (!elementType.AssignableFromType(initializer[i].GetValueType()))
+                if (!elementType.AssignableOrConvertableFromType(initializer[i].GetValueType()))
                 {
                     throw new ScriptParsingException(
                         source: token,
@@ -45,7 +45,7 @@ public class ConstructArrayExpression : IValueGetter
     {
         Type returnType = typeof(T);
 
-        if (!returnType.AssignableFromType(arrayType))
+        if (!returnType.AssignableOrConvertableFromType(arrayType))
         {
             throw new ScriptRuntimeException($"Tried to retrieve result of object construction of type {arrayType.Name} as type {returnType.Name}");
         }

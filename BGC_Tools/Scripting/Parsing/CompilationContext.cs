@@ -94,8 +94,8 @@ public abstract class CompilationContext
         return parent.GetConstantValue(key);
     }
 
-    public virtual FunctionSignature GetFunctionSignature(string key) =>
-        ScriptContext!.GetFunctionSignature(key);
+    public virtual FunctionSignature? GetMatchingFunctionSignature(IdentifierToken identToken, Type[] arguments) =>
+        ScriptContext!.GetMatchingFunctionSignature(identToken, arguments);
 
     public void DeclareConstant(
         IdentifierToken identifierToken,
@@ -120,10 +120,9 @@ public abstract class CompilationContext
 
         if (HasExistingFunction(identifierToken.identifier))
         {
-            IdentifierToken? functionToken = GetExistingFunctionIdentifier(identifierToken.identifier);
             throw new ScriptParsingException(
                 source: identifierToken,
-                message: $"Constant {identifierToken.identifier} already defined in context as function, on line {functionToken?.line} column {functionToken?.column}.");
+                message: $"Constant {identifierToken.identifier} already defined in context as function.");
         }
 
         constantDictionary.Add(
@@ -156,10 +155,9 @@ public abstract class CompilationContext
 
         if (HasExistingFunction(identifierToken.identifier))
         {
-            IdentifierToken? functionToken = GetExistingFunctionIdentifier(identifierToken.identifier);
             throw new ScriptParsingException(
                 source: identifierToken,
-                message: $"Variable {identifierToken.identifier} already defined in context as function, on line {functionToken?.line} column {functionToken?.column}.");
+                message: $"Variable {identifierToken.identifier} already defined in context as function.");
         }
 
         valueDictionary.Add(
@@ -240,7 +238,7 @@ public abstract class CompilationContext
 
     public void ValidateReturn(KeywordToken returnKeyword, Type returnType)
     {
-        if (!GetReturnType().AssignableFromType(returnType))
+        if (!GetReturnType().AssignableOrConvertableFromType(returnType))
         {
             throw new ScriptParsingException(
                 source: returnKeyword,
@@ -261,7 +259,7 @@ public abstract class CompilationContext
 
 public class ScriptCompilationContext : CompilationContext
 {
-    protected readonly Dictionary<string, FunctionSignature> functionDictionary = new Dictionary<string, FunctionSignature>();
+    protected readonly Dictionary<string, List<FunctionSignature>> functionDictionary = new Dictionary<string, List<FunctionSignature>>();
 
     protected override ScriptCompilationContext ScriptContext => this;
 
@@ -271,24 +269,29 @@ public class ScriptCompilationContext : CompilationContext
 
     }
 
-    protected override IdentifierToken? GetExistingFunctionIdentifier(string identifier)
+    public override FunctionSignature? GetMatchingFunctionSignature(IdentifierToken identToken, Type[] arguments)
     {
-        if (functionDictionary.ContainsKey(identifier))
+        if (!functionDictionary.TryGetValue(identToken.identifier, out List<FunctionSignature>? functionSignatures))
         {
-            return functionDictionary[identifier].identifierToken;
+            return null;
         }
 
-        return null;
-    }
-
-    public override FunctionSignature GetFunctionSignature(string key)
-    {
-        if (functionDictionary.ContainsKey(key))
+        if (functionSignatures.Any(x => x.MatchesArgs(arguments)))
         {
-            return functionDictionary[key];
+            return functionSignatures.Single(x => x.MatchesArgs(arguments));
         }
 
-        throw new Exception("Failed to check if function signature existed first");
+        int looseCount = functionSignatures.Count(x => x.LooselyMatchesArgs(arguments));
+
+        if (looseCount > 1)
+        {
+            throw new ScriptParsingException(identToken,
+                $"Ambiguous function invocation. " +
+                $"Argument type list [{string.Join(", ", arguments.Select(x => x.Name))}] exactly matches no function " +
+                $"and loosely matches {looseCount} functions.");
+        }
+
+        return functionSignatures.FirstOrDefault(x => x.LooselyMatchesArgs(arguments));
     }
 
     protected override bool HasExistingFunction(string identifier) =>
@@ -296,14 +299,6 @@ public class ScriptCompilationContext : CompilationContext
 
     public void DeclareFunction(in FunctionSignature functionSignature)
     {
-        if (HasExistingFunction(functionSignature.identifierToken.identifier))
-        {
-            IdentifierToken? originalToken = GetExistingFunctionIdentifier(functionSignature.identifierToken.identifier);
-            throw new ScriptParsingException(
-                source: functionSignature.identifierToken,
-                message: $"Function {functionSignature.identifierToken.identifier} already defined in context, on line {originalToken?.line} column {originalToken?.column}.");
-        }
-
         if (HasExistingConstant(functionSignature.identifierToken.identifier))
         {
             IdentifierToken? constantToken = GetExistingConstantIdentifier(functionSignature.identifierToken.identifier);
@@ -320,7 +315,24 @@ public class ScriptCompilationContext : CompilationContext
                 message: $"Function {functionSignature.identifierToken.identifier} already defined in context as variable, on line {memberToken?.line} column {memberToken?.column}.");
         }
 
-        functionDictionary.Add(functionSignature.identifierToken.identifier, functionSignature);
+        List<FunctionSignature> functions;
+        if (!functionDictionary.TryGetValue(functionSignature.identifierToken.identifier, out functions!))
+        {
+            functions = new List<FunctionSignature>();
+            functionDictionary.Add(functionSignature.identifierToken.identifier, functions);
+        }
+
+        foreach (FunctionSignature function in functions)
+        {
+            if (function.Matches(functionSignature))
+            {
+                throw new ScriptParsingException(
+                    source: function.identifierToken,
+                    message: $"Function {functionSignature.identifierToken.identifier} already defined with same argument list, on line {function.identifierToken.line} column {function.identifierToken.column}.");
+            }
+        }
+
+        functions.Add(functionSignature);
     }
 
 
@@ -405,6 +417,12 @@ public readonly struct VariableData
     public bool MatchesType(in VariableData other) =>
         valueType == other.valueType;
 
+    public bool MatchesType(Type other) =>
+        valueType == other;
+
+    public bool LooselyMatchesType(Type other) =>
+        valueType.AssignableOrConvertableFromType(other);
+
     public override string ToString() => $"{valueType.Name} {identifierToken.identifier}";
 }
 
@@ -472,6 +490,42 @@ public readonly struct FunctionSignature
         for (int i = 0; i < arguments.Length; i++)
         {
             if (!arguments[i].MatchesType(other.arguments[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public bool MatchesArgs(Type[] args)
+    {
+        if (arguments.Length != args.Length)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < arguments.Length; i++)
+        {
+            if (!arguments[i].MatchesType(args[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public bool LooselyMatchesArgs(Type[] args)
+    {
+        if (arguments.Length != args.Length)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < arguments.Length; i++)
+        {
+            if (!arguments[i].LooselyMatchesType(args[i]))
             {
                 return false;
             }

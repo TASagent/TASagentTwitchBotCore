@@ -23,9 +23,9 @@ public abstract class RegisteredGettablePropertyOperation : IValueGetter
     {
         Type returnType = typeof(T);
 
-        if (!returnType.AssignableFromType(propertyType))
+        if (!returnType.AssignableOrConvertableFromType(propertyType))
         {
-            throw new ScriptRuntimeException($"Tried to retrieve Property with type {propertyType.Name} as type {returnType.Name}");
+            throw new ScriptRuntimeException($"Tried to retrieve Property {propertyInfo.Name} with type {propertyType.Name} as type {returnType.Name}");
         }
 
         object? result = propertyInfo.GetValue(GetInstanceValue(context));

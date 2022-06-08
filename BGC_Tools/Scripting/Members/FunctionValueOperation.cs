@@ -26,7 +26,7 @@ public class FunctionValueOperation : IValueGetter, IExecutable
     {
         Type returnType = typeof(T);
 
-        if (!returnType.AssignableFromType(outputType))
+        if (!returnType.AssignableOrConvertableFromType(outputType))
         {
             throw new ScriptRuntimeException($"Tried to retrieve result of Indexing with type {outputType.Name} as type {returnType.Name}");
         }

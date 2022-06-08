@@ -4,7 +4,7 @@ public class Script
 {
     public readonly string scriptText;
     private readonly List<ScriptDeclaration> scriptDeclarations = new List<ScriptDeclaration>();
-    private readonly Dictionary<string, ScriptFunction> scriptFunctions = new Dictionary<string, ScriptFunction>();
+    private readonly Dictionary<string, List<ScriptFunction>> scriptFunctions = new Dictionary<string, List<ScriptFunction>>();
 
     /// <summary>
     /// Parse Script
@@ -33,22 +33,31 @@ public class Script
                     message: $"Expected Function not found: {data}");
             }
 
-            if (!data.Matches(scriptFunctions[data.identifierToken.identifier].functionSignature))
+            if (!scriptFunctions[data.identifierToken.identifier].Any(x => data.Matches(x.functionSignature)))
             {
+                if (scriptFunctions[data.identifierToken.identifier].Count == 1)
+                {
+                    throw new ScriptParsingException(
+                        source: new EOFToken(0, 0),
+                        message: $"Expected Function: {data}  Found Function: {scriptFunctions[data.identifierToken.identifier][0].functionSignature}");
+                }
+
                 throw new ScriptParsingException(
-                    source: scriptFunctions[data.identifierToken.identifier].functionSignature.identifierToken,
-                    message: $"Expected Function: {data}  Found Function: {scriptFunctions[data.identifierToken.identifier].functionSignature}");
+                    source: new EOFToken(0, 0),
+                    message: $"Expected Function: {data}  Found Functions: [{string.Join(", ", scriptFunctions[data.identifierToken.identifier].Select(x => x.functionSignature))}]");
             }
         }
 
-        foreach (ScriptFunction scriptFunction in scriptFunctions.Values)
+        foreach (ScriptFunction scriptFunction in scriptFunctions.Values.SelectMany(x => x))
         {
             scriptFunction.ParseFunctions(compilationContext);
         }
     }
 
     public bool HasFunction(string identifier) => scriptFunctions.ContainsKey(identifier);
-    public FunctionSignature GetFunctionSignature(string identifier) => scriptFunctions[identifier].functionSignature;
+    public FunctionSignature GetFunctionSignature(string identifier, Type[] arguments) =>
+        scriptFunctions[identifier].FirstOrDefault(x=>x.functionSignature.MatchesArgs(arguments))?.functionSignature ??
+        scriptFunctions[identifier].Single(x=>x.functionSignature.LooselyMatchesArgs(arguments)).functionSignature;
 
     public bool HasFunction(FunctionSignature functionSignature)
     {
@@ -58,7 +67,51 @@ public class Script
             return false;
         }
 
-        return functionSignature.Matches(scriptFunctions[identifier].functionSignature);
+        return scriptFunctions[identifier].Any(x => x.functionSignature.Matches(functionSignature));
+    }
+
+    public void AddFunction(ScriptFunction scriptFunction)
+    {
+        List<ScriptFunction> functions;
+        if (!scriptFunctions.TryGetValue(scriptFunction.FunctionName, out functions!))
+        {
+            functions = new List<ScriptFunction>();
+            scriptFunctions.Add(scriptFunction.FunctionName, functions);
+        }
+
+        //Check for collision
+        if (functions.Any(x => x.functionSignature.Matches(scriptFunction.functionSignature)))
+        {
+            throw new ScriptParsingException(
+                source: scriptFunction.functionSignature.identifierToken,
+                message: $"Two declarations of function {scriptFunction.FunctionName} found: {scriptFunction.functionSignature}");
+        }
+
+        functions.Add(scriptFunction);
+    }
+
+    public ScriptFunction? GetMatchingFunction(string functionName, object[] arguments)
+    {
+        if (!scriptFunctions.TryGetValue(functionName, out List<ScriptFunction>? functions))
+        {
+            return null;
+        }
+
+        Type[] argumentTypes = arguments.Select(x => x.GetType()).ToArray();
+
+        if (functions.FirstOrDefault(x => x.functionSignature.MatchesArgs(argumentTypes)) is ScriptFunction exactMatch)
+        {
+            return exactMatch;
+        }
+
+        List<ScriptFunction> looselyMatchingFunctions = functions.Where(x => x.functionSignature.LooselyMatchesArgs(argumentTypes)).ToList();
+
+        if (looselyMatchingFunctions.Count > 1)
+        {
+            throw new ScriptRuntimeException($"Multiple functions named {functionName} matched the argument list [{string.Join(", ", argumentTypes.Select(x=>x.Name))}]");
+        }
+
+        return looselyMatchingFunctions.FirstOrDefault();
     }
 
     public void ParseNextGlobal(
@@ -86,12 +139,12 @@ public class Script
                             IdentifierToken identToken = scriptTokens.GetTokenAndAdvance<IdentifierToken>();
                             IValueGetter? initializerExpression = null;
 
-                            if (scriptTokens.TestAndConditionallySkip(Operator.Assignment))
+                            if (scriptTokens.TestAndConditionallyAdvance(Operator.Assignment))
                             {
                                 initializerExpression = Expression.ParseNextGetterExpression(scriptTokens, context);
                             }
 
-                            scriptTokens.AssertAndSkip(Separator.Semicolon, false);
+                            scriptTokens.AssertAndAdvance(Separator.Semicolon, false);
 
                             scriptDeclarations.Add(
                                 new GlobalDeclaration(
@@ -110,10 +163,10 @@ public class Script
                             Type valueType = scriptTokens.ReadTypeAndAdvance();
 
                             IdentifierToken identToken = scriptTokens.GetTokenAndAdvance<IdentifierToken>();
-                            scriptTokens.AssertAndSkip(Operator.Assignment);
+                            scriptTokens.AssertAndAdvance(Operator.Assignment);
                             IValueGetter initializerExpression = Expression.ParseNextGetterExpression(scriptTokens, context);
 
-                            scriptTokens.AssertAndSkip(Separator.Semicolon, false);
+                            scriptTokens.AssertAndAdvance(Separator.Semicolon, false);
 
                             if (initializerExpression is not LiteralToken litToken)
                             {
@@ -148,25 +201,17 @@ public class Script
                     Type valueType = scriptTokens.ReadTypeAndAdvance();
                     IdentifierToken identToken = scriptTokens.GetTokenAndAdvance<IdentifierToken>();
 
-                    if (scriptTokens.TestWithoutSkipping(Separator.OpenParen))
+                    if (scriptTokens.TestWithoutAdvancing(Separator.OpenParen))
                     {
                         VariableData[] arguments = ParseArgumentsDeclaration(scriptTokens);
 
-                        if (scriptFunctions.ContainsKey(identToken.identifier))
-                        {
-                            throw new ScriptParsingException(
-                                source: identToken,
-                                message: $"Two declarations of function {identToken.identifier} found.");
-                        }
-
-                        scriptFunctions.Add(identToken.identifier,
-                            new ScriptFunction(
-                                functionTokens: scriptTokens,
-                                functionSignature: new FunctionSignature(
-                                    identifierToken: identToken,
-                                    returnType: valueType,
-                                    arguments: arguments),
-                                context: context));
+                        AddFunction(new ScriptFunction(
+                            functionTokens: scriptTokens,
+                            functionSignature: new FunctionSignature(
+                                identifierToken: identToken,
+                                returnType: valueType,
+                                arguments: arguments),
+                            context: context));
                     }
                     else
                     {
@@ -179,12 +224,12 @@ public class Script
                         }
 
                         IValueGetter? initializerExpression = null;
-                        if (scriptTokens.TestAndConditionallySkip(Operator.Assignment))
+                        if (scriptTokens.TestAndConditionallyAdvance(Operator.Assignment))
                         {
                             initializerExpression = Expression.ParseNextGetterExpression(scriptTokens, context);
                         }
 
-                        scriptTokens.AssertAndSkip(Separator.Semicolon, false);
+                        scriptTokens.AssertAndAdvance(Separator.Semicolon, false);
 
                         scriptDeclarations.Add(
                             new MemberDeclaration(
@@ -253,12 +298,14 @@ public class Script
         ScriptRuntimeContext context,
         params object[] arguments)
     {
-        if (!scriptFunctions.ContainsKey(functionName))
+        ScriptFunction? matchingFunction = GetMatchingFunction(functionName, arguments);
+
+        if (matchingFunction is null)
         {
             throw new ScriptRuntimeException($"Unable to find function {functionName} for external invocation.");
         }
 
-        scriptFunctions[functionName].Execute(context, CancellationToken.None, arguments);
+        matchingFunction.Execute(context, CancellationToken.None, arguments);
     }
 
     /// <summary>
@@ -270,12 +317,14 @@ public class Script
         ScriptRuntimeContext context,
         params object[] arguments)
     {
-        if (!scriptFunctions.ContainsKey(functionName))
+        ScriptFunction? matchingFunction = GetMatchingFunction(functionName, arguments);
+
+        if (matchingFunction is null)
         {
             throw new ScriptRuntimeException($"Unable to find function {functionName} for external invocation.");
         }
 
-        scriptFunctions[functionName].Execute(context, CancellationToken.None, arguments);
+        matchingFunction.Execute(context, CancellationToken.None, arguments);
 
         return context.PopReturnValue<T>();
     }
@@ -291,14 +340,17 @@ public class Script
         ScriptRuntimeContext context,
         params object[] arguments)
     {
-        if (!scriptFunctions.ContainsKey(functionName))
+        ScriptFunction? matchingFunction = GetMatchingFunction(functionName, arguments);
+
+        if (matchingFunction is null)
         {
             throw new ScriptRuntimeException($"Unable to find function {functionName} for external invocation.");
         }
 
         using CancellationTokenSource tokenSource = new CancellationTokenSource(timeoutMS);
 
-        scriptFunctions[functionName].Execute(context, tokenSource.Token, arguments);
+        matchingFunction.Execute(context, tokenSource.Token, arguments);
+
         return context.PopReturnValue<T>();
     }
 
@@ -313,7 +365,9 @@ public class Script
         ScriptRuntimeContext context,
         params object[] arguments)
     {
-        if (!scriptFunctions.ContainsKey(functionName))
+        ScriptFunction? matchingFunction = GetMatchingFunction(functionName, arguments);
+
+        if (matchingFunction is null)
         {
             throw new ScriptRuntimeException($"Unable to find function {functionName} for external invocation.");
         }
@@ -321,7 +375,7 @@ public class Script
         return Task.Run(() =>
         {
             using CancellationTokenSource tokenSource = new CancellationTokenSource(timeoutMS);
-            scriptFunctions[functionName].Execute(context, tokenSource.Token, arguments);
+            matchingFunction.Execute(context, tokenSource.Token, arguments);
         });
     }
 
@@ -336,7 +390,9 @@ public class Script
         ScriptRuntimeContext context,
         params object[] arguments)
     {
-        if (!scriptFunctions.ContainsKey(functionName))
+        ScriptFunction? matchingFunction = GetMatchingFunction(functionName, arguments);
+
+        if (matchingFunction is null)
         {
             throw new ScriptRuntimeException($"Unable to find function {functionName} for external invocation.");
         }
@@ -344,7 +400,7 @@ public class Script
         return Task.Run(() =>
         {
             using CancellationTokenSource tokenSource = new CancellationTokenSource(timeoutMS);
-            scriptFunctions[functionName].Execute(context, tokenSource.Token, arguments);
+            matchingFunction.Execute(context, tokenSource.Token, arguments);
             return context.PopReturnValue<T>();
         });
     }
@@ -363,17 +419,19 @@ public class Script
         ScriptRuntimeContext context,
         params object[] arguments)
     {
-        if (!scriptFunctions.ContainsKey(functionName))
+        ScriptFunction? matchingFunction = GetMatchingFunction(functionName, arguments);
+
+        if (matchingFunction is null)
         {
             throw new ScriptRuntimeException($"Unable to find function {functionName} for external invocation.");
         }
-        
+
         using CancellationTokenSource tokenSource = new CancellationTokenSource(timeoutMS);
         using CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(tokenSource.Token, ct);
-        
+
         return Task.Run(() =>
         {
-            scriptFunctions[functionName].Execute(context, linkedSource.Token, arguments);
+            matchingFunction.Execute(context, linkedSource.Token, arguments);
             return context.PopReturnValue<T>();
         },
         linkedSource.Token);
@@ -393,7 +451,9 @@ public class Script
         ScriptRuntimeContext context,
         params object[] arguments)
     {
-        if (!scriptFunctions.ContainsKey(functionName))
+        ScriptFunction? matchingFunction = GetMatchingFunction(functionName, arguments);
+
+        if (matchingFunction is null)
         {
             throw new ScriptRuntimeException($"Unable to find function {functionName} for external invocation.");
         }
@@ -403,7 +463,7 @@ public class Script
 
         return Task.Run(() =>
         {
-            scriptFunctions[functionName].Execute(context, linkedSource.Token, arguments);
+            matchingFunction.Execute(context, linkedSource.Token, arguments);
         },
         linkedSource.Token);
     }
@@ -411,9 +471,9 @@ public class Script
     private static VariableData[] ParseArgumentsDeclaration(IEnumerator<Token> tokens)
     {
         List<VariableData> arguments = new List<VariableData>();
-        tokens.AssertAndSkip(Separator.OpenParen);
+        tokens.AssertAndAdvance(Separator.OpenParen);
 
-        if (!tokens.TestWithoutSkipping(Separator.CloseParen))
+        if (!tokens.TestWithoutAdvancing(Separator.CloseParen))
         {
             do
             {
@@ -422,10 +482,10 @@ public class Script
 
                 arguments.Add(new VariableData(identToken, argumentType));
             }
-            while (tokens.TestAndConditionallySkip(Separator.Comma));
+            while (tokens.TestAndConditionallyAdvance(Separator.Comma));
         }
 
-        tokens.AssertAndSkip(Separator.CloseParen);
+        tokens.AssertAndAdvance(Separator.CloseParen);
 
         return arguments.ToArray();
     }

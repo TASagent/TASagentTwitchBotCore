@@ -31,7 +31,7 @@ public class NotOperation : IValueGetter
     public T GetAs<T>(RuntimeContext context)
     {
         //Check Value Type
-        if (!typeof(T).AssignableFromType(typeof(bool)))
+        if (!typeof(T).AssignableOrConvertableFromType(typeof(bool)))
         {
             throw new ScriptRuntimeException($"Tried to retrieve result of Not operator at type {typeof(T).Name}");
         }

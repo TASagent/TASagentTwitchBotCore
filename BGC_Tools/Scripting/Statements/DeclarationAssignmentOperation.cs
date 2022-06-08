@@ -14,11 +14,31 @@ public class DeclarationAssignmentOperation : Statement
         CompilationContext context)
     {
         //Check initializer type
-        if (!valueType.AssignableFromType(initializer.GetValueType()))
+        if (!valueType.AssignableOrConvertableFromType(initializer.GetValueType()))
         {
-            throw new ScriptParsingException(
-                source: identifierToken,
-                message: $"Incompatible type in declaration.  Expected type {valueType.Name}, Received {initializer.GetValueType().Name}");
+            //Allow some 
+            if (valueType.IsSmallIntegralType() && initializer is LiteralToken litToken)
+            {
+                if (litToken.IsLiteralInRange(valueType))
+                {
+                    initializer = new ConstantToken(
+                        source: litToken,
+                        value: Convert.ChangeType(litToken.GetAs<object>(), valueType),
+                        valueType: valueType);
+                }
+                else
+                {
+                    throw new ScriptParsingException(
+                        source: identifierToken,
+                        message: $"Value {litToken.GetAs<object>()} is out of range for {identifierToken.identifier} of type {valueType.Name}");
+                }
+            }
+            else
+            {
+                throw new ScriptParsingException(
+                    source: identifierToken,
+                    message: $"Incompatible type in declaration.  Expected type {valueType.Name}, Received {initializer.GetValueType().Name}");
+            }
         }
 
         if (isConstant)

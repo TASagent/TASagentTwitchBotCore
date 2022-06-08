@@ -19,7 +19,7 @@ public class ScriptFunction
 
         //Determine Type
         //Function Body
-        if (functionTokens.TestAndConditionallySkip(Separator.Arrow))
+        if (functionTokens.TestAndConditionallyAdvance(Separator.Arrow))
         {
             if (functionSignature.returnType != typeof(void))
             {
@@ -32,7 +32,7 @@ public class ScriptFunction
             {
                 cachedFunctionTokens.Add(functionTokens.Current);
 
-                if (functionTokens.TestAndConditionallySkip(Separator.Semicolon, false))
+                if (functionTokens.TestAndConditionallyAdvance(Separator.Semicolon, false))
                 {
                     break;
                 }
@@ -43,7 +43,7 @@ public class ScriptFunction
             //Cap off function with EOF Token
             cachedFunctionTokens.Add(new EOFToken(functionTokens.Current));
         }
-        else if (functionTokens.TestWithoutSkipping(Separator.OpenCurlyBoi))
+        else if (functionTokens.TestWithoutAdvancing(Separator.OpenCurlyBoi))
         {
             //standard function
             Stack<SeparatorToken> separators = new Stack<SeparatorToken>();
@@ -112,7 +112,7 @@ public class ScriptFunction
                 functionTokens.CautiousAdvance();
             }
 
-            functionTokens.AssertAndSkip(Separator.CloseCurlyBoi, false);
+            functionTokens.AssertAndAdvance(Separator.CloseCurlyBoi, false);
 
             //Cap off function with EOF Token
             cachedFunctionTokens.Add(new EOFToken(functionTokens.Current));

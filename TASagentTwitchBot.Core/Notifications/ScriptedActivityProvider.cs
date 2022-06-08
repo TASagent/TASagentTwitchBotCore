@@ -712,9 +712,9 @@ public partial class ScriptedActivityProvider :
                 case NotificationTTS tts:
                     transformedAudioRequests.Add(await ttsRenderer.TTSRequest(
                         authorizationLevel: Commands.AuthorizationLevel.Moderator,
-                        voicePreference: tts.TTSVoice.TranslateTTSVoice(),
-                        pitchPreference: tts.TTSPitch.TranslateTTSPitch(),
-                        speedPreference: tts.TTSSpeed.TranslateTTSSpeed(),
+                        voicePreference: tts.TTSVoice,
+                        pitchPreference: tts.TTSPitch,
+                        speedPreference: tts.TTSSpeed,
                         effectsChain: audioEffectSystem.SafeParse(tts.TTSEffect),
                         ttsText: tts.Message));
                     break;
@@ -914,9 +914,9 @@ public partial class ScriptedActivityProvider :
 
     public class NotificationTTS : NotificationAudio
     {
-        public string TTSVoice { get; set; } = "";
-        public string TTSPitch { get; set; } = "";
-        public string TTSSpeed { get; set; } = "";
+        public TTSVoice TTSVoice { get; set; } = TTSVoice.Unassigned;
+        public TTSPitch TTSPitch { get; set; } = TTSPitch.Unassigned;
+        public TTSSpeed TTSSpeed { get; set; } = TTSSpeed.Unassigned;
         public string TTSEffect { get; set; } = "";
         public string Message { get; set; } = "";
 
@@ -939,6 +939,21 @@ public partial class ScriptedActivityProvider :
             string ttsEffect,
             string message)
         {
+            TTSVoice = ttsVoice.TranslateTTSVoice();
+            TTSPitch = ttsPitch.TranslateTTSPitch();
+            TTSSpeed = ttsSpeed.TranslateTTSSpeed();
+            TTSEffect = ttsEffect;
+
+            Message = message;
+        }
+
+        public NotificationTTS(
+            TTSVoice ttsVoice,
+            TTSPitch ttsPitch,
+            TTSSpeed ttsSpeed,
+            string ttsEffect,
+            string message)
+        { 
             TTSVoice = ttsVoice;
             TTSPitch = ttsPitch;
             TTSSpeed = ttsSpeed;
@@ -946,7 +961,6 @@ public partial class ScriptedActivityProvider :
 
             Message = message;
         }
-
     }
 
     public class NotificationText

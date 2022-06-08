@@ -8,17 +8,20 @@ public enum Operator
     Minus,
     Times,
     Divide,
-    Power,
     Modulo,
 
-    CastDouble,
-    CastInteger,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXOr,
+
+    BitwiseComplement,
+    BitwiseLeftShift,
+    BitwiseRightShift,
 
     PlusEquals,
     MinusEquals,
     TimesEquals,
     DivideEquals,
-    PowerEquals,
     ModuloEquals,
 
     Increment,
@@ -42,6 +45,10 @@ public enum Operator
 
     AndEquals,
     OrEquals,
+
+    BitwiseXOrEquals,
+    BitwiseLeftShiftEquals,
+    BitwiseRightShiftEquals,
 
     MAX,
 

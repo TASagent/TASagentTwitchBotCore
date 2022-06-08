@@ -14,7 +14,7 @@ public class Block : Statement
         compilationContext = compilationContext.CreateChildScope();
         while (tokens.Current is not EOFToken)
         {
-            if (tokens.TestWithoutSkipping(Separator.CloseCurlyBoi) || tokens.TestWithoutSkipping(Keyword.Default) || tokens.TestWithoutSkipping(Keyword.Case))
+            if (tokens.TestWithoutAdvancing(Separator.CloseCurlyBoi) || tokens.TestWithoutAdvancing(Keyword.Default) || tokens.TestWithoutAdvancing(Keyword.Case))
             {
                 return;
             }

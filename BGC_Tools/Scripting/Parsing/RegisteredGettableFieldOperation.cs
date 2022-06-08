@@ -23,9 +23,9 @@ public abstract class RegisteredGettableFieldOperation : IValueGetter
     {
         Type returnType = typeof(T);
 
-        if (!returnType.AssignableFromType(fieldType))
+        if (!returnType.AssignableOrConvertableFromType(fieldType))
         {
-            throw new ScriptRuntimeException($"Tried to retrieve Property with type {fieldType.Name} as type {returnType.Name}");
+            throw new ScriptRuntimeException($"Tried to retrieve Field {fieldInfo.Name} with type {fieldType.Name} as type {returnType.Name}");
         }
 
         object? result = fieldInfo.GetValue(GetInstanceValue(context));

@@ -30,7 +30,7 @@ public class IndexerOperation : IValue, IValueGetter, IValueSetter
 
         getType = containerType.GetIndexingReturnType()!;
 
-        if (!indexerType.AssignableFromType(indexArg.GetValueType()))
+        if (!indexerType.AssignableOrConvertableFromType(indexArg.GetValueType()))
         {
             throw new ScriptParsingException(
                 source: source,
@@ -65,7 +65,7 @@ public class IndexerOperation : IValue, IValueGetter, IValueSetter
     {
         Type returnType = typeof(T);
 
-        if (!returnType.AssignableFromType(getType))
+        if (!returnType.AssignableOrConvertableFromType(getType))
         {
             throw new ScriptRuntimeException($"Tried to retrieve result of Indexing with type {getType.Name} as type {returnType.Name}");
         }
@@ -105,7 +105,7 @@ public class IndexerOperation : IValue, IValueGetter, IValueSetter
     {
         Type valueType = value?.GetType() ?? typeof(object);
 
-        if (!getType.AssignableFromType(valueType))
+        if (!getType.AssignableOrConvertableFromType(valueType))
         {
             throw new ScriptRuntimeException($"Tried to set result of Indexing with type {getType.Name} as type {valueType.Name}");
         }
@@ -139,7 +139,7 @@ public class IndexerOperation : IValue, IValueGetter, IValueSetter
     {
         Type setType = typeof(T);
 
-        if (!getType.AssignableFromType(setType))
+        if (!getType.AssignableOrConvertableFromType(setType))
         {
             throw new ScriptRuntimeException($"Tried to set result of Indexing with type {getType.Name} as type {setType.Name}");
         }

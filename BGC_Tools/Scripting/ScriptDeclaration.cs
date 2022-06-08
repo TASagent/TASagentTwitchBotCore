@@ -20,7 +20,7 @@ public abstract class ScriptDeclaration
         context.DeclareVariable(identifierToken, valueType);
 
         //Check initializer type
-        if (initializer is not null && !valueType.AssignableFromType(initializer.GetValueType()))
+        if (initializer is not null && !valueType.AssignableOrConvertableFromType(initializer.GetValueType()))
         {
             throw new ScriptParsingException(
                 source: identifierToken,

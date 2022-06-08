@@ -27,10 +27,17 @@ public class TernaryOperation : IValueGetter
         {
             valueType = arg1Type;
         }
-        else if ((arg1Type == typeof(int) || arg1Type == typeof(double)) &&
-                 (arg2Type == typeof(int) || arg2Type == typeof(double)))
+        else if (arg1Type.IsAssignableFrom(arg2Type))
         {
-            valueType = typeof(double);
+            valueType = arg1Type;
+        }
+        else if (arg2Type.IsAssignableFrom(arg1Type))
+        {
+            valueType = arg2Type;
+        }
+        else if (arg1Type.IsExtendedPrimitive() && arg2Type.IsExtendedPrimitive())
+        {
+            valueType = operatorToken.GetBinaryPromotedType(arg1Type, arg2Type);
         }
         else
         {
@@ -48,7 +55,7 @@ public class TernaryOperation : IValueGetter
     {
         Type returnType = typeof(T);
 
-        if (!returnType.AssignableFromType(valueType))
+        if (!returnType.AssignableOrConvertableFromType(valueType))
         {
             throw new ScriptRuntimeException($"Tried to implicitly cast the results of {this} to type {returnType.Name} instead of argument type {valueType.Name}");
         }

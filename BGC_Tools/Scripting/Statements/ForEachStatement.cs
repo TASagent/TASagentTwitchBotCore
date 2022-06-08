@@ -35,7 +35,7 @@ public class ForEachStatement : Statement
             if (containerInterface.IsGenericType && containerInterface.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
                 //Found an IEnumerable<T> Implementation
-                if (loopVariable.GetValueType().AssignableFromType(containerInterface.GetGenericArguments()[0]))
+                if (loopVariable.GetValueType().AssignableOrConvertableFromType(containerInterface.GetGenericArguments()[0]))
                 {
                     enumerableType = containerInterface.GetGenericArguments()[0];
                     break;

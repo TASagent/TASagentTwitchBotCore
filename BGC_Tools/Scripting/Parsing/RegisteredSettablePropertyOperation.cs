@@ -23,9 +23,9 @@ public abstract class RegisteredSettablePropertyOperation : IValue
     {
         Type returnType = typeof(T);
 
-        if (!returnType.AssignableFromType(propertyType))
+        if (!returnType.AssignableOrConvertableFromType(propertyType))
         {
-            throw new ScriptRuntimeException($"Tried to retrieve Property with type {propertyType.Name} as type {returnType.Name}");
+            throw new ScriptRuntimeException($"Tried to retrieve Property {propertyInfo.Name} with type {propertyType.Name} as type {returnType.Name}");
         }
 
         object? result = propertyInfo.GetValue(GetInstanceValue(context));
@@ -42,9 +42,9 @@ public abstract class RegisteredSettablePropertyOperation : IValue
     {
         Type inputType = newValue?.GetType() ?? typeof(object);
 
-        if (!propertyType.AssignableFromType(inputType))
+        if (!propertyType.AssignableOrConvertableFromType(inputType))
         {
-            throw new ScriptRuntimeException($"Tried to set result of Indexing with type {propertyType.Name} as type {inputType.Name}");
+            throw new ScriptRuntimeException($"Tried to set Property {propertyInfo.Name} with type {propertyType.Name} as type {inputType.Name}");
         }
 
         object? convertedValue = newValue;
@@ -61,9 +61,9 @@ public abstract class RegisteredSettablePropertyOperation : IValue
     {
         Type inputType = typeof(T);
 
-        if (!propertyType.AssignableFromType(inputType))
+        if (!propertyType.AssignableOrConvertableFromType(inputType))
         {
-            throw new ScriptRuntimeException($"Tried to set result of Indexing with type {propertyType.Name} as type {inputType.Name}");
+            throw new ScriptRuntimeException($"Tried to set Property {propertyInfo.Name} with type {propertyType.Name} as type {inputType.Name}");
         }
 
         object? convertedValue = newValue;

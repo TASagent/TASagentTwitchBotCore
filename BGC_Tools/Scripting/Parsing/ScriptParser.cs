@@ -1,4 +1,6 @@
-﻿namespace BGC.Scripting;
+﻿using BGC.Collections.Generic;
+
+namespace BGC.Scripting;
 
 public static class ScriptParser
 {
@@ -20,8 +22,10 @@ public static class ScriptParser
                 .HandleArrays()
                 .HandleElseIf()
                 .HandleAmbiguousMinus()
-                .HandleCasting()
                 .CheckParens()
+                .HandleGenericTypeArguments()
+                .HandleCasting()
+                //.HandleMemberAccess()
                 .GetEnumerator();
 
             tokens.MoveNext();
@@ -113,68 +117,31 @@ public static class ScriptParser
 
     private static IEnumerable<Token> HandleCasting(this IEnumerable<Token> tokens)
     {
-        //Handle conversion of ( double ) to cast operation
-        Operator operatorType = Operator.CastDouble;
-        Queue<Token> tokenQueue = new Queue<Token>(3);
+        RingBuffer<Token> tokenQueue = new RingBuffer<Token>(3);
 
         foreach (Token token in tokens)
         {
-            switch (tokenQueue.Count)
+            tokenQueue.Add(token);
+
+            if (tokenQueue.Count == 3)
             {
-                case 0:
-                    if (token is SeparatorToken sep && sep.separator == Separator.OpenParen)
-                    {
-                        tokenQueue.Enqueue(token);
-                    }
-                    else
-                    {
-                        yield return token;
-                    }
-                    break;
-
-                case 1:
-                    if (token is TypeToken typeToken && (typeToken.type == typeof(int) || typeToken.type == typeof(double)))
-                    {
-                        tokenQueue.Enqueue(token);
-
-                        if (typeToken.type == typeof(int))
-                        {
-                            operatorType = Operator.CastInteger;
-                        }
-                        else
-                        {
-                            operatorType = Operator.CastDouble;
-                        }
-                    }
-                    else
-                    {
-                        yield return tokenQueue.Dequeue();
-                        yield return token;
-                    }
-                    break;
-
-                case 2:
-                    if (token is SeparatorToken sep2 && sep2.separator == Separator.CloseParen)
-                    {
-                        tokenQueue.Clear();
-                        yield return new OperatorToken(token, operatorType);
-                    }
-                    else
-                    {
-                        yield return tokenQueue.Dequeue();
-                        yield return tokenQueue.Dequeue();
-                        yield return token;
-                    }
-                    break;
-
-                default:
-                    throw new Exception($"Serious parsing error.  Too many queued tokens.");
+                if (tokenQueue[2] is SeparatorToken openParen && openParen.separator == Separator.OpenParen &&
+                    tokenQueue[1] is TypeToken typeToken &&
+                    tokenQueue[0] is SeparatorToken closeParen && closeParen.separator == Separator.CloseParen)
+                {
+                    yield return new CastingOperationToken(typeToken, typeToken.BuildType());
+                    tokenQueue.Clear();
+                }
+                else
+                {
+                    yield return tokenQueue.PopBack();
+                }
             }
         }
 
         while (tokenQueue.Count > 0)
         {
-            yield return tokenQueue.Dequeue();
+            yield return tokenQueue.PopBack();
         }
     }
 
@@ -228,7 +195,7 @@ public static class ScriptParser
                     priorTypeToken = new TypeToken(
                         source: priorTypeToken!,
                         alias: $"{priorTypeToken!.alias}[]",
-                        type: priorTypeToken.type.MakeArrayType());
+                        type: priorTypeToken.BuildType().MakeArrayType());
 
                     openBracketToken = null;
                     continue;
@@ -245,7 +212,7 @@ public static class ScriptParser
                     //Continue on in case token is a type
                 }
             }
-            
+
             if (priorTypeToken is not null)
             {
                 //Accumulated "Type"
@@ -265,7 +232,7 @@ public static class ScriptParser
                     //Continue on in case token is a type
                 }
             }
-            
+
             if (token is TypeToken typeToken)
             {
                 priorTypeToken = typeToken;
@@ -332,6 +299,230 @@ public static class ScriptParser
             yield return stashedToken;
         }
     }
+
+    /// <summary>
+    /// Collect generic type arguments into a single meta token
+    /// </summary>
+    private static IEnumerable<Token> HandleGenericTypeArguments(this IEnumerable<Token> tokenEnumerable)
+    {
+        IEnumerator<Token> tokens = tokenEnumerable.GetEnumerator();
+        tokens.MoveNext();
+
+        while (tokens.Current is not EOFToken)
+        {
+            if (tokens.Current is IdentifierToken || tokens.Current is TypeToken)
+            {
+                Token? genericArgumentTarget = tokens.Current;
+                tokens.MoveNext();
+
+                if (tokens.Current is OperatorToken operatorToken && operatorToken.operatorType == Operator.IsLessThan)
+                {
+                    foreach (Token token in PotentiallyCollapseGenericArguments(genericArgumentTarget, tokens))
+                    {
+                        //Includes genericArgumentTarget
+                        yield return token;
+                    }
+                }
+                else
+                {
+                    yield return genericArgumentTarget;
+                }
+            }
+            else
+            {
+                yield return tokens.Current;
+                tokens.MoveNext();
+            }
+
+        }
+
+        //send EOF Token
+        yield return tokens.Current;
+    }
+
+    private static IEnumerable<Token> PotentiallyCollapseGenericArguments(Token genericArgumentTarget, IEnumerator<Token> tokens)
+    {
+        if (tokens.Current is not OperatorToken initialOperatorToken || initialOperatorToken.operatorType != Operator.IsLessThan)
+        {
+            throw new Exception($"CollapseGenericArguments expectes to be passed an enumerator pointing at a '<' character");
+        }
+
+        Queue<Token> tokenQueue = new Queue<Token>();
+        tokenQueue.Enqueue(tokens.Current);
+
+        List<Type> typeList = new List<Type>();
+
+        bool expectClass = true;
+
+        tokens.MoveNext();
+
+        while (tokens.Current is not EOFToken)
+        {
+            if (expectClass)
+            {
+                expectClass = false;
+
+                //Class (Potentially Generic class)
+                if (tokens.Current is not TypeToken typeToken)
+                {
+                    //Failed expectation. Treat this like an operator expression and output all the raw tokens instead.
+                    break;
+                }
+
+                //Double check for generic arguments
+                tokens.MoveNext();
+
+                if (tokens.Current is OperatorToken operatorToken && operatorToken.operatorType == Operator.IsLessThan)
+                {
+                    //An < operator inside a generic argument that isn't a generic argument renders the external set invalid as well
+                    Token[] collectedTokens = PotentiallyCollapseGenericArguments(typeToken, tokens).ToArray();
+
+                    //Accumulate all tokens to the queue
+                    foreach (Token token in collectedTokens)
+                    {
+                        tokenQueue.Enqueue(token);
+                    }
+
+                    if (collectedTokens.Length == 1 && collectedTokens[0] is TypeToken collectedTypeToken)
+                    {
+                        //Valid, let's keep going
+                        typeList.Add(collectedTypeToken.BuildType());
+                    }
+                    else
+                    {
+                        //Invalid. We give up on parsing it and we can give up trying to parse this as a generic argument list
+                        break;
+                    }
+                }
+                else
+                {
+                    //Just enqueue the type we read
+                    tokenQueue.Enqueue(typeToken);
+                    typeList.Add(typeToken.BuildType());
+                }
+            }
+            else
+            {
+                expectClass = true;
+
+                //Comma, or Close
+                if (tokens.Current is OperatorToken operatorToken && operatorToken.operatorType == Operator.IsGreaterThan)
+                {
+                    //Done
+                    //Skip > operator
+                    tokens.MoveNext();
+                    //Create and Output collapsed token
+                    yield return ApplyGenericArguments(genericArgumentTarget, typeList);
+
+                    //Exit
+                    yield break;
+                }
+
+                if (tokens.Current is SeparatorToken separatorToken && separatorToken.separator == Separator.Comma)
+                {
+                    //Accumulating more classes
+                    tokenQueue.Enqueue(tokens.Current);
+                    tokens.MoveNext();
+
+                    //Advance
+                    continue;
+                }
+
+                //Failed expectation. Treat this like an operator expression and output all the raw tokens instead.
+                break;
+            }
+        }
+
+        //We failed to match a Generic Argument List. Returning all tokens.
+        yield return genericArgumentTarget;
+        while (tokenQueue.Count > 0)
+        {
+            yield return tokenQueue.Dequeue();
+        }
+    }
+
+    private static Token ApplyGenericArguments(Token genericArgumentTarget, List<Type> types)
+    {
+        if (genericArgumentTarget is IdentifierToken identifierToken)
+        {
+            //Apply to Method
+            identifierToken.ApplyGenericArguments(types);
+            return identifierToken;
+        }
+        else if (genericArgumentTarget is TypeToken typeToken)
+        {
+            //Apply to Class
+            typeToken.ApplyGenericArguments(types);
+            return typeToken;
+        }
+
+        throw new ScriptParsingException(genericArgumentTarget, $"Cannot apply Generic Type Arguments to token of type {genericArgumentTarget.GetType().Name}");
+    }
+
+    ///// <summary>
+    ///// Patterns:
+    ///// 
+    /////
+    ///// Console.WriteLine("test");          //Static Invocation
+    ///// someReference.SomeFunction();       //Method Invocation on reference
+    ///// someArray[i].SomeFunction();        //Method Invocation on element
+    ///// (3 + 6).ToString("X6");             //Method Invocation on result
+    /////                                     
+    ///// string temp = Console.Title;        //Static Property Access
+    ///// Console.Title = "asdf";             //Static Property Assignment
+    ///// StaticClass.List.Clear();           //Static Property Access
+    ///// string temp = someReference.Name;   //Property Access on reference
+    ///// someReference.SomeProperty = 1;     //Property Assignment on reference
+    ///// someArray[i].PropertyThing = 1;     //Property Access/Assignment on element
+    ///// int i = ("a" + "B").Length;         //Property Access/Assignment on result
+    ///// 
+    ///// 
+    ///// </summary>
+    ///// <param name="tokens"></param>
+    ///// <returns></returns>
+    ///// <exception cref="Exception"></exception>
+    //private static IEnumerable<Token> HandleMemberAccess(this IEnumerable<Token> tokens)
+    //{
+    //    Queue<Token> tokenQueue = new Queue<Token>(3);
+
+    //    foreach (Token token in tokens)
+    //    {
+    //        switch (tokenQueue.Count)
+    //        {
+    //            case 0:
+    //                if (token is IdentifierToken)
+    //                {
+    //                    tokenQueue.Enqueue(token);
+    //                }
+    //                else if (token is TypeToken)
+    //                {
+    //                    tokenQueue.Enqueue(token);
+
+    //                }
+    //                else
+    //                {
+    //                    yield return token;
+    //                }
+    //                break;
+
+    //            case 1:
+
+    //                break;
+
+    //            case 2:
+
+    //                break;
+
+    //            default:
+    //                throw new Exception($"Serious parsing error.  Too many queued tokens.");
+    //        }
+    //    }
+
+    //    while (tokenQueue.Count > 0)
+    //    {
+    //        yield return tokenQueue.Dequeue();
+    //    }
+    //}
 
     private static IEnumerable<Token> DropComments(this IEnumerable<Token> tokens) =>
         tokens.Where(x => x is not CommentToken);

@@ -419,6 +419,11 @@ public static class TTSVoiceExtensions
 
         string cleanedString = voiceString.Trim().ToLowerInvariant();
 
+        if (string.IsNullOrEmpty(cleanedString))
+        {
+            return TTSVoice.Unassigned;
+        }
+
         if (ttsVoiceLookup.TryGetValue(cleanedString, out TTSVoice ttsVoice))
         {
             return ttsVoice;

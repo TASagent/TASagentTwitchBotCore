@@ -20,7 +20,7 @@ public class ConstructObjectExpression : IValueGetter
     {
         Type returnType = typeof(T);
 
-        if (!returnType.AssignableFromType(objectType))
+        if (!returnType.AssignableOrConvertableFromType(objectType))
         {
             throw new ScriptRuntimeException($"Tried to retrieve result of object construction of type {objectType.Name} as type {returnType.Name}");
         }

@@ -19,7 +19,7 @@ public class AssignmentOperation : Statement
         assigneeType = assignee.GetValueType();
         valueType = value.GetValueType();
 
-        if (!assigneeType.AssignableFromType(valueType))
+        if (!assigneeType.AssignableOrConvertableFromType(valueType))
         {
             throw new ScriptParsingException(
                 source: source,
@@ -35,7 +35,7 @@ public class AssignmentOperation : Statement
         {
             assignee.Set(context, value.GetAs<object>(context));
         }
-        else if (assigneeType.AssignableFromType(valueType))
+        else if (assigneeType.AssignableOrConvertableFromType(valueType))
         {
             assignee.Set(context, Convert.ChangeType(value.GetAs<object>(context), assigneeType));
         }

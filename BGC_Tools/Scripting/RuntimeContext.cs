@@ -52,7 +52,7 @@ public abstract class RuntimeContext
     {
         if (valueDictionary.ContainsKey(key))
         {
-            if (!typeof(T).AssignableFromType(valueDictionary[key].valueType))
+            if (!typeof(T).AssignableOrConvertableFromType(valueDictionary[key].valueType))
             {
                 throw new ScriptRuntimeException($"Value {key} retrieved as {typeof(T).Name} when it's {valueDictionary[key].valueType.Name}");
             }
@@ -79,7 +79,7 @@ public abstract class RuntimeContext
         {
             Type otherType = value is null ? typeof(NullLiteralToken) : value.GetType();
 
-            if (!valueDictionary[key].valueType.AssignableFromType(otherType))
+            if (!valueDictionary[key].valueType.AssignableOrConvertableFromType(otherType))
             {
                 throw new ScriptRuntimeException($"Value {key} set as {otherType.Name} when it's {valueDictionary[key].valueType.Name}");
             }
@@ -139,7 +139,7 @@ public class GlobalRuntimeContext : RuntimeContext
     {
         Type returnValueType = stashedReturnValue is null ? typeof(NullLiteralToken) : stashedReturnValue.GetType();
 
-        if (!typeof(T).AssignableFromType(returnValueType))
+        if (!typeof(T).AssignableOrConvertableFromType(returnValueType))
         {
             throw new ScriptRuntimeException($"Unable to return value of type {returnValueType.Name} as a {typeof(T).Name}");
         }
@@ -164,7 +164,7 @@ public class GlobalRuntimeContext : RuntimeContext
     {
         if (valueDictionary.ContainsKey(key))
         {
-            if (!valueDictionary[key].valueType.AssignableFromType(type))
+            if (!valueDictionary[key].valueType.AssignableOrConvertableFromType(type))
             {
                 throw new ScriptRuntimeException($"Value {key} set as {type.Name} when it was {valueDictionary[key].valueType.Name}");
             }
@@ -281,7 +281,7 @@ public class FunctionRuntimeContext : RuntimeContext
 
         for (int i = 0; i < functionSignature.arguments.Length; i++)
         {
-            if (!functionSignature.arguments[i].valueType.AssignableFromType(arguments[i].GetType()))
+            if (!functionSignature.arguments[i].valueType.AssignableOrConvertableFromType(arguments[i].GetType()))
             {
                 throw new ScriptRuntimeException(
                     $"Incompatible argument type for argument {functionSignature.arguments[i].identifierToken.identifier}.  " +

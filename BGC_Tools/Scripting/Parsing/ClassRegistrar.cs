@@ -1,18 +1,18 @@
 ﻿using System.Collections;
-using System.Reflection;
 using BGC.Collections.Generic;
 
 namespace BGC.Scripting.Parsing;
 
-public static class ClassRegistrar
+public static partial class ClassRegistrar
 {
     public delegate IExpression MemberExpression(IValueGetter value, Token source);
     public delegate IExpression MethodExpression(IValueGetter value, IValueGetter[] args, Token source);
     public delegate IExpression StaticExpression(Token source);
     public delegate IExpression StaticMethodExpression(IValueGetter[] args, Token source);
 
-    private static readonly Dictionary<Type, ClassRegistration> classLookup = new Dictionary<Type, ClassRegistration>();
     private static readonly Dictionary<string, Type> aliasLookup = new Dictionary<string, Type>();
+
+    private static readonly Dictionary<Type, IRegistration> classLookup = new Dictionary<Type, IRegistration>();
 
     static ClassRegistrar()
     {
@@ -87,20 +87,40 @@ public static class ClassRegistrar
             return false;
         }
 
-        ClassRegistration newRegistration = new ClassRegistration(type, !limited);
         aliasLookup.Add(registerAs, type);
-        classLookup.Add(type, newRegistration);
+
+        if (type.IsEnum)
+        {
+            classLookup.Add(type, new EnumRegistration(type));
+        }
+        else
+        {
+            classLookup.Add(type, new ClassRegistration(type, !limited));
+        }
 
         return true;
     }
 
     public static Type? LookUpClass(string className) => aliasLookup.GetValueOrDefault(className);
 
-    public static IEnumerable<(ClassRegistration registration, Type[]? genericArguments)> GetRegisteredClasses(this Type type)
+    //public static bool HasMember(this Type type, string memberName)
+    //{
+    //    foreach ((IRegistration registration, Type[]? _) in type.GetRegisteredClasses())
+    //    {
+    //        if (registration.HasMember(memberName))
+    //        {
+    //            return true;
+    //        }
+    //    }
+
+    //    return false;
+    //}
+
+    public static IEnumerable<(IRegistration registration, Type[]? genericArguments)> GetRegisteredClasses(this Type type)
     {
         foreach (Type baseClass in type.GetTypes())
         {
-            if (classLookup.TryGetValue(baseClass, out ClassRegistration? registration))
+            if (classLookup.TryGetValue(baseClass, out IRegistration? registration))
             {
                 yield return (registration, null);
             }
@@ -120,7 +140,7 @@ public static class ClassRegistrar
         string memberName,
         Token source)
     {
-        foreach ((ClassRegistration registration, Type[]? genericClassArguments) in value.GetValueType().GetRegisteredClasses())
+        foreach ((IRegistration registration, Type[]? genericClassArguments) in value.GetValueType().GetRegisteredClasses())
         {
             if (registration.GetPropertyExpression(value, genericClassArguments, memberName, source) is IExpression propertyExpression)
             {
@@ -138,7 +158,7 @@ public static class ClassRegistrar
         string methodName,
         Token source)
     {
-        foreach ((ClassRegistration registration, Type[]? genericClassArguments) in value.GetValueType().GetRegisteredClasses())
+        foreach ((IRegistration registration, Type[]? genericClassArguments) in value.GetValueType().GetRegisteredClasses())
         {
             if (registration.GetMethodExpression(value, genericClassArguments, genericMethodArguments, args, methodName, source) is IExpression methodExpression)
             {
@@ -156,7 +176,7 @@ public static class ClassRegistrar
         string methodName,
         Token source)
     {
-        foreach ((ClassRegistration registration, Type[]? genericClassArguments) in type.GetRegisteredClasses())
+        foreach ((IRegistration registration, Type[]? genericClassArguments) in type.GetRegisteredClasses())
         {
             if (registration.GetStaticMethodExpression(genericClassArguments, genericMethodArguments, args, methodName, source) is IExpression methodExpression)
             {
@@ -172,7 +192,7 @@ public static class ClassRegistrar
         string propertyName,
         Token source)
     {
-        foreach ((ClassRegistration registration, Type[]? genericClassArguments) in type.GetRegisteredClasses())
+        foreach ((IRegistration registration, Type[]? genericClassArguments) in type.GetRegisteredClasses())
         {
             if (registration.GetStaticPropertyExpression(genericClassArguments, propertyName, source) is IExpression propertyExpression)
             {
@@ -201,253 +221,36 @@ public static class ClassRegistrar
             .Distinct();
     }
 
-    public class ClassRegistration
+    public interface IRegistration
     {
-        private readonly Type type;
-        private readonly bool fullRegistration;
+        Type ClassType { get; }
 
-        public ClassRegistration(
-            Type type,
-            bool fullRegistration)
-        {
-            this.type = type;
-            this.fullRegistration = fullRegistration;
-        }
+        //bool HasMember(string memberName);
 
-        public IExpression? GetMethodExpression(
+        IExpression? GetMethodExpression(
             IValueGetter value,
             Type[]? genericClassArguments,
             Type[]? genericMethodArguments,
             IValueGetter[] args,
             string methodName,
-            Token source)
-        {
-            Type invocationType = type;
+            Token source);
 
-            if (type.ContainsGenericParameters)
-            {
-                if (genericClassArguments is null || genericClassArguments.Length == 0)
-                {
-                    //Can't construct concrete class
-                    return null;
-                }
-
-                invocationType = type.MakeGenericType(genericClassArguments);
-            }
-
-            //Try to find it
-            IEnumerable<MethodInfo> methodInfos = invocationType
-                .GetMethods(BindingFlags.Public | BindingFlags.Instance)
-                .Where(x => x.Name == methodName)
-                .Where(x => fullRegistration || x.GetCustomAttribute<ScriptingAccessAttribute>() is not null);
-
-            if (!methodInfos.Any())
-            {
-                return null;
-            }
-
-            MethodInfo? selectedMethodInfo = SelectMethod(
-                methodInfos: methodInfos.ToArray(),
-                argumentTypes: args.Select(x => x.GetValueType()).ToArray(),
-                genericMethodArguments: genericMethodArguments);
-
-            if (selectedMethodInfo is null)
-            {
-                return null;
-            }
-
-            return new RegisteredInstanceMethodOperation(
-                value: value,
-                args: args,
-                methodInfo: selectedMethodInfo,
-                source: source);
-        }
-
-        public IExpression? GetPropertyExpression(
+        IExpression? GetPropertyExpression(
             IValueGetter value,
             Type[]? genericClassArguments,
             string propertyName,
-            Token source)
-        {
-            Type invocationType = type;
+            Token source);
 
-            if (type.ContainsGenericParameters)
-            {
-                if (genericClassArguments is null || genericClassArguments.Length == 0)
-                {
-                    //Can't construct concrete class
-                    return null;
-                }
-
-                invocationType = type.MakeGenericType(genericClassArguments);
-            }
-
-            //Try to find it
-            PropertyInfo? propertyInfo = invocationType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
-
-            if (propertyInfo is not null && (fullRegistration || propertyInfo.GetCustomAttribute<ScriptingAccessAttribute>() is not null))
-            {
-                if (propertyInfo.CanWrite)
-                {
-                    return new RegisteredSettableInstancePropertyOperation(
-                        value: value,
-                        propertyInfo: propertyInfo,
-                        source: source);
-                }
-                else
-                {
-                    return new RegisteredGettableInstancePropertyOperation(
-                        value: value,
-                        propertyInfo: propertyInfo,
-                        source: source);
-                }
-            }
-
-            FieldInfo? fieldInfo = invocationType.GetField(propertyName, BindingFlags.Public | BindingFlags.Instance);
-
-            if (fieldInfo is not null && (fullRegistration || fieldInfo.GetCustomAttribute<ScriptingAccessAttribute>() is not null))
-            {
-                return new RegisteredGettableInstanceFieldOperation(
-                    value: value,
-                    fieldInfo: fieldInfo,
-                    source: source);
-            }
-
-            return null;
-        }
-
-        private static MethodInfo? SelectMethod(
-            MethodInfo[] methodInfos,
-            Type[] argumentTypes,
-            Type[]? genericMethodArguments)
-        {
-            if (genericMethodArguments is null)
-            {
-                //Test Non-Generic
-                if (Type.DefaultBinder.SelectMethod(
-                    bindingAttr: BindingFlags.Public | BindingFlags.Instance,
-                    match: methodInfos,
-                    types: argumentTypes,
-                    modifiers: null) is MethodInfo methodInfo)
-                {
-                    return methodInfo;
-                }
-            }
-            else
-            {
-                //Find Generic
-                if (Type.DefaultBinder.SelectMethod(
-                    bindingAttr: BindingFlags.Public | BindingFlags.Instance,
-                    match: methodInfos
-                        .Where(x => x.ContainsGenericParameters)
-                        .Select(x=>x.MakeGenericMethod(genericMethodArguments))
-                        .ToArray(),
-                    types: argumentTypes,
-                    modifiers: null) is MethodInfo methodInfo)
-                {
-                    return methodInfo;
-                }
-            }
-
-            //In principle, here is where we would do generic type inferencing
-
-            return null;
-        }
-
-        public IExpression? GetStaticMethodExpression(
+        IExpression? GetStaticMethodExpression(
             Type[]? genericClassArguments,
             Type[]? genericMethodArguments,
             IValueGetter[] args,
             string methodName,
-            Token source)
-        {
-            Type invocationType = type;
+            Token source);
 
-            if (type.ContainsGenericParameters)
-            {
-                if (genericClassArguments is null || genericClassArguments.Length == 0)
-                {
-                    //Can't construct concrete class
-                    return null;
-                }
-
-                invocationType = type.MakeGenericType(genericClassArguments);
-            }
-
-            //Try to find it
-            IEnumerable<MethodInfo> methodInfos = invocationType
-                .GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
-                .Where(x => x.Name == methodName)
-                .Where(x => fullRegistration || x.GetCustomAttribute<ScriptingAccessAttribute>() is not null);
-
-            if (!methodInfos.Any())
-            {
-                return null;
-            }
-
-            MethodInfo? selectedMethodInfo = SelectMethod(
-                methodInfos: methodInfos.ToArray(),
-                argumentTypes: args.Select(x => x.GetValueType()).ToArray(),
-                genericMethodArguments: genericMethodArguments);
-
-            if (selectedMethodInfo is null)
-            {
-                return null;
-            }
-
-            return new RegisteredStaticMethodOperation(
-                args: args,
-                methodInfo: selectedMethodInfo,
-                source: source);
-        }
-
-        public IExpression? GetStaticPropertyExpression(
+        IExpression? GetStaticPropertyExpression(
             Type[]? genericClassArguments,
             string propertyName,
-            Token source)
-        {
-            Type invocationType = type;
-
-            if (type.ContainsGenericParameters)
-            {
-                if (genericClassArguments is null || genericClassArguments.Length == 0)
-                {
-                    //Can't construct concrete class
-                    return null;
-                }
-
-                invocationType = type.MakeGenericType(genericClassArguments);
-            }
-
-            //Try to find it
-            PropertyInfo? propertyInfo = invocationType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-
-            if (propertyInfo is not null && (fullRegistration || propertyInfo.GetCustomAttribute<ScriptingAccessAttribute>() is not null))
-            {
-                if (propertyInfo.CanWrite)
-                {
-                    return new RegisteredSettableStaticPropertyOperation(
-                        propertyInfo: propertyInfo,
-                        source: source);
-                }
-                else
-                {
-                    return new RegisteredGettableStaticPropertyOperation(
-                        propertyInfo: propertyInfo,
-                        source: source);
-                }
-            }
-
-            FieldInfo? fieldInfo = invocationType.GetField(propertyName, BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-
-            if (fieldInfo is not null && (fullRegistration || fieldInfo.GetCustomAttribute<ScriptingAccessAttribute>() is not null))
-            {
-                return new RegisteredGettableStaticFieldOperation(
-                    fieldInfo: fieldInfo,
-                    source: source);
-            }
-
-            return null;
-        }
+            Token source);
     }
 }

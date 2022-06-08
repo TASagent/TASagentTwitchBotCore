@@ -28,7 +28,7 @@ public abstract class Statement : IExecutable
                     case Separator.OpenCurlyBoi:
                         tokens.CautiousAdvance();
                         IExecutable statement = new Block(tokens, context);
-                        tokens.AssertAndSkip(Separator.CloseCurlyBoi, checkEOF: false);
+                        tokens.AssertAndAdvance(Separator.CloseCurlyBoi, checkEOF: false);
                         return statement;
 
                     default:
@@ -42,15 +42,19 @@ public abstract class Statement : IExecutable
                 //Valid operations:
                 //  Continue, Break
                 //  Return (With or Without return value)
-                //  Declaration (With or Without assignment, with or without const)
+                //  Declaration (With const) 
                 //  If ( Condition )
                 //  While ( Condition )
                 //  For ( A; B; C )
+                //  ForEach ( var A in B )
+                //  Switch (A) { case B: case C: default: }
                 return ParseKeywordStatement(kwToken, tokens, context);
 
             case TypeToken typeToken:
                 //Valid operations:
-                //  Declaration (With or Without assignment, with or without const)
+                //  Declaration (With or Without Assignment)
+                //  Static Method Invocation
+                //  Static Property assignment
                 return ParseTypeStatement(typeToken, tokens, context);
 
             case LiteralToken _:
@@ -61,7 +65,7 @@ public abstract class Statement : IExecutable
                 //  PostIncrement
                 //  PreIncrement
                 IExecutable standardExecutable = Expression.ParseNextExecutableExpression(tokens, context);
-                tokens.AssertAndSkip(Separator.Semicolon, checkEOF: false);
+                tokens.AssertAndAdvance(Separator.Semicolon, checkEOF: false);
                 return standardExecutable;
 
             default:
@@ -77,19 +81,21 @@ public abstract class Statement : IExecutable
         //Valid operations:
         //  Continue, Break
         //  Return (With or Without return value)
-        //  Declaration (With or Without assignment, with or without global)
+        //  Declaration (With const) 
         //  If ( Condition )
         //  While ( Condition )
         //  For ( A; B; C )
+        //  ForEach ( var A in B )
+        //  Switch (A) { case B: case C: default: }
 
         switch (kwToken.keyword)
         {
             case Keyword.If:
                 {
                     tokens.CautiousAdvance();
-                    tokens.AssertAndSkip(Separator.OpenParen);
+                    tokens.AssertAndAdvance(Separator.OpenParen);
                     IValueGetter ifTest = Expression.ParseNextGetterExpression(tokens, context);
-                    tokens.AssertAndSkip(Separator.CloseParen);
+                    tokens.AssertAndAdvance(Separator.CloseParen);
 
                     IExecutable trueStatement = ParseNextStatement(tokens, context)!;
                     IExecutable? falseStatement = null;
@@ -102,11 +108,11 @@ public abstract class Statement : IExecutable
                     }
 
                     //Check the next token for Else or Else IF
-                    if (tokens.TestAndConditionallySkip(Keyword.Else))
+                    if (tokens.TestAndConditionallyAdvance(Keyword.Else))
                     {
                         falseStatement = ParseNextStatement(tokens, context);
                     }
-                    else if (tokens.TestWithoutSkipping(Keyword.ElseIf))
+                    else if (tokens.TestWithoutAdvancing(Keyword.ElseIf))
                     {
                         KeywordToken replacementIf = new KeywordToken(
                             source: tokens.Current,
@@ -128,9 +134,9 @@ public abstract class Statement : IExecutable
             case Keyword.Switch:
                 {
                     tokens.CautiousAdvance();
-                    tokens.AssertAndSkip(Separator.OpenParen);
+                    tokens.AssertAndAdvance(Separator.OpenParen);
                     IValueGetter switchExpression = Expression.ParseNextGetterExpression(tokens, context);
-                    tokens.AssertAndSkip(Separator.CloseParen);
+                    tokens.AssertAndAdvance(Separator.CloseParen);
 
                     return ParseSwitch(
                         tokens: tokens,
@@ -145,9 +151,9 @@ public abstract class Statement : IExecutable
                     //New context is used for loop
                     context = context.CreateChildScope(true);
 
-                    tokens.AssertAndSkip(Separator.OpenParen);
+                    tokens.AssertAndAdvance(Separator.OpenParen);
                     IValueGetter conditionTest = Expression.ParseNextGetterExpression(tokens, context);
-                    tokens.AssertAndSkip(Separator.CloseParen);
+                    tokens.AssertAndAdvance(Separator.CloseParen);
 
                     IExecutable? loopBody = ParseNextStatement(tokens, context);
 
@@ -164,7 +170,7 @@ public abstract class Statement : IExecutable
                     context = context.CreateChildScope(true);
 
                     //Open Paren
-                    tokens.AssertAndSkip(Separator.OpenParen);
+                    tokens.AssertAndAdvance(Separator.OpenParen);
 
                     //Initialization
                     IExecutable? initializationStatement = ParseNextStatement(tokens, context);
@@ -175,13 +181,13 @@ public abstract class Statement : IExecutable
                     IValueGetter continueExpression = Expression.ParseNextGetterExpression(tokens, context);
 
                     //Semicolon
-                    tokens.AssertAndSkip(Separator.Semicolon);
+                    tokens.AssertAndAdvance(Separator.Semicolon);
 
                     //Increment
                     IExecutable? incrementStatement = ParseForIncrementer(tokens, context);
 
                     //Close Paren
-                    tokens.AssertAndSkip(Separator.CloseParen);
+                    tokens.AssertAndAdvance(Separator.CloseParen);
 
                     IExecutable? loopBody = ParseNextStatement(tokens, context);
 
@@ -201,7 +207,7 @@ public abstract class Statement : IExecutable
                     context = context.CreateChildScope(true);
 
                     //Open Paren
-                    tokens.AssertAndSkip(Separator.OpenParen);
+                    tokens.AssertAndAdvance(Separator.OpenParen);
 
                     //Item Declaration
                     Type itemType = tokens.ReadTypeAndAdvance();
@@ -216,13 +222,13 @@ public abstract class Statement : IExecutable
                         identifierToken: identifierToken,
                         context: context);
 
-                    tokens.AssertAndSkip(Keyword.In);
+                    tokens.AssertAndAdvance(Keyword.In);
 
                     //Container
                     IValueGetter containerExpression = Expression.ParseNextGetterExpression(tokens, context);
 
                     //Close Paren
-                    tokens.AssertAndSkip(Separator.CloseParen);
+                    tokens.AssertAndAdvance(Separator.CloseParen);
 
                     IExecutable? loopBody = ParseNextStatement(tokens, context);
 
@@ -238,7 +244,7 @@ public abstract class Statement : IExecutable
             case Keyword.Break:
                 {
                     tokens.CautiousAdvance();
-                    tokens.AssertAndSkip(Separator.Semicolon, false);
+                    tokens.AssertAndAdvance(Separator.Semicolon, false);
                     return new ControlStatement(kwToken, context);
                 }
 
@@ -249,7 +255,7 @@ public abstract class Statement : IExecutable
                         keywordToken: kwToken,
                         returnValue: Expression.ParseNextGetterExpression(tokens, context),
                         context: context);
-                    tokens.AssertAndSkip(Separator.Semicolon, false);
+                    tokens.AssertAndAdvance(Separator.Semicolon, false);
                     return returnStatement;
                 }
 
@@ -296,12 +302,22 @@ public abstract class Statement : IExecutable
     {
         //Valid operations:
         //  Declaration (With or Without assignment, with or without global)
+        //  Static Method Invocation
+        //  Static Property access/assignment
 
         Type valueType = tokens.ReadTypeAndAdvance();
 
+        if (tokens.TestWithoutAdvancing(Operator.MemberAccess))
+        {
+            //Static Member
+            IExecutable standardExecutable = Expression.ParseNextExecutableExpression(tokens, context, new Expression.TokenUnit(typeToken));
+            tokens.AssertAndAdvance(Separator.Semicolon, checkEOF: false);
+            return standardExecutable;
+        }
+
         IdentifierToken identToken = tokens.GetTokenAndAdvance<IdentifierToken>();
 
-        if (tokens.TestAndConditionallySkip(Separator.Semicolon, false))
+        if (tokens.TestAndConditionallyAdvance(Separator.Semicolon, false))
         {
             if (constDeclaration)
             {
@@ -315,11 +331,11 @@ public abstract class Statement : IExecutable
                 valueType: valueType,
                 context: context);
         }
-        else if (tokens.TestAndConditionallySkip(Operator.Assignment))
+        else if (tokens.TestAndConditionallyAdvance(Operator.Assignment))
         {
             IValueGetter initializerExpression = Expression.ParseNextGetterExpression(tokens, context);
 
-            tokens.AssertAndSkip(Separator.Semicolon, false);
+            tokens.AssertAndAdvance(Separator.Semicolon, false);
 
             return DeclarationAssignmentOperation.CreateDelcaration(
                 identifierToken: identToken,
@@ -339,7 +355,7 @@ public abstract class Statement : IExecutable
         IEnumerator<Token> tokens,
         CompilationContext context)
     {
-        if (tokens.TestWithoutSkipping(Separator.CloseParen))
+        if (tokens.TestWithoutAdvancing(Separator.CloseParen))
         {
             return null;
         }
@@ -350,7 +366,7 @@ public abstract class Statement : IExecutable
         {
             returnStatements.Add(Expression.ParseNextExecutableExpression(tokens, context));
         }
-        while (tokens.TestAndConditionallySkip(Separator.Comma));
+        while (tokens.TestAndConditionallyAdvance(Separator.Comma));
 
         if (returnStatements.Count == 1)
         {
@@ -366,7 +382,7 @@ public abstract class Statement : IExecutable
         CompilationContext context,
         KeywordToken keywordToken)
     {
-        tokens.AssertAndSkip(Separator.OpenCurlyBoi);
+        tokens.AssertAndAdvance(Separator.OpenCurlyBoi);
         Type switchType = switchExpression.GetValueType();
 
         Dictionary<object, Block> map = new Dictionary<object, Block>();
@@ -381,10 +397,10 @@ public abstract class Statement : IExecutable
             //Parse Labels
             while (true)
             {
-                if (tokens.TestAndConditionallySkip(Keyword.Case))
+                if (tokens.TestAndConditionallyAdvance(Keyword.Case))
                 {
                     LiteralToken switchStatementValue = tokens.GetTokenAndAdvance<LiteralToken>();
-                    tokens.AssertAndSkip(Separator.Colon);
+                    tokens.AssertAndAdvance(Separator.Colon);
 
                     if (!switchStatementValue.GetValueType().IsAssignableTo(switchType))
                     {
@@ -395,9 +411,9 @@ public abstract class Statement : IExecutable
 
                     continue;
                 }
-                else if (tokens.TestAndConditionallySkip(Keyword.Default))
+                else if (tokens.TestAndConditionallyAdvance(Keyword.Default))
                 {
-                    tokens.AssertAndSkip(Separator.Colon);
+                    tokens.AssertAndAdvance(Separator.Colon);
 
                     if (defaultInPlay || defaultBlock is not null)
                     {
@@ -436,7 +452,7 @@ public abstract class Statement : IExecutable
                 map[value] = switchBlock;
             }
 
-            if (tokens.TestAndConditionallySkip(Separator.CloseCurlyBoi, false))
+            if (tokens.TestAndConditionallyAdvance(Separator.CloseCurlyBoi, false))
             {
                 break;
             }

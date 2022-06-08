@@ -68,6 +68,12 @@ public partial class ScriptedCommands : ICommandContainer, IScriptedComponent
 
         globalRuntimeContext = scriptRegistrar.GlobalSharedRuntimeContext;
 
+        ClassRegistrar.TryRegisterClass<TTS.TTSVoice>();
+        ClassRegistrar.TryRegisterClass<TTS.TTSPitch>();
+        ClassRegistrar.TryRegisterClass<TTS.TTSSpeed>();
+
+        ClassRegistrar.TryRegisterClass<AuthorizationLevel>();
+
         ClassRegistrar.TryRegisterClass<ScriptingUser>("User");
 
         foreach (ScriptedCommandsConfig.ScriptedCommand? script in scriptedCommandsConfig.ScriptedCommands)

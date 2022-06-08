@@ -22,7 +22,7 @@ public class IdentifierExpression : IValue
 
     public T? GetAs<T>(RuntimeContext context)
     {
-        if (typeof(T).AssignableFromType(type))
+        if (typeof(T).AssignableOrConvertableFromType(type))
         {
             return context.GetExistingValue<T>(identifier);
         }
@@ -35,7 +35,7 @@ public class IdentifierExpression : IValue
     {
         Type otherType = (value is null) ? typeof(NullLiteralToken) : value.GetType();
 
-        if (type.AssignableFromType(otherType))
+        if (type.AssignableOrConvertableFromType(otherType))
         {
             context.SetExistingValue(identifier, value);
         }
@@ -48,7 +48,7 @@ public class IdentifierExpression : IValue
 
     public void SetAs<T>(RuntimeContext context, T? value)
     {
-        if (type.AssignableFromType(typeof(T)))
+        if (type.AssignableOrConvertableFromType(typeof(T)))
         {
             context.SetExistingValue(identifier, value);
         }

@@ -74,6 +74,7 @@ public sealed class GeneralScriptReader : IDisposable
             case '*':
             case '/':
             case '^':
+            case '~':
             case '!':
             case '<':
             case '>':
@@ -100,6 +101,9 @@ public sealed class GeneralScriptReader : IDisposable
         }
     }
 
+    /// <summary>
+    /// https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/integral-numeric-types
+    /// </summary>
     private Token ParseNumber()
     {
         StringBuilder numberBuilder = new StringBuilder();
@@ -107,25 +111,173 @@ public sealed class GeneralScriptReader : IDisposable
         int startLine = line;
         int startColumn = column;
 
-        while (CanRead && IsNumberCharacter(Peek()))
+        while (CanRead && IsNumberCharacter(char.ToUpper(Peek())))
         {
             numberBuilder.Append(Read());
         }
 
-        string numberString = numberBuilder.ToString();
+        string numberString = numberBuilder.ToString().ToUpper();
 
-        if (int.TryParse(numberString, out int integerResult))
+        char peek = char.ToUpper(Peek());
+
+        //Force float-types
+        if (numberString.Contains('.') || numberString.Contains('E') || peek == 'F' || peek == 'M')
         {
-            return new LiteralToken<int>(startLine, startColumn, integerResult);
+            if (peek == 'M')
+            {
+                Read();
+
+                if (!decimal.TryParse(numberString, out decimal decimalResult))
+                {
+                    throw new ScriptParsingException(startLine, startColumn, $"Unable to parse Number: {numberBuilder}");
+                }
+
+                return new LiteralToken<decimal>(startLine, startColumn, decimalResult);
+            }
+            else if (peek == 'F')
+            {
+                Read();
+
+                if (!float.TryParse(numberString, out float floatResult))
+                {
+                    throw new ScriptParsingException(startLine, startColumn, $"Unable to parse Number: {numberBuilder}");
+                }
+
+                return new LiteralToken<float>(startLine, startColumn, floatResult);
+            }
+            else
+            {
+                if (!double.TryParse(numberString, out double doubleResult))
+                {
+                    throw new ScriptParsingException(startLine, startColumn, $"Unable to parse Number: {numberBuilder}");
+                }
+
+                return new LiteralToken<double>(startLine, startColumn, doubleResult);
+            }
         }
-        else if (double.TryParse(numberString, out double doubleResult))
+
+        if (numberString.StartsWith("0B"))
         {
-            return new LiteralToken<double>(startLine, startColumn, doubleResult);
+            //Binary
+            numberString = numberString[2..].Replace("_", "");
+
+            if (numberString.Length <= 32)
+            {
+                return new LiteralToken<int>(startLine, startColumn, Convert.ToInt32(numberString, 2));
+            }
+            
+            if (numberString.Length <= 64)
+            {
+                return new LiteralToken<long>(startLine, startColumn, Convert.ToInt64(numberString, 2));
+            }
+
+            throw new ScriptParsingException(startLine, startColumn, $"Unable to convert binary string to a number. Too large: {numberBuilder}");
         }
-        else
+        
+        if (numberString.StartsWith("0X"))
         {
-            throw new ScriptParsingException(startLine, startColumn, $"Unable to parse Number: {numberString}");
+            //Hex String
+            numberString = numberString[2..].Replace("_", "");
+
+            if (numberString.Length <= 8)
+            {
+                return new LiteralToken<int>(startLine, startColumn, Convert.ToInt32(numberString, 16));
+            }
+
+            if (numberString.Length <= 16)
+            {
+                return new LiteralToken<long>(startLine, startColumn, Convert.ToInt64(numberString, 16));
+            }
+
+            throw new ScriptParsingException(startLine, startColumn, $"Unable to convert hex string to a number. Too large: {numberBuilder}");
         }
+
+        if (peek == 'U')
+        {
+            Read();
+            peek = char.ToUpper(Peek());
+
+            if (peek == 'L')
+            {
+                Read();
+
+                if (ulong.TryParse(numberString, out ulong ulongResult))
+                {
+                    return new LiteralToken<ulong>(startLine, startColumn, ulongResult);
+                }
+            }
+            else
+            {
+                if (uint.TryParse(numberString, out uint uintResult))
+                {
+                    return new LiteralToken<uint>(startLine, startColumn, uintResult);
+                }
+
+                if (ulong.TryParse(numberString, out ulong ulongResult))
+                {
+                    return new LiteralToken<ulong>(startLine, startColumn, ulongResult);
+                }
+            }
+
+            throw new ScriptParsingException(startLine, startColumn, $"Unable to parse Number: {numberBuilder}");
+        }
+
+        if (peek == 'L')
+        {
+            Read();
+            peek = char.ToUpper(Peek());
+
+            if (peek == 'U')
+            {
+                Read();
+
+                if (ulong.TryParse(numberString, out ulong ulongResult))
+                {
+                    return new LiteralToken<ulong>(startLine, startColumn, ulongResult);
+                }
+            }
+            else
+            {
+                if (long.TryParse(numberString, out long longResult))
+                {
+                    return new LiteralToken<long>(startLine, startColumn, longResult);
+                }
+
+                if (ulong.TryParse(numberString, out ulong ulongResult))
+                {
+                    return new LiteralToken<ulong>(startLine, startColumn, ulongResult);
+                }
+            }
+
+            throw new ScriptParsingException(startLine, startColumn, $"Unable to parse Number: {numberBuilder}");
+        }
+
+        if (int.TryParse(numberString, out int fallbackIntegerResult))
+        {
+            return new LiteralToken<int>(startLine, startColumn, fallbackIntegerResult);
+        }
+
+        if (uint.TryParse(numberString, out uint fallbackUIntegerResult))
+        {
+            return new LiteralToken<uint>(startLine, startColumn, fallbackUIntegerResult);
+        }
+
+        if (long.TryParse(numberString, out long fallbackLongResult))
+        {
+            return new LiteralToken<long>(startLine, startColumn, fallbackLongResult);
+        }
+
+        if (ulong.TryParse(numberString, out ulong fallbackULongResult))
+        {
+            return new LiteralToken<ulong>(startLine, startColumn, fallbackULongResult);
+        }
+
+        if (double.TryParse(numberString, out double fallbackDoubleResult))
+        {
+            return new LiteralToken<double>(startLine, startColumn, fallbackDoubleResult);
+        }
+
+        throw new ScriptParsingException(startLine, startColumn, $"Unable to parse Number: {numberBuilder}");
     }
 
     private Token ParseBlockComment()
@@ -411,12 +563,28 @@ public sealed class GeneralScriptReader : IDisposable
                 {
                     return new OperatorToken(line, column - 2, Operator.IsLessThanOrEqualTo);
                 }
+                else if (ConsumeIfNext('<'))
+                {
+                    if (ConsumeIfNext('='))
+                    {
+                        return new OperatorToken(line, column - 3, Operator.BitwiseLeftShiftEquals);
+                    }
+                    return new OperatorToken(line, column - 2, Operator.BitwiseLeftShift);
+                }
                 return new OperatorToken(line, column - 1, Operator.IsLessThan);
 
             case '>':
                 if (ConsumeIfNext('='))
                 {
                     return new OperatorToken(line, column - 2, Operator.IsGreaterThanOrEqualTo);
+                }
+                else if (ConsumeIfNext('>'))
+                {
+                    if (ConsumeIfNext('='))
+                    {
+                        return new OperatorToken(line, column - 3, Operator.BitwiseRightShiftEquals);
+                    }
+                    return new OperatorToken(line, column - 2, Operator.BitwiseRightShift);
                 }
                 return new OperatorToken(line, column - 1, Operator.IsGreaterThan);
 
@@ -464,13 +632,6 @@ public sealed class GeneralScriptReader : IDisposable
                 }
                 return new OperatorToken(line, column - 1, Operator.Modulo);
 
-            case '^':
-                if (ConsumeIfNext('='))
-                {
-                    return new OperatorToken(line, column - 2, Operator.PowerEquals);
-                }
-                return new OperatorToken(line, column - 1, Operator.Power);
-
             case '&':
                 if (ConsumeIfNext('='))
                 {
@@ -480,7 +641,7 @@ public sealed class GeneralScriptReader : IDisposable
                 {
                     return new OperatorToken(line, column - 2, Operator.And);
                 }
-                throw new ScriptParsingException(line, column - 1, "And operator is \"&&\"");
+                return new OperatorToken(line, column - 1, Operator.BitwiseAnd);
 
             case '|':
                 if (ConsumeIfNext('='))
@@ -491,7 +652,17 @@ public sealed class GeneralScriptReader : IDisposable
                 {
                     return new OperatorToken(line, column - 2, Operator.Or);
                 }
-                throw new ScriptParsingException(line, column - 1, "Or operator is \"||\"");
+                return new OperatorToken(line, column - 1, Operator.BitwiseOr);
+
+            case '^':
+                if (ConsumeIfNext('='))
+                {
+                    return new OperatorToken(line, column - 2, Operator.BitwiseXOrEquals);
+                }
+                return new OperatorToken(line, column - 1, Operator.BitwiseXOr);
+
+            case '~':
+                return new OperatorToken(line, column - 1, Operator.BitwiseComplement);
 
             case '?':
                 return new OperatorToken(line, column - 1, Operator.Ternary);
@@ -660,7 +831,7 @@ public sealed class GeneralScriptReader : IDisposable
 
     private static bool IsWordCharacter(char c) => char.IsLetterOrDigit(c) || c == '_';
     private static bool IsNumberCharacter(char c) =>
-        char.IsNumber(c) || c == '.' || c == 'E' || c == 'e';
+        char.IsNumber(c) || c == '.' || c == 'E' || c == '_' || c == 'X' || c == 'B';
 
     #region IDisposable Support
 
