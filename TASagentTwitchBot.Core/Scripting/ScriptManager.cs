@@ -30,17 +30,20 @@ public interface IScriptRegistrar
 public class ScriptManager : IScriptManager, IScriptRegistrar
 {
     private readonly ICommunication communication;
+    private readonly IScriptHelper scriptHelper;
     private readonly List<IScriptedComponent> scriptedComponents;
 
     private readonly Dictionary<string, IScriptedComponent> scriptMap = new Dictionary<string, IScriptedComponent>();
 
-    GlobalRuntimeContext IScriptRegistrar.GlobalSharedRuntimeContext { get; } = new GlobalRuntimeContext();
+    public GlobalRuntimeContext GlobalSharedRuntimeContext { get; } = new GlobalRuntimeContext();
 
     public ScriptManager(
         ICommunication communication,
+        IScriptHelper scriptHelper,
         IEnumerable<IScriptedComponent> scriptedComponents)
     {
         this.communication = communication;
+        this.scriptHelper = scriptHelper;
         this.scriptedComponents = scriptedComponents.ToList();
 
         Initialize();
@@ -49,8 +52,10 @@ public class ScriptManager : IScriptManager, IScriptRegistrar
     private void Initialize()
     {
         ClassRegistrar.TryRegisterClass<ICommunication>("ICommunication", limited: true);
-        GlobalRuntimeContext globalRuntimeContext = (this as IScriptRegistrar).GlobalSharedRuntimeContext;
-        globalRuntimeContext.AddOrSetValue("communication", typeof(ICommunication), communication);
+        GlobalSharedRuntimeContext.AddOrSetValue("communication", typeof(ICommunication), communication);
+
+        ClassRegistrar.TryRegisterClass<IScriptHelper>("IScriptHelper", limited: true);
+        GlobalSharedRuntimeContext.AddOrSetValue("scriptHelper", typeof(IScriptHelper), scriptHelper);
 
         foreach (IScriptedComponent scriptedComponent in scriptedComponents)
         {

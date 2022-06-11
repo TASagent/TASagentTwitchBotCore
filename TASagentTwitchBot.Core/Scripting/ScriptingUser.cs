@@ -1,30 +1,46 @@
 ﻿using BGC.Scripting.Parsing;
+using TASagentTwitchBot.Core.Commands;
 using TASagentTwitchBot.Core.TTS;
 
 namespace TASagentTwitchBot.Core.Scripting;
 
 public class ScriptingUser
 {
-    public string TwitchUserName { get; set; } = "";
-    public string TwitchUserId { get; set; } = "";
-    public string Color { get; set; } = "";
-    public Commands.AuthorizationLevel AuthorizationLevel { get; set; } = Commands.AuthorizationLevel.Restricted;
-    public TTSVoice TTSVoice { get; set; } = TTSVoice.Unassigned;
-    public TTSPitch TTSPitch { get; set; } = TTSPitch.Unassigned;
-    public TTSSpeed TTSSpeed { get; set; } = TTSSpeed.Unassigned;
-    public string TTSEffect { get; set; } = "";
+    public string TwitchUserName { get; }
+    public string TwitchUserId { get; }
+    public string Color { get; set; }
+    public AuthorizationLevel AuthorizationLevel { get; set; }
+    public TTSVoice TTSVoice { get; }
+    public TTSPitch TTSPitch { get; }
+    public TTSSpeed TTSSpeed { get; }
+    public string TTSEffect { get; }
 
-    public static ScriptingUser FromDB(Database.User user) => new ScriptingUser()
+    private readonly IPersistentDataManager persistentDataManager;
+
+    public ScriptingUser(
+        string twitchUserName,
+        string twitchUserId,
+        string color,
+        AuthorizationLevel authorizationLevel,
+        TTSVoice ttsVoice,
+        TTSPitch ttsPitch,
+        TTSSpeed ttsSpeed,
+        string ttsEffect,
+        IPersistentDataManager persistentDataManager)
     {
-        TwitchUserName = user.TwitchUserName,
-        TwitchUserId = user.TwitchUserId,
-        Color = string.IsNullOrWhiteSpace(user.Color) ? "#0000FF" : user.Color,
-        AuthorizationLevel = user.AuthorizationLevel,
+        TwitchUserName = twitchUserName;
+        TwitchUserId = twitchUserId;
+        Color = color;
+        AuthorizationLevel = authorizationLevel;
+        TTSVoice = ttsVoice;
+        TTSPitch = ttsPitch;
+        TTSSpeed = ttsSpeed;
+        TTSEffect = ttsEffect;
+        this.persistentDataManager = persistentDataManager;
+    }
 
-        TTSVoice = user.TTSVoicePreference,
-        TTSPitch = user.TTSPitchPreference,
-        TTSSpeed = user.TTSSpeedPreference,
-        TTSEffect = user.TTSEffectsChain ?? ""
-    };
+    public bool HasDatum(string key) => persistentDataManager.HasUserDatum(TwitchUserId, key);
+    public T? GetDatum<T>(string key) => persistentDataManager.GetUserDatum<T>(TwitchUserId, key);
+    public void SetDatum<T>(string key, T value) => persistentDataManager.SetUserDatum(TwitchUserId, key, value);
 }
 

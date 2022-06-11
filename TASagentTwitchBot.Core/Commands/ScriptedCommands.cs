@@ -1,7 +1,4 @@
-﻿using System.Text;
-using System.Text.RegularExpressions;
-
-using BGC.Scripting;
+﻿using BGC.Scripting;
 using BGC.Scripting.Parsing;
 using TASagentTwitchBot.Core.Scripting;
 
@@ -9,21 +6,24 @@ namespace TASagentTwitchBot.Core.Commands;
 
 public partial class ScriptedCommands : ICommandContainer, IScriptedComponent
 {
+    private readonly ScriptedCommandsConfig scriptedCommandsConfig;
+
     private readonly ICommunication communication;
+    private readonly IScriptHelper scriptHelper;
 
     private ICommandRegistrar? commandRegistrar = null;
     private IScriptRegistrar? scriptRegistrar = null;
-
-    private readonly ScriptedCommandsConfig scriptedCommandsConfig;
 
     private GlobalRuntimeContext? globalRuntimeContext = null;
 
     public ScriptedCommands(
         ScriptedCommandsConfig scriptedCommandsConfig,
-        ICommunication communication)
+        ICommunication communication,
+        IScriptHelper scriptHelper)
     {
         this.scriptedCommandsConfig = scriptedCommandsConfig;
         this.communication = communication;
+        this.scriptHelper = scriptHelper;
     }
 
     public void RegisterCommands(ICommandRegistrar commandRegistrar)
@@ -169,7 +169,7 @@ public partial class ScriptedCommands : ICommandContainer, IScriptedComponent
         try
         {
             await script.Execute(
-                user: ScriptingUser.FromDB(chatter.User),
+                user: scriptHelper.GetScriptingUser(chatter.User),
                 remainingCommand: remainingCommand.ToList());
         }
         catch (Exception ex)

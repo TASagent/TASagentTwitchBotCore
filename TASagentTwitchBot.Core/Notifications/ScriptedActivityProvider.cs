@@ -27,6 +27,7 @@ public partial class ScriptedActivityProvider :
     private readonly ITTSRenderer ttsRenderer;
     private readonly NotificationServer notificationServer;
     private readonly Bits.CheerHelper cheerHelper;
+    private readonly IScriptHelper scriptHelper;
 
     private readonly ScriptedNotificationConfig notificationConfig;
 
@@ -70,7 +71,8 @@ public partial class ScriptedActivityProvider :
         IActivityDispatcher activityDispatcher,
         ITTSRenderer ttsRenderer,
         NotificationServer notificationServer,
-        Database.IUserHelper userHelper)
+        Database.IUserHelper userHelper,
+        IScriptHelper scriptHelper)
     {
         this.notificationConfig = notificationConfig;
 
@@ -86,6 +88,7 @@ public partial class ScriptedActivityProvider :
         this.notificationServer = notificationServer;
 
         this.userHelper = userHelper;
+        this.scriptHelper = scriptHelper;
     }
 
     #region IScriptedComponent
@@ -342,7 +345,7 @@ public partial class ScriptedActivityProvider :
         {
             try
             {
-                ScriptingUser user = ScriptingUser.FromDB(subscriber);
+                ScriptingUser user = scriptHelper.GetScriptingUser(subscriber);
                 NotificationSub sub = new NotificationSub(tier, monthCount, message);
 
                 IAlert alertData = await subScript.ExecuteFunctionAsync<IAlert>(
@@ -385,7 +388,7 @@ public partial class ScriptedActivityProvider :
         {
             try
             {
-                ScriptingUser user = ScriptingUser.FromDB(cheerer);
+                ScriptingUser user = scriptHelper.GetScriptingUser(cheerer);
                 NotificationCheer cheer = new NotificationCheer(quantity, message);
 
                 IAlert alertData = await cheerScript.ExecuteFunctionAsync<IAlert>(
@@ -436,7 +439,7 @@ public partial class ScriptedActivityProvider :
         {
             try
             {
-                ScriptingUser user = ScriptingUser.FromDB(raider);
+                ScriptingUser user = scriptHelper.GetScriptingUser(raider);
 
                 IAlert alertData = await raidScript.ExecuteFunctionAsync<IAlert>(
                     "GetAlertData", 2_000, raidRuntimeContext, user, count);
@@ -495,8 +498,8 @@ public partial class ScriptedActivityProvider :
         {
             try
             {
-                ScriptingUser notificationSender = ScriptingUser.FromDB(sender);
-                ScriptingUser notificationRecipient = ScriptingUser.FromDB(recipient);
+                ScriptingUser notificationSender = scriptHelper.GetScriptingUser(sender);
+                ScriptingUser notificationRecipient = scriptHelper.GetScriptingUser(recipient);
 
                 NotificationGiftSub notificationGiftSub = new NotificationGiftSub(tier, months);
 
@@ -545,7 +548,7 @@ public partial class ScriptedActivityProvider :
         {
             try
             {
-                ScriptingUser notificationRecipient = ScriptingUser.FromDB(recipient);
+                ScriptingUser notificationRecipient = scriptHelper.GetScriptingUser(recipient);
 
                 NotificationGiftSub notificationGiftSub = new NotificationGiftSub(tier, months);
 
@@ -587,7 +590,7 @@ public partial class ScriptedActivityProvider :
         {
             try
             {
-                ScriptingUser notificationFollower = ScriptingUser.FromDB(follower);
+                ScriptingUser notificationFollower = scriptHelper.GetScriptingUser(follower);
 
                 IAlert alertData = await followScript.ExecuteFunctionAsync<IAlert>(
                     "GetAlertData", 2_000, followRuntimeContext, notificationFollower);

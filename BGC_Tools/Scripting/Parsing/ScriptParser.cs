@@ -25,7 +25,6 @@ public static class ScriptParser
                 .CheckParens()
                 .HandleGenericTypeArguments()
                 .HandleCasting()
-                //.HandleMemberAccess()
                 .GetEnumerator();
 
             tokens.MoveNext();
@@ -458,72 +457,7 @@ public static class ScriptParser
 
         throw new ScriptParsingException(genericArgumentTarget, $"Cannot apply Generic Type Arguments to token of type {genericArgumentTarget.GetType().Name}");
     }
-
-    ///// <summary>
-    ///// Patterns:
-    ///// 
-    /////
-    ///// Console.WriteLine("test");          //Static Invocation
-    ///// someReference.SomeFunction();       //Method Invocation on reference
-    ///// someArray[i].SomeFunction();        //Method Invocation on element
-    ///// (3 + 6).ToString("X6");             //Method Invocation on result
-    /////                                     
-    ///// string temp = Console.Title;        //Static Property Access
-    ///// Console.Title = "asdf";             //Static Property Assignment
-    ///// StaticClass.List.Clear();           //Static Property Access
-    ///// string temp = someReference.Name;   //Property Access on reference
-    ///// someReference.SomeProperty = 1;     //Property Assignment on reference
-    ///// someArray[i].PropertyThing = 1;     //Property Access/Assignment on element
-    ///// int i = ("a" + "B").Length;         //Property Access/Assignment on result
-    ///// 
-    ///// 
-    ///// </summary>
-    ///// <param name="tokens"></param>
-    ///// <returns></returns>
-    ///// <exception cref="Exception"></exception>
-    //private static IEnumerable<Token> HandleMemberAccess(this IEnumerable<Token> tokens)
-    //{
-    //    Queue<Token> tokenQueue = new Queue<Token>(3);
-
-    //    foreach (Token token in tokens)
-    //    {
-    //        switch (tokenQueue.Count)
-    //        {
-    //            case 0:
-    //                if (token is IdentifierToken)
-    //                {
-    //                    tokenQueue.Enqueue(token);
-    //                }
-    //                else if (token is TypeToken)
-    //                {
-    //                    tokenQueue.Enqueue(token);
-
-    //                }
-    //                else
-    //                {
-    //                    yield return token;
-    //                }
-    //                break;
-
-    //            case 1:
-
-    //                break;
-
-    //            case 2:
-
-    //                break;
-
-    //            default:
-    //                throw new Exception($"Serious parsing error.  Too many queued tokens.");
-    //        }
-    //    }
-
-    //    while (tokenQueue.Count > 0)
-    //    {
-    //        yield return tokenQueue.Dequeue();
-    //    }
-    //}
-
+    
     private static IEnumerable<Token> DropComments(this IEnumerable<Token> tokens) =>
         tokens.Where(x => x is not CommentToken);
 }

@@ -167,11 +167,6 @@ public static class ParsingExtensions
         {
             type = typeToken.BuildType();
             tokens.CautiousAdvance(checkEOF);
-
-            //if (classToken.IsGenericType)
-            //{
-            //    type = type.MakeGenericType(tokens.ReadTypeArguments());
-            //}
         }
 
         if (type is null)
@@ -183,40 +178,6 @@ public static class ParsingExtensions
 
         return type;
     }
-
-    //public static Type[]? TryReadTypeArguments(this IEnumerator<Token> tokens)
-    //{
-    //    if (!tokens.TestWithoutAdvancing(Operator.IsLessThan))
-    //    {
-    //        return null;
-    //    }
-
-    //    return tokens.ReadTypeArguments();
-    //}
-
-    //public static Type[] ReadTypeArguments(this IEnumerator<Token> tokens)
-    //{
-    //    tokens.AssertAndAdvance(Operator.IsLessThan);
-
-    //    if (tokens.Current is OperatorToken closeToken &&
-    //        closeToken.operatorType == Operator.IsLessThan)
-    //    {
-    //        throw new ScriptParsingException(
-    //            source: tokens.Current,
-    //            message: "Generic types must be specified");
-    //    }
-
-    //    List<Type> types = new List<Type>();
-    //    do
-    //    {
-    //        types.Add(tokens.ReadTypeAndAdvance());
-    //    }
-    //    while (tokens.TestAndConditionallyAdvance(Separator.Comma));
-
-    //    tokens.AssertAndAdvance(Operator.IsGreaterThan);
-
-    //    return types.ToArray();
-    //}
 
 
     public static bool AssignableOrConvertableFromType(this Type valueType, Type otherValueType)

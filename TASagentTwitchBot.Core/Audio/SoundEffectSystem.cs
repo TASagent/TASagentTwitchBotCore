@@ -32,7 +32,6 @@ public class SoundEffectSystem : ISoundEffectSystem
     private readonly ICommunication communication;
 
     private readonly SoundEffectData soundEffectData;
-    private readonly string dataFilePath;
 
 
     public SoundEffectSystem(
@@ -40,18 +39,7 @@ public class SoundEffectSystem : ISoundEffectSystem
     {
         this.communication = communication;
 
-        dataFilePath = BGC.IO.DataManagement.PathForDataFile("Config", "SoundEffects.json");
-
-        if (File.Exists(dataFilePath))
-        {
-            soundEffectData = JsonSerializer.Deserialize<SoundEffectData>(File.ReadAllText(dataFilePath))!;
-            soundEffectData.VerifyAndPopulate(communication);
-        }
-        else
-        {
-            soundEffectData = new SoundEffectData();
-            File.WriteAllText(dataFilePath, JsonSerializer.Serialize(soundEffectData));
-        }
+        soundEffectData = SoundEffectData.GetData(communication);
     }
 
     public bool HasSoundEffects() => soundEffectData.SoundEffects.Count != 0;
@@ -191,7 +179,7 @@ public class SoundEffectSystem : ISoundEffectSystem
 
         if (serialize)
         {
-            Serialize();
+            soundEffectData.Serialize();
         }
     }
 
@@ -212,7 +200,7 @@ public class SoundEffectSystem : ISoundEffectSystem
             soundEffectData.SoundEffectAliasLookup.Remove(alias.ToLowerInvariant());
         }
 
-        Serialize();
+        soundEffectData.Serialize();
 
         return true;
     }
@@ -317,7 +305,7 @@ public class SoundEffectSystem : ISoundEffectSystem
 
         if (serialize)
         {
-            Serialize();
+            soundEffectData.Serialize();
         }
     }
 
@@ -335,14 +323,6 @@ public class SoundEffectSystem : ISoundEffectSystem
         double finalAudioFileRMS = convolvedStreamA.CalculateRMS().Max();
 
         return finalAudioFileRMS / initialFileRMS;
-    }
-
-    private void Serialize()
-    {
-        lock (soundEffectData)
-        {
-            File.WriteAllText(dataFilePath, JsonSerializer.Serialize(soundEffectData));
-        }
     }
 
     public static IBGCStream Spatialize(
@@ -406,6 +386,9 @@ public class SoundEffectSystem : ISoundEffectSystem
 
     public class SoundEffectData
     {
+        private static string FilePath => BGC.IO.DataManagement.PathForDataFile("Config", "SoundEffects.json");
+        private static readonly object _lock = new object();
+
         public string ReverbTestFile { get; set; } = "";
 
         public List<SoundEffect> SoundEffects { get; init; } = new List<SoundEffect>();
@@ -421,7 +404,32 @@ public class SoundEffectSystem : ISoundEffectSystem
         [JsonIgnore]
         public Dictionary<string, ReverbIRF> ReverbIRFAliasLookup { get; } = new Dictionary<string, ReverbIRF>();
 
-        public void VerifyAndPopulate(ICommunication communication)
+        public static SoundEffectData GetData(ICommunication communication)
+        {
+            SoundEffectData data;
+            if (File.Exists(FilePath))
+            {
+                data = JsonSerializer.Deserialize<SoundEffectData>(File.ReadAllText(FilePath))!;
+                data.VerifyAndPopulate(communication);
+            }
+            else
+            {
+                data = new SoundEffectData();
+                data.Serialize();
+            }
+
+            return data;
+        }
+
+        public void Serialize()
+        {
+            lock (_lock)
+            {
+                File.WriteAllText(FilePath, JsonSerializer.Serialize(this));
+            }
+        }
+
+        private void VerifyAndPopulate(ICommunication communication)
         {
             //Keep SoundEffects Sorted
             SoundEffects.Sort();
@@ -477,6 +485,5 @@ public record SoundEffect(string Name, string FilePath, string[] Aliases) : ICom
         return Name.CompareTo(other.Name);
     }
 }
-
 
 public record ReverbIRF(string Name, string FilePath, double Gain, string[] Aliases);
