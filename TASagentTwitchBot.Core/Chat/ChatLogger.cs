@@ -32,14 +32,7 @@ public class ChatLogger : IStartupListener, IDisposable
             communication.SendWhisperHandlers += WriteOutgoingWhisper;
             communication.ReceiveMessageLoggers += WriteIncomingMessage;
 
-            if (botConfig.UseThreadedMonitors)
-            {
-                logHandlerTask = Task.Run(HandleLines);
-            }
-            else
-            {
-                logHandlerTask = HandleLines();
-            }
+            logHandlerTask = Task.Run(HandleLines);
         }
         else
         {

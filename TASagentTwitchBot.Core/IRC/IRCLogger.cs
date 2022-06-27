@@ -29,14 +29,7 @@ public class IRCLogger : IIRCLogger, IDisposable
 
         if (botConfig.ExhaustiveIRCLogging)
         {
-            if (botConfig.UseThreadedMonitors)
-            {
-                logHandlerTask = Task.Run(HandleLines);
-            }
-            else
-            {
-                logHandlerTask = HandleLines();
-            }
+            logHandlerTask = Task.Run(HandleLines);
         }
         else
         {

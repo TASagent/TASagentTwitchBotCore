@@ -54,14 +54,7 @@ public class ActivityDispatcher : IActivityDispatcher, IDisposable
         activityWriter = channel.Writer;
         activityReader = channel.Reader;
 
-        if (botConfig.UseThreadedMonitors)
-        {
-            activityListeningTask = Task.Run(ListenForActivity);
-        }
-        else
-        {
-            activityListeningTask = ListenForActivity();
-        }
+        activityListeningTask = Task.Run(ListenForActivity);
     }
 
     private async Task ListenForActivity()

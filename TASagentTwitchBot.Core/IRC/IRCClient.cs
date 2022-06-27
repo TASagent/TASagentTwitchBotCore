@@ -93,14 +93,7 @@ public class IrcClient : IStartupListener, IShutdownListener, IDisposable
 
         applicationManagement.RegisterShutdownListener(this);
 
-        if (botConfig.UseThreadedMonitors)
-        {
-            Task.Run(Start);
-        }
-        else
-        {
-            Start();
-        }
+        Task.Run(Start);
     }
 
     private async void Start()

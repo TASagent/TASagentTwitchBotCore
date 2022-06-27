@@ -55,14 +55,7 @@ public class PubSubClient : IStartupListener, IShutdownListener, IDisposable
 
         applicationManagement.RegisterShutdownListener(this);
 
-        if (botConfig.UseThreadedMonitors)
-        {
-            Task.Run(Launch);
-        }
-        else
-        {
-            Launch();
-        }
+        Task.Run(Launch);
     }
 
     private async void Launch()

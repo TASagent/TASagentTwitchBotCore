@@ -75,7 +75,17 @@ public class TTTASCommandSystem : ICommandContainer
 
         if (!await GetCanUseTTTAS(chatter.User))
         {
-            communication.SendPublicChatMessage($"You are not authorized to use the {tttasConfig.FeatureName} System with chat commands, @{chatter.User.TwitchUserName}.");
+            if (tttasConfig.Command.AllowCreditRedemptions && creditManager.IsEnabled)
+            {
+                long credits = await creditManager.GetCredits(chatter.User, tttasConfig.Command.CreditName);
+
+                communication.SendPublicChatMessage(
+                        $"@{chatter.User.TwitchUserName}, you only have {credits:N0} / {tttasConfig.Command.CreditCost:N0} {tttasConfig.Command.CreditName} credits.");
+            }
+            else
+            {
+                communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, you are not authorized to use the {tttasConfig.FeatureName} System with chat commands.");
+            }
             return;
         }
 

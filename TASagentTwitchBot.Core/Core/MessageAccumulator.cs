@@ -54,14 +54,7 @@ public class MessageAccumulator : IMessageAccumulator, IStartupListener, IDispos
         communication.ReceiveNotificationHandlers += ReceiveNotification;
         communication.ReceivePendingNotificationHandlers += ReceivePendingNotification;
 
-        if (botConfig.UseThreadedMonitors)
-        {
-            monitorTask = Task.Run(MonitorMessages);
-        }
-        else
-        {
-            monitorTask = MonitorMessages();
-        }
+        monitorTask = Task.Run(MonitorMessages);
     }
 
     private async Task MonitorMessages()

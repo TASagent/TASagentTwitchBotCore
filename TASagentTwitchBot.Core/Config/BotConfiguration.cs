@@ -34,7 +34,6 @@ public class BotConfiguration
     public string MidiOutputDevice { get; set; } = "";
     public string VoiceInputDevice { get; set; } = "";
 
-    public bool UseThreadedMonitors { get; init; } = true;
     public int Version { get; set; } = 1;
     public const int CURRENT_VERSION = 2;
 

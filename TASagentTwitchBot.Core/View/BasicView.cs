@@ -2,15 +2,15 @@
 
 namespace TASagentTwitchBot.Core.View;
 
-public class BasicView : IConsoleOutput, IShutdownListener, IDisposable
+public class BasicView : IConsoleOutput, IShutdownListener, IStartupListener, IDisposable
 {
     private readonly Config.BotConfiguration botConfig;
     private readonly ICommunication communication;
     private readonly ApplicationManagement applicationManagement;
 
     private readonly CancellationTokenSource generalTokenSource = new CancellationTokenSource();
-    private readonly Task readHandlerTask;
-    private readonly Task keysHandlerTask;
+    private Task? readHandlerTask = null;
+    private Task? keysHandlerTask = null;
 
     private readonly ChannelWriter<ConsoleKeyInfo> consoleChannelWriter;
     private readonly ChannelReader<ConsoleKeyInfo> consoleChannelReader;
@@ -32,17 +32,6 @@ public class BasicView : IConsoleOutput, IShutdownListener, IDisposable
 
         applicationManagement.RegisterShutdownListener(this);
 
-        if (botConfig.UseThreadedMonitors)
-        {
-            readHandlerTask = Task.Run(ReadKeysHandler);
-            keysHandlerTask = Task.Run(HandleKeysLoop);
-        }
-        else
-        {
-            readHandlerTask = ReadKeysHandler();
-            keysHandlerTask = HandleKeysLoop();
-        }
-
         communication.ReceivePendingNotificationHandlers += ReceivePendingNotification;
         communication.ReceiveEventHandlers += ReceiveEventHandler;
         communication.ReceiveMessageLoggers += ReceiveMessageHandler;
@@ -51,6 +40,12 @@ public class BasicView : IConsoleOutput, IShutdownListener, IDisposable
         communication.DebugMessageHandlers += DebugMessageHandler;
 
         communication.SendDebugMessage("BasicView Connected.  Listening for Ctrl+Q to quit gracefully.\n");
+    }
+
+    public virtual void NotifyStartup()
+    {
+        readHandlerTask = Task.Run(ReadKeysHandler);
+        keysHandlerTask = Task.Run(HandleKeysLoop);
     }
 
     protected virtual void ReceiveEventHandler(string message)
@@ -174,8 +169,8 @@ public class BasicView : IConsoleOutput, IShutdownListener, IDisposable
 
                 consoleChannelWriter.TryComplete();
 
-                readHandlerTask.Wait(2_000);
-                keysHandlerTask.Wait(2_000);
+                readHandlerTask?.Wait(2_000);
+                keysHandlerTask?.Wait(2_000);
 
                 generalTokenSource.Dispose();
             }

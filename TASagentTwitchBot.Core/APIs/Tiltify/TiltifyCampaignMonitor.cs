@@ -42,14 +42,7 @@ public class TiltifyCampaignMonitor : IStartupListener, IDisposable
         else
         {
             //Campaign running
-            if (botConfig.UseThreadedMonitors)
-            {
-                monitorTask = Task.Run(MonitorCampaign);
-            }
-            else
-            {
-                monitorTask = MonitorCampaign();
-            }
+            monitorTask = Task.Run(MonitorCampaign);
         }
 
     }

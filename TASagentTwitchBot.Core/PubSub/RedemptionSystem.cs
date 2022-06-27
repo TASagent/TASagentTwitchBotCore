@@ -64,14 +64,7 @@ public class RedemptionSystem : IRedemptionSystem, IDisposable
 
         if (logRedemptions)
         {
-            if (botConfig.UseThreadedMonitors)
-            {
-                logHandlerTask = Task.Run(HandleLogs);
-            }
-            else
-            {
-                logHandlerTask = HandleLogs();
-            }
+            logHandlerTask = Task.Run(HandleLogs);
         }
         else
         {
