@@ -9,23 +9,27 @@ namespace TASagentTwitchBot.Core.TTS;
 public class TTSSystem : ICommandContainer
 {
     //Subsystems
-    private readonly IServiceScopeFactory scopeFactory;
     private readonly TTSConfiguration ttsConfig;
     private readonly ICommunication communication;
     private readonly IAudioEffectSystem audioEffectSystem;
     private readonly Notifications.ITTSHandler ttsHandler;
+    private readonly IUserHelper userHelper;
+
+    private readonly IServiceScopeFactory scopeFactory;
 
     public TTSSystem(
         TTSConfiguration ttsConfig,
         ICommunication communication,
         IAudioEffectSystem audioEffectSystem,
         Notifications.ITTSHandler ttsHandler,
+        IUserHelper userHelper,
         IServiceScopeFactory scopeFactory)
     {
         this.ttsConfig = ttsConfig;
         this.communication = communication;
         this.audioEffectSystem = audioEffectSystem;
         this.ttsHandler = ttsHandler;
+        this.userHelper = userHelper;
         this.scopeFactory = scopeFactory;
     }
 
@@ -40,6 +44,9 @@ public class TTSSystem : ICommandContainer
 
         commandRegistrar.RegisterScopedCommand("disable", ttsConfig.Command.CommandName, HandleTTSDisableRequest);
         commandRegistrar.RegisterScopedCommand("enable", ttsConfig.Command.CommandName, HandleTTSEnableRequest);
+
+        commandRegistrar.RegisterScopedCommand("pause", ttsConfig.Command.CommandName, HandleTTSPauseRequest);
+        commandRegistrar.RegisterScopedCommand("unpause", ttsConfig.Command.CommandName, HandleTTSUnpauseRequest);
 
         //Helper Aliases
         commandRegistrar.RegisterScopedCommand("set", "voice", (chatter, remainingCommand) => HandleBadSetRequests(chatter, remainingCommand, "voice"));
@@ -118,7 +125,11 @@ public class TTSSystem : ICommandContainer
         //Check permissions
         if (!ttsConfig.CanUseCommand(chatter.User.AuthorizationLevel))
         {
-            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, I'm afraid the {ttsConfig.FeatureName} system is currently disabled.");
+            if (ttsConfig.Command.RespondOnRejection)
+            {
+                communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, I'm afraid you do not have permission to use the {ttsConfig.FeatureName} system.");
+            }
+
             return;
         }
 
@@ -156,7 +167,7 @@ public class TTSSystem : ICommandContainer
             return;
         }
 
-        if (remainingCommand.Length == 2)
+        if (remainingCommand.Length == 2 && ttsConfig.CanCustomize(chatter.User.AuthorizationLevel))
         {
             //Special overloaded service to handle when "!set" is forgotten
             switch (remainingCommand[0].ToLowerInvariant())
@@ -213,18 +224,41 @@ public class TTSSystem : ICommandContainer
         dbUser.LastSuccessfulTTS = DateTime.Now;
         await db.SaveChangesAsync();
 
-        if (!ttsConfig.HasCommandApproval(chatter.User.AuthorizationLevel))
+        User speaker = chatter.User;
+
+        if (ttsConfig.OverrideVoices)
         {
-            communication.SendPublicChatMessage($"TTS Message queued for approval, @{chatter.User.TwitchUserName}.");
+            User broadcaster = await userHelper.GetBroadcaster();
+
+            speaker = new User()
+            {
+                UserId = chatter.User.UserId,
+                TwitchUserName = chatter.User.TwitchUserName,
+                TwitchUserId = chatter.User.TwitchUserId,
+
+                TTSVoicePreference = broadcaster.TTSVoicePreference,
+                TTSPitchPreference = broadcaster.TTSPitchPreference,
+                TTSSpeedPreference = broadcaster.TTSSpeedPreference,
+                TTSEffectsChain = broadcaster.TTSEffectsChain,
+
+                AuthorizationLevel = chatter.User.AuthorizationLevel,
+                Color = chatter.User.Color
+            };
+        }
+
+
+        if (!ttsConfig.HasCommandApproval(speaker.AuthorizationLevel))
+        {
+            communication.SendPublicChatMessage($"TTS Message queued for approval, @{speaker.TwitchUserName}.");
             ttsHandler.HandleTTS(
-                user: chatter.User,
+                user: speaker,
                 message: string.Join(' ', remainingCommand),
                 approved: false);
         }
         else
         {
             ttsHandler.HandleTTS(
-                user: chatter.User,
+                user: speaker,
                 message: string.Join(' ', remainingCommand),
                 approved: true);
         }
@@ -241,7 +275,10 @@ public class TTSSystem : ICommandContainer
         if (!ttsConfig.CanCustomize(chatter.User.AuthorizationLevel))
         {
             //No set permissions
-            communication.SendPublicChatMessage($"I'm afraid I can't let you do that, @{chatter.User.TwitchUserName}.");
+            if (ttsConfig.Command.RespondOnRejection)
+            {
+                communication.SendPublicChatMessage($"I'm afraid I can't let you do that, @{chatter.User.TwitchUserName}.");
+            }
             return;
         }
 
@@ -489,6 +526,11 @@ public class TTSSystem : ICommandContainer
             return;
         }
 
+        if (!ttsConfig.Command.AllowGetTTS && chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
+        {
+            return;
+        }
+
         if (remainingCommand is null || remainingCommand.Length == 0)
         {
             communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, your TTS settings: {GetUserTTSSettings(chatter.User)}");
@@ -565,5 +607,53 @@ public class TTSSystem : ICommandContainer
         ttsConfig.Command.Enabled = enabled;
         ttsConfig.Serialize();
         communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, the TTS system has been {(enabled ? "enabled" : "disabled")}");
+    }
+
+    private Task HandleTTSPauseRequest(IRC.TwitchChatter chatter, string[] remainingCommand)
+    {
+        if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
+        {
+            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, you are not authorized to pause TTS redemptions.");
+            return Task.CompletedTask;
+        }
+
+        SetTTSRedemptionStatus(chatter, true);
+        return Task.CompletedTask;
+    }
+
+    private Task HandleTTSUnpauseRequest(IRC.TwitchChatter chatter, string[] remainingCommand)
+    {
+        if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
+        {
+            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, you are not authorized to unpause TTS redemptions.");
+            return Task.CompletedTask;
+        }
+
+        SetTTSRedemptionStatus(chatter, false);
+        return Task.CompletedTask;
+    }
+
+    private void SetTTSRedemptionStatus(IRC.TwitchChatter chatter, bool paused)
+    {
+        if (!ttsConfig.Enabled)
+        {
+            //TTS disabled entirely
+            return;
+        }
+
+        if (!ttsConfig.Redemption.Enabled)
+        {
+            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, TTS redemptions are already disabled. They cannot be {(paused ? "paused" : "unpaused")}.");
+            return;
+        }
+
+        if (ttsConfig.Redemption.Paused == paused)
+        {
+            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, TTS redemptions are already {(paused ? "paused" : "unpaused")}");
+            return;
+        }
+
+        ttsConfig.UpdateRedemptionStatus(true, paused);
+        communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, TTS redemptions have been {(paused ? "paused" : "unpaused")}");
     }
 }

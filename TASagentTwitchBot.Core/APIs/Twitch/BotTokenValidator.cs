@@ -4,9 +4,10 @@ using TASagentTwitchBot.Core.API.OAuth;
 
 namespace TASagentTwitchBot.Core.API.Twitch;
 
+[AutoRegister]
 public interface IBotTokenValidator : ITokenValidator { }
 
-public class BotTokenValidator : TokenValidator, IBotTokenValidator
+public class BotTokenValidator : TokenValidator, IBotTokenValidator, IStartupListener
 {
     private readonly Config.BotConfiguration botConfig;
 
@@ -71,4 +72,6 @@ public class BotTokenValidator : TokenValidator, IBotTokenValidator
 
         communication.SendDebugMessage($"Go to this url logged into Twitch as the Bot:\n\n{url}\n\n");
     }
+
+    void IStartupListener.NotifyStartup() => RunValidator();
 }

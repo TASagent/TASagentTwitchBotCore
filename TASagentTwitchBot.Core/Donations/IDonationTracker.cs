@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace TASagentTwitchBot.Core.Donations;
 
+[AutoRegister]
 public interface IDonationTracker
 {
     void AddBits(int count);

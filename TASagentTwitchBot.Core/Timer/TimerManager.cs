@@ -5,6 +5,7 @@ using TASagentTwitchBot.Core.Web.Hubs;
 
 namespace TASagentTwitchBot.Core.Timer;
 
+[AutoRegister]
 public interface ITimerManager : IDisposable
 {
     TimerState GetTimerState();

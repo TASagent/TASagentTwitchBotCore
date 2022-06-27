@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace TASagentTwitchBot.Core.Scripting;
 
+[AutoRegister]
 public interface IPersistentDataManager
 {
     bool HasGlobalDatum(string key);

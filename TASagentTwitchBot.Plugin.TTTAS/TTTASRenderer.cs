@@ -5,6 +5,7 @@ using TASagentTwitchBot.Core.Audio;
 
 namespace TASagentTwitchBot.Plugin.TTTAS;
 
+[AutoRegister]
 public interface ITTTASRenderer
 {
     Task<AudioRequest> TTTASRequest(string tttasText);

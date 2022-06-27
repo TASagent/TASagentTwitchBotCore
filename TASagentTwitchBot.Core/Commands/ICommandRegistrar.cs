@@ -1,5 +1,6 @@
 ﻿namespace TASagentTwitchBot.Core.Commands;
 
+[AutoRegister]
 public interface ICommandRegistrar
 {
     bool ContainsGlobalCommand(string command);

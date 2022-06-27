@@ -2,6 +2,7 @@
 
 namespace TASagentTwitchBot.Plugin.TTTAS;
 
+[Core.AutoRegister]
 public interface ITTTASHandler
 {
     void HandleTTTAS(Core.Database.User user, string message, bool approved);
@@ -42,6 +43,7 @@ public class TTTASHandler : ITTTASHandler
             activity: new TTTASActivityRequest(
                 activityHandler: activityHandler,
                 description: $"{tttasConfig.FeatureNameBrief} {user.TwitchUserName}: {message}",
+                requesterId: user.TwitchUserId,
                 audioRequest: await GetTTTASAudioRequest(user, message),
                 marqueeMessage: GetStandardMarqueeMessage(user, message)),
             approved: approved);
@@ -84,9 +86,10 @@ public class TTTASHandler : ITTTASHandler
         public TTTASActivityRequest(
             Core.Notifications.IActivityHandler activityHandler,
             string description,
+            string requesterId,
             Core.Audio.AudioRequest? audioRequest = null,
             string? marqueeMessage = null)
-            : base(activityHandler, description)
+            : base(activityHandler, description, requesterId)
         {
             AudioRequest = audioRequest;
             MarqueeMessage = marqueeMessage;

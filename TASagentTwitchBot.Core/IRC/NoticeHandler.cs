@@ -1,5 +1,6 @@
 ﻿namespace TASagentTwitchBot.Core.IRC;
 
+[AutoRegister]
 public interface INoticeHandler
 {
     void HandleIRCNotice(IRCMessage message);

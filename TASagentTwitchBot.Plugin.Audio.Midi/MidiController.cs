@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
+using TASagentTwitchBot.Core.Audio;
 using TASagentTwitchBot.Core.Web.Middleware;
 
 namespace TASagentTwitchBot.Plugin.Audio.Midi.Web.Controllers;
@@ -8,30 +9,36 @@ namespace TASagentTwitchBot.Plugin.Audio.Midi.Web.Controllers;
 [Route("/TASagentBotAPI/Midi/[action]")]
 public class MidiController : ControllerBase
 {
-    private readonly MidiKeyboardHandler midiKeyboardHandler;
+    private readonly IMidiKeyboardHandler midiKeyboardHandler;
+    private readonly IMidiDeviceManager midiDeviceManager;
+    private readonly IAudioDeviceManager audioDeviceManager;
 
     public MidiController(
-        MidiKeyboardHandler midiKeyboardHandler)
+        IAudioDeviceManager audioDeviceManager,
+        IMidiKeyboardHandler midiKeyboardHandler,
+        IMidiDeviceManager midiDeviceManager)
     {
         this.midiKeyboardHandler = midiKeyboardHandler;
+        this.audioDeviceManager = audioDeviceManager;
+        this.midiDeviceManager = midiDeviceManager;
     }
 
     [HttpGet]
     [AuthRequired(AuthDegree.Admin)]
     public ActionResult<IEnumerable<string>> MidiDevices() =>
-        midiKeyboardHandler.GetMidiDevices();
+        midiDeviceManager.GetMidiDevices();
 
     [HttpGet]
     [AuthRequired(AuthDegree.Admin)]
-    public ActionResult<string> CurrentMidiDevice() =>
-        midiKeyboardHandler.GetCurrentMidiDevice();
+    public ActionResult<string?> CurrentMidiDevice() =>
+        midiDeviceManager.GetMidiDeviceName(0);
 
     [HttpPost]
     [AuthRequired(AuthDegree.Admin)]
     public IActionResult CurrentMidiDevice(
         DeviceRequest deviceRequest)
     {
-        if (!midiKeyboardHandler.UpdateCurrentMidiDevice(deviceRequest.Device))
+        if (!midiDeviceManager.UpdateMidiDevice(0, deviceRequest.Device))
         {
             return BadRequest();
         }
@@ -42,14 +49,14 @@ public class MidiController : ControllerBase
     [HttpGet]
     [AuthRequired(AuthDegree.Admin)]
     public ActionResult<string> CurrentMidiOutputDevice() =>
-        midiKeyboardHandler.GetCurrentMidiOutputDevice();
+        audioDeviceManager.GetAudioDeviceName(AudioDeviceType.MidiOutput);
 
     [HttpPost]
     [AuthRequired(AuthDegree.Admin)]
     public IActionResult CurrentMidiOutputDevice(
         DeviceRequest deviceRequest)
     {
-        if (!midiKeyboardHandler.UpdateCurrentMidiOutputDevice(deviceRequest.Device))
+        if (!audioDeviceManager.OverrideAudioDevice(AudioDeviceType.MidiOutput, deviceRequest.Device))
         {
             return BadRequest();
         }

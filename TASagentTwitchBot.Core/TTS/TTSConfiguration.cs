@@ -8,18 +8,20 @@ public class TTSConfiguration
     private static string ConfigFilePath => BGC.IO.DataManagement.PathForDataFile("Config", "TTSConfig.json");
     private static readonly object _lock = new object();
 
-    private const int CURRENT_VERSION = 2;
+    public const int CURRENT_VERSION = 3;
 
-    public int Version { get; private set; } = 0;
+    public int Version { get; set; } = 0;
     public string FeatureName { get; init; } = "Text-To-Speech";
     public string FeatureNameBrief { get; init; } = "TTS";
 
     public bool Enabled { get; set; } = true;
 
-    public bool AllowNeuralVoices { get; set; } = false;
+    public bool AllowNeuralVoices { get; set; } = true;
     public bool UseAWSPolly { get; set; } = true;
     public bool UseGoogleCloudTTS { get; set; } = true;
-    public bool UseAzureSpeechSynthesis { get; set; } = false;
+    public bool UseAzureSpeechSynthesis { get; set; } = true;
+
+    public bool OverrideVoices { get; set; } = false;
 
     public CommandConfiguration Command { get; init; } = new CommandConfiguration();
     public RedemptionConfiguration Redemption { get; init; } = new RedemptionConfiguration();
@@ -38,7 +40,7 @@ public class TTSConfiguration
         MAX
     }
 
-    public static TTSConfiguration GetConfig()
+    public static TTSConfiguration GetConfig(TTSConfiguration? defaultConfig = null)
     {
         if (File.Exists(ConfigFilePath))
         {
@@ -62,7 +64,8 @@ public class TTSConfiguration
         }
         else
         {
-            TTSConfiguration config = new TTSConfiguration()
+
+            TTSConfiguration config = defaultConfig ?? new TTSConfiguration()
             {
                 Version = CURRENT_VERSION
             };
@@ -82,6 +85,37 @@ public class TTSConfiguration
         lock (_lock)
         {
             File.WriteAllText(ConfigFilePath, JsonSerializer.Serialize(this, options));
+        }
+    }
+
+    private Action? redemptionUpdateAction = null;
+
+    public void AssignRedemptionUpdateAction(Action updateAction)
+    {
+        if (redemptionUpdateAction is not null)
+        {
+            if (redemptionUpdateAction != updateAction)
+            {
+                throw new Exception($"Redemption update action already assigned.");
+            }
+
+            return;
+        }
+
+        redemptionUpdateAction = updateAction;
+    }
+
+    public void UpdateRedemptionStatus(bool enabled, bool paused)
+    {
+        if (Redemption.Enabled != enabled || Redemption.Paused != paused)
+        {
+            Redemption.Enabled = enabled;
+            Redemption.Paused = paused;
+
+            Serialize();
+
+            //Notify
+            redemptionUpdateAction?.Invoke();
         }
     }
 
@@ -225,15 +259,18 @@ public class TTSConfiguration
         public bool AllowCreditRedemptions { get; init; } = false;
         public string CreditName { get; init; } = "TTS";
         public long CreditCost { get; init; } = 4;
+        public bool RespondOnRejection { get; init; } = true;
+        public bool AllowGetTTS { get; init; } = true;
     }
 
     public class RedemptionConfiguration
     {
         public bool Enabled { get; set; } = false;
+        public bool Paused { get; set; } = false;
         public string RedemptionID { get; set; } = "";
         public string Name { get; init; } = "TTS";
         public string Description { get; init; } = "Send a message using the TTS System.";
-        public string BackgroundColor { get; init; } = "#56BDE6";
+        public string BackgroundColor { get; init; } = "#9456E6";
         public int Cost { get; init; } = 500;
     }
 }

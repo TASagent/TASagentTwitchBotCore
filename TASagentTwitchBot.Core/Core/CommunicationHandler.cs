@@ -2,6 +2,7 @@
 
 namespace TASagentTwitchBot.Core;
 
+[AutoRegister]
 public interface ICommunication
 {
     public delegate void DebugMessageHandler(string message, MessageType messageType);
@@ -48,7 +49,6 @@ public enum MessageType
     Warning,
     Error
 }
-
 
 public class CommunicationHandler : ICommunication
 {

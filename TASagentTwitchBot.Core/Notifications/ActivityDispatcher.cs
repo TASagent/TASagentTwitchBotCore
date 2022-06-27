@@ -4,11 +4,13 @@ using TASagentTwitchBot.Core.Audio;
 
 namespace TASagentTwitchBot.Core.Notifications;
 
+[AutoRegister]
 public interface IActivityDispatcher
 {
     bool ReplayNotification(int index);
     void QueueActivity(ActivityRequest activity, bool approved);
     bool UpdatePendingRequest(int index, bool approved);
+    void UpdateAllRequests(string userId, bool approved);
 
     void Skip();
 }
@@ -20,6 +22,7 @@ public class ActivityDispatcher : IActivityDispatcher, IDisposable
 {
     private readonly ErrorHandler errorHandler;
     private readonly ICommunication communication;
+    private readonly IMessageAccumulator messageAccumulator;
     private readonly IAudioPlayer audioPlayer;
 
     private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
@@ -39,10 +42,12 @@ public class ActivityDispatcher : IActivityDispatcher, IDisposable
         Config.BotConfiguration botConfig,
         ErrorHandler errorHandler,
         ICommunication communication,
+        IMessageAccumulator messageAccumulator,
         IAudioPlayer audioPlayer)
     {
         this.errorHandler = errorHandler;
         this.communication = communication;
+        this.messageAccumulator = messageAccumulator;
         this.audioPlayer = audioPlayer;
 
         Channel<ActivityRequest> channel = Channel.CreateUnbounded<ActivityRequest>();
@@ -145,7 +150,27 @@ public class ActivityDispatcher : IActivityDispatcher, IDisposable
             activityWriter.TryWrite(activity);
         }
 
+        messageAccumulator.RemovePendingNotification(activity.Id);
+
         return true;
+    }
+
+    public void UpdateAllRequests(string userId, bool approve)
+    {
+        foreach (ActivityRequest request in pendingActivityRequests.Values.Where(x => x.RequesterId == userId).ToList())
+        {
+            pendingActivityRequests.Remove(request.Id);
+
+            if (approve)
+            {
+                //Queue approved activity
+                activityDict.Add(request.Id, request);
+                communication.NotifyNotification(request.Id, request.ToString()!);
+                activityWriter.TryWrite(request);
+            }
+
+            messageAccumulator.RemovePendingNotification(request.Id);
+        }
     }
 
     public void DemandPlayAudioImmediate(AudioRequest audioRequest) =>

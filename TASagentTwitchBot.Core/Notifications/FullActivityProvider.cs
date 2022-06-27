@@ -5,11 +5,6 @@ using TASagentTwitchBot.Core.TTS;
 
 namespace TASagentTwitchBot.Core.Notifications;
 
-public interface IActivityHandler
-{
-    Task Execute(ActivityRequest activityRequest);
-}
-
 public class FullActivityProvider :
     IActivityHandler,
     ISubscriptionHandler,
@@ -27,7 +22,7 @@ public class FullActivityProvider :
     protected readonly Audio.Effects.IAudioEffectSystem audioEffectSystem;
     protected readonly ITTSRenderer ttsRenderer;
     protected readonly NotificationServer notificationServer;
-    protected readonly Bits.CheerHelper cheerHelper;
+    protected readonly Bits.ICheerHelper cheerHelper;
 
     protected readonly NotificationConfig notificationConfig;
 
@@ -45,7 +40,7 @@ public class FullActivityProvider :
         Audio.ISoundEffectSystem soundEffectSystem,
         Audio.IAudioPlayer audioPlayer,
         Audio.Effects.IAudioEffectSystem audioEffectSystem,
-        Bits.CheerHelper cheerHelper,
+        Bits.ICheerHelper cheerHelper,
         IActivityDispatcher activityDispatcher,
         ITTSRenderer ttsRenderer,
         NotificationServer notificationServer,
@@ -124,6 +119,7 @@ public class FullActivityProvider :
             activity: new FullActivityRequest(
                 activityHandler: this,
                 description: $"Sub: {subscriber.TwitchUserName}: {message}",
+                requesterId: subscriber.TwitchUserId,
                 notificationMessage: await GetSubscriberNotificationRequest(subscriber, message, monthCount, tier),
                 audioRequest: await GetSubscriberAudioRequest(subscriber, message, monthCount, tier),
                 marqueeMessage: await GetSubscriberMarqueeMessage(subscriber, message, monthCount, tier)),
@@ -265,6 +261,7 @@ public class FullActivityProvider :
             activity: new FullActivityRequest(
                 activityHandler: this,
                 description: $"User {cheerer.TwitchUserName} cheered {quantity} bits: {message}",
+                requesterId: cheerer.TwitchUserId,
                 notificationMessage: await GetCheerNotificationRequest(cheerer, message, quantity),
                 audioRequest: await GetCheerAudioRequest(cheerer, message, quantity),
                 marqueeMessage: await GetCheerMarqueeMessage(cheerer, message, quantity)),
@@ -377,6 +374,7 @@ public class FullActivityProvider :
             activity: new FullActivityRequest(
                 activityHandler: this,
                 description: $"Raid: {raider.TwitchUserName} with {count} viewers",
+                requesterId: raider.TwitchUserId,
                 notificationMessage: await GetRaidNotificationRequest(raider, count),
                 audioRequest: await GetRaidAudioRequest(raider, count),
                 marqueeMessage: await GetRaidMarqueeMessage(raider, count)),
@@ -473,6 +471,7 @@ public class FullActivityProvider :
             activity: new FullActivityRequest(
                 activityHandler: this,
                 description: $"Gift Sub To: {recipient.TwitchUserName}",
+                requesterId: sender.TwitchUserId,
                 notificationMessage: await GetGiftSubNotificationRequest(sender, recipient, tier, months),
                 audioRequest: await GetGiftSubAudioRequest(sender, recipient, tier, months),
                 marqueeMessage: await GetGiftSubMarqueeMessage(sender, recipient, tier, months)),
@@ -600,6 +599,7 @@ public class FullActivityProvider :
             activity: new FullActivityRequest(
                 activityHandler: this,
                 description: $"Anon Gift Sub To: {recipient.TwitchUserName}",
+                requesterId: "",
                 notificationMessage: await GetAnonGiftSubNotificationRequest(recipient, tier, months),
                 audioRequest: await GetAnonGiftSubAudioRequest(recipient, tier, months),
                 marqueeMessage: await GetAnonGiftSubMarqueeMessage(recipient, tier, months)),
@@ -724,6 +724,7 @@ public class FullActivityProvider :
             activity: new FullActivityRequest(
                 activityHandler: this,
                 description: $"Follower: {follower.TwitchUserName}",
+                requesterId: follower.TwitchUserId,
                 notificationMessage: await GetFollowNotificationRequest(follower),
                 audioRequest: await GetFollowAudioRequest(follower),
                 marqueeMessage: await GetFollowMarqueeMessage(follower)),
@@ -801,6 +802,7 @@ public class FullActivityProvider :
             activity: new FullActivityRequest(
                 activityHandler: this,
                 description: $"TTS {user.TwitchUserName} : {message}",
+                requesterId: user.TwitchUserId,
                 notificationMessage: await GetTTSNotificationRequest(user, message),
                 audioRequest: await GetTTSAudioRequest(user, message),
                 marqueeMessage: await GetTTSMarqueeMessage(user, message)),
@@ -883,10 +885,11 @@ public class FullActivityProvider :
         public FullActivityRequest(
             IActivityHandler activityHandler,
             string description,
+            string requesterId,
             NotificationMessage? notificationMessage = null,
             Audio.AudioRequest? audioRequest = null,
             string? marqueeMessage = null)
-            : base(activityHandler, description)
+            : base(activityHandler, description, requesterId)
         {
             NotificationMessage = notificationMessage;
             AudioRequest = audioRequest;

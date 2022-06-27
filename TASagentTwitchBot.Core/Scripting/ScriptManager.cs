@@ -3,6 +3,7 @@ using BGC.Scripting.Parsing;
 
 namespace TASagentTwitchBot.Core.Scripting;
 
+[AutoRegister]
 public interface IScriptManager
 {
     IEnumerable<string> GetScriptNames();
@@ -11,6 +12,7 @@ public interface IScriptManager
     bool SetScript(string scriptName, string script);
 }
 
+[AutoRegister]
 public interface IScriptRegistrar
 {
     GlobalRuntimeContext GlobalSharedRuntimeContext { get; }
@@ -26,8 +28,7 @@ public interface IScriptRegistrar
     bool UnregisterScript(string scriptName);
 }
 
-
-public class ScriptManager : IScriptManager, IScriptRegistrar
+public class ScriptManager : IScriptManager, IScriptRegistrar, IStartupListener
 {
     private readonly ICommunication communication;
     private readonly IScriptHelper scriptHelper;

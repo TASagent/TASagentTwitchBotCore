@@ -1,6 +1,6 @@
 ﻿namespace TASagentTwitchBot.Core.Bits;
 
-public class CheerDispatcher
+public class CheerDispatcher : IStartupListener
 {
     private readonly TTS.TTSConfiguration ttsConfig;
     private readonly Notifications.ICheerHandler cheerHandler;

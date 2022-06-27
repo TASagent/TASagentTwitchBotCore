@@ -4,7 +4,15 @@ using TASagentTwitchBot.Core.API.Twitch;
 
 namespace TASagentTwitchBot.Core.Bits;
 
-public class CheerHelper
+[AutoRegister]
+public interface ICheerHelper
+{
+    Task<string?> GetAnimatedCheerURL(string prefix, int quantity, bool dark = true);
+    Task<string?> GetCheerImageURL(string message, int quantity);
+    Task<string?> GetCheermoteURL(string prefix);
+}
+
+public class CheerHelper : ICheerHelper
 {
     private readonly Config.BotConfiguration botConfig;
     private readonly ICommunication communication;

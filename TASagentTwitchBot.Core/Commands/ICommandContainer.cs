@@ -7,6 +7,7 @@ public delegate string HelpFunction(IRC.TwitchChatter chatter, string[] remainin
 
 public delegate Task ResponseHandler(IRC.TwitchChatter chatter);
 
+[AutoRegister]
 public interface ICommandContainer
 {
     void RegisterCommands(ICommandRegistrar commandRegistrar);

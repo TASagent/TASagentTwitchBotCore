@@ -4,11 +4,13 @@ using TASagentTwitchBot.Core.API.Twitch;
 
 namespace TASagentTwitchBot.Core.EventSub;
 
+[AutoRegister]
 public interface IStreamLiveListener
 {
     void NotifyLiveStatus(bool isLive);
 }
 
+[AutoRegister]
 public interface IStreamDetailListener
 {
     void NotifyStreamDetailUpdate(StreamUpdateData streamData);

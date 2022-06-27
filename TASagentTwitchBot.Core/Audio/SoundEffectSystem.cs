@@ -5,6 +5,7 @@ using BGC.Audio.NAudio;
 
 namespace TASagentTwitchBot.Core.Audio;
 
+[AutoRegister]
 public interface ISoundEffectSystem
 {
     bool HasSoundEffects();

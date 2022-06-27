@@ -5,6 +5,7 @@ using TASagentTwitchBot.Core.Web.Hubs;
 
 namespace TASagentTwitchBot.Core;
 
+[AutoRegister]
 public interface IMessageAccumulator
 {
     MessageBlock<SimpleMessage> GetAllEvents();
@@ -20,7 +21,7 @@ public interface IMessageAccumulator
     bool RemovePendingNotification(int index);
 }
 
-public class MessageAccumulator : IMessageAccumulator, IDisposable
+public class MessageAccumulator : IMessageAccumulator, IStartupListener, IDisposable
 {
     private readonly Config.BotConfiguration botConfig;
     private readonly IHubContext<MonitorHub> monitorHubContext;

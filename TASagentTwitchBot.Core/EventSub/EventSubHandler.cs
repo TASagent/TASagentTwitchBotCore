@@ -6,12 +6,13 @@ namespace TASagentTwitchBot.Core.EventSub;
 
 public delegate Task EventHandler(JsonElement twitchEvent);
 
+[AutoRegister]
 public interface IEventSubSubscriber
 {
     void RegisterHandlers(Dictionary<string, EventHandler> handlers);
 }
 
-public class EventSubHandler : IDisposable
+public class EventSubHandler : IStartupListener, IDisposable
 {
     private readonly ICommunication communication;
     private readonly HubConnection? serverHubConnection;

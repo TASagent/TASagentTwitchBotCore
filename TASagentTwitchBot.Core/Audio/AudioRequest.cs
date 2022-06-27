@@ -9,7 +9,7 @@ public abstract class AudioRequest
 {
     protected bool cancel = false;
 
-    public abstract Task PlayRequest(MMDevice outputDevice);
+    public abstract Task PlayRequest(MMDevice effectDevice, MMDevice ttsDevice);
     public abstract IBGCStream CacheToBGCStream();
 
     public virtual void RequestCancel()
@@ -60,9 +60,9 @@ public class VideoFileAudioRequest : AudioRequest
     }
 
 
-    public override async Task PlayRequest(MMDevice outputDevice)
+    public override async Task PlayRequest(MMDevice effectDevice, MMDevice ttsDevice)
     {
-        using WasapiOut outputPlayer = new WasapiOut(outputDevice, AudioClientShareMode.Shared, true, 100);
+        using WasapiOut outputPlayer = new WasapiOut(effectDevice, AudioClientShareMode.Shared, true, 100);
         using DisposableWaveProvider audioStream = AudioTools.GetWaveProvider(filePath);
 
         cancel = false;
@@ -87,10 +87,15 @@ public class AudioFileRequest : AudioRequest
 {
     private readonly string filePath;
     private readonly Effects.Effect effectsChain;
+    private readonly bool ttsAudio;
 
-    public AudioFileRequest(string filePath, Effects.Effect effectsChain)
+    public AudioFileRequest(
+        string filePath,
+        bool ttsAudio,
+        Effects.Effect effectsChain)
     {
         this.filePath = filePath;
+        this.ttsAudio = ttsAudio;
         this.effectsChain = effectsChain;
     }
 
@@ -100,9 +105,9 @@ public class AudioFileRequest : AudioRequest
         return effectsChain.ApplyEffects(audioStream.ToBGCStream().EnsureMono()).LimitStream().SafeCache();
     }
 
-    public override async Task PlayRequest(MMDevice outputDevice)
+    public override async Task PlayRequest(MMDevice effectDevice, MMDevice ttsDevice)
     {
-        using WasapiOut outputPlayer = new WasapiOut(outputDevice, AudioClientShareMode.Shared, true, 100);
+        using WasapiOut outputPlayer = new WasapiOut(ttsAudio ? ttsDevice : effectDevice, AudioClientShareMode.Shared, true, 100);
         using DisposableWaveProvider audioStream = AudioTools.GetWaveProvider(filePath);
 
         cancel = false;
@@ -138,9 +143,9 @@ public class SoundEffectRequest : AudioRequest
         return audioStream.ToBGCStream().SlowRangeFitter().StreamLevelScaler(-10).SafeCache();
     }
 
-    public override async Task PlayRequest(MMDevice outputDevice)
+    public override async Task PlayRequest(MMDevice effectDevice, MMDevice ttsDevice)
     {
-        using WasapiOut outputPlayer = new WasapiOut(outputDevice, AudioClientShareMode.Shared, true, 100);
+        using WasapiOut outputPlayer = new WasapiOut(effectDevice, AudioClientShareMode.Shared, true, 100);
         using DisposableWaveProvider audioStream = AudioTools.GetWaveProvider(soundEffect.FilePath);
 
         cancel = false;
@@ -173,7 +178,7 @@ public class AudioDelay : AudioRequest
     public override IBGCStream CacheToBGCStream() =>
         new BGC.Audio.Synthesis.SilenceStream(1, (int)Math.Ceiling(44100 * 0.001 * delayMS));
 
-    public override async Task PlayRequest(MMDevice outputDevice)
+    public override async Task PlayRequest(MMDevice effectDevice, MMDevice ttsDevice)
     {
         await Task.Delay(delayMS);
     }
@@ -192,9 +197,9 @@ public class BGCStreamRequest : AudioRequest
     public override IBGCStream CacheToBGCStream() =>
         stream.SafeCache();
 
-    public override async Task PlayRequest(MMDevice outputDevice)
+    public override async Task PlayRequest(MMDevice effectDevice, MMDevice ttsDevice)
     {
-        using WasapiOut outputPlayer = new WasapiOut(outputDevice, AudioClientShareMode.Shared, true, 100);
+        using WasapiOut outputPlayer = new WasapiOut(effectDevice, AudioClientShareMode.Shared, true, 100);
         cancel = false;
 
         ISampleProvider sampleProvider = stream.ToSampleProvider();
@@ -242,7 +247,7 @@ public class ConcatenatedAudioRequest : AudioRequest
         currentRequest?.RequestCancel();
     }
 
-    public override async Task PlayRequest(MMDevice outputDevice)
+    public override async Task PlayRequest(MMDevice effectDevice, MMDevice ttsDevice)
     {
         cancel = false;
 
@@ -250,7 +255,7 @@ public class ConcatenatedAudioRequest : AudioRequest
         {
             currentRequest = request;
 
-            await request.PlayRequest(outputDevice);
+            await request.PlayRequest(effectDevice, ttsDevice);
 
             currentRequest = null;
 

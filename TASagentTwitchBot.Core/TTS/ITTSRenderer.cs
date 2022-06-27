@@ -4,6 +4,7 @@ using TASagentTwitchBot.Core.Audio.Effects;
 
 namespace TASagentTwitchBot.Core.TTS;
 
+[AutoRegister]
 public interface ITTSRenderer
 {
     Task<bool> SetTTSEnabled(bool enabled);

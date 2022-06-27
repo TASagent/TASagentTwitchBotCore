@@ -1,11 +1,13 @@
 ﻿namespace TASagentTwitchBot.Core.Audio.Effects;
 
+[AutoRegister]
 public interface IAudioEffectSystem
 {
     bool TryParse(string? effectsChain, out Effect effect, out string? errorMessage);
     Effect SafeParse(string? effectsChain);
 }
 
+public delegate Effect EffectConstructionHandler(string[] effectArguments, Effect? lastEffect);
 
 public class AudioEffectSystem : IAudioEffectSystem
 {
@@ -119,5 +121,3 @@ public class AudioEffectSystem : IAudioEffectSystem
         }
     }
 }
-
-public delegate Effect EffectConstructionHandler(string[] effectArguments, Effect? lastEffect);

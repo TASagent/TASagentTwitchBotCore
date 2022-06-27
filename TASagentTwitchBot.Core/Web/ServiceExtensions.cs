@@ -1,6 +1,9 @@
-﻿namespace TASagentTwitchBot.Core.Web;
+﻿using Microsoft.EntityFrameworkCore;
+using System.Reflection;
 
-public static class ServiceExtensions
+namespace TASagentTwitchBot.Core.Web;
+
+public static partial class ServiceExtensions
 {
     public static IServiceCollection UnregisterInterfaceAll<T>(this IServiceCollection services)
     {
@@ -52,17 +55,71 @@ public static class ServiceExtensions
 
         Type serviceType = typeof(TService);
 
-        if (serviceType.GetInterfaces().Contains(typeof(Scripting.IScriptedComponent)))
+        foreach (Type serviceInterface in serviceType.GetBaseTypesAndInterfaces())
         {
-            services.AddSingleton<Scripting.IScriptedComponent>(x => (Scripting.IScriptedComponent)x.GetRequiredService<TService>());
-        }
-
-        if (serviceType.GetInterfaces().Contains(typeof(Commands.ICommandContainer)))
-        {
-            services.AddSingleton<Commands.ICommandContainer>(x => (Commands.ICommandContainer)x.GetRequiredService<TService>());
+            if (serviceInterface.GetCustomAttribute<AutoRegisterAttribute>() is not null)
+            {
+                services.AddSingleton(serviceInterface, x => x.GetRequiredService<TService>());
+            }
         }
 
         return services;
+    }
+
+    /// <summary>
+    /// Registers <typeparamref name="TService"/> and adds automatic redirects for several optional interfaces
+    /// </summary>
+    public static IServiceCollection AddTASSingleton<TService>(this IServiceCollection services, TService implementationInstance) where TService : class
+    {
+        services.AddSingleton<TService>(implementationInstance);
+
+        Type serviceType = typeof(TService);
+
+        foreach (Type serviceInterface in serviceType.GetBaseTypesAndInterfaces())
+        {
+            if (serviceInterface.GetCustomAttribute<AutoRegisterAttribute>() is not null)
+            {
+                services.AddSingleton(serviceInterface, implementationInstance);
+            }
+        }
+
+        return services;
+    }
+
+    public static IServiceCollection AddTASDbContext<TContext>(
+        this IServiceCollection services,
+        Action<DbContextOptionsBuilder>? optionsAction = null,
+        ServiceLifetime contextLifetime = ServiceLifetime.Scoped,
+        ServiceLifetime optionsLifetime = ServiceLifetime.Scoped)
+        where TContext : DbContext
+    {
+        services.AddDbContext<TContext>(optionsAction, contextLifetime, optionsLifetime);
+
+        Type databaseType = typeof(TContext);
+
+        foreach (Type serviceInterface in databaseType.GetBaseTypesAndInterfaces())
+        {
+            if (serviceInterface.GetCustomAttribute<AutoRegisterAttribute>() is not null)
+            {
+                services.AddScoped(serviceInterface, x => x.GetRequiredService<TContext>());
+            }
+        }
+
+        return services;
+    }
+
+
+    private static IEnumerable<Type> GetBaseTypesAndInterfaces(this Type type)
+    {
+        if (type.BaseType is null || type.BaseType == typeof(object))
+        {
+            return type.GetInterfaces();
+        }
+
+        return type.BaseType.GetBaseTypesAndInterfaces()
+            .Prepend(type.BaseType)
+            .Concat(type.GetInterfaces())
+            .Distinct();
     }
 
     /// <summary>
@@ -78,7 +135,7 @@ public static class ServiceExtensions
     /// </summary>
     public static IServiceCollection AddSingletonRedirect<TService, TImplementation>(this IServiceCollection services)
         where TService : class
-        where TImplementation : class, TService => 
+        where TImplementation : class, TService =>
         services.AddSingleton<TService>(x => x.GetRequiredService<TImplementation>());
 
 }

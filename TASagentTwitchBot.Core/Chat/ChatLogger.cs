@@ -2,7 +2,7 @@
 
 namespace TASagentTwitchBot.Core.Chat;
 
-public class ChatLogger : IDisposable
+public class ChatLogger : IStartupListener, IDisposable
 {
     private readonly Config.BotConfiguration botConfig;
     private readonly Lazy<Logs.LocalLogger> chatLog = new Lazy<Logs.LocalLogger>(() => new Logs.LocalLogger("ChatLogs", "chat"));

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace TASagentTwitchBot.Plugin.ControllerSpy;
 
+[Core.AutoRegister]
 public interface IControllerManager
 {
     List<string> GetPorts();

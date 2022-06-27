@@ -7,7 +7,6 @@ public class TestCommandSystem : ICommandContainer
     private readonly Notifications.IFollowerHandler followHandler;
     private readonly Notifications.ISubscriptionHandler subscriptionHandler;
     private readonly Notifications.IRaidHandler raidHandler;
-    private readonly Notifications.ICheerHandler cheerHandler;
 
     private readonly Database.IUserHelper userHelper;
 
@@ -17,7 +16,6 @@ public class TestCommandSystem : ICommandContainer
         Notifications.IFollowerHandler followHandler,
         Notifications.ISubscriptionHandler subscriptionHandler,
         Notifications.IRaidHandler raidHandler,
-        Notifications.ICheerHandler cheerHandler,
         Database.IUserHelper userHelper)
     {
         this.botConfig = botConfig;
@@ -26,7 +24,6 @@ public class TestCommandSystem : ICommandContainer
         this.followHandler = followHandler;
         this.subscriptionHandler = subscriptionHandler;
         this.raidHandler = raidHandler;
-        this.cheerHandler = cheerHandler;
 
         this.userHelper = userHelper;
     }
@@ -194,12 +191,6 @@ public class TestCommandSystem : ICommandContainer
             };
 
             communication.DispatchChatMessage(testChatter);
-
-            //cheerHandler.HandleCheer(
-            //    cheerer: cheerer!,
-            //    message: message,
-            //    quantity: quantity,
-            //    approved: true);
         }
     }
 }

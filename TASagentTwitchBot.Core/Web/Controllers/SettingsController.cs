@@ -10,43 +10,40 @@ namespace TASagentTwitchBot.Core.Web.Controllers;
 public class SettingsController : ControllerBase
 {
     private readonly Config.BotConfiguration botConfig;
-    private readonly Audio.IMicrophoneHandler microphoneHandler;
-    private readonly Audio.IAudioPlayer audioPlayer;
+    private readonly Audio.IAudioDeviceManager audioDeviceManager;
 
     public SettingsController(
         Config.BotConfiguration botConfig,
-        Audio.IMicrophoneHandler microphoneHandler,
-        Audio.IAudioPlayer audioPlayer)
+        Audio.IAudioDeviceManager audioDeviceManager)
     {
         this.botConfig = botConfig;
-        this.microphoneHandler = microphoneHandler;
-        this.audioPlayer = audioPlayer;
+        this.audioDeviceManager = audioDeviceManager;
     }
 
     [HttpGet]
     [AuthRequired(AuthDegree.Admin)]
     public ActionResult<IEnumerable<string>> OutputDevices() =>
-        microphoneHandler.GetOutputDevices();
+        audioDeviceManager.GetOutputDevices();
 
     [HttpGet]
     [AuthRequired(AuthDegree.Admin)]
     public ActionResult<IEnumerable<string>> InputDevices() =>
-        microphoneHandler.GetInputDevices();
+        audioDeviceManager.GetInputDevices();
 
     [HttpGet]
     [AuthRequired(AuthDegree.Admin)]
     public ActionResult<string> CurrentVoiceOutputDevice() =>
-        microphoneHandler.GetCurrentVoiceOutputDevice();
+        audioDeviceManager.GetAudioDeviceName(Audio.AudioDeviceType.VoiceOutput);
 
     [HttpGet]
     [AuthRequired(AuthDegree.Admin)]
     public ActionResult<string> CurrentVoiceInputDevice() =>
-        microphoneHandler.GetCurrentVoiceInputDevice();
+        audioDeviceManager.GetAudioDeviceName(Audio.AudioDeviceType.MicrophoneInput);
 
     [HttpGet]
     [AuthRequired(AuthDegree.Admin)]
     public ActionResult<string> CurrentEffectOutputDevice() =>
-        audioPlayer.GetCurrentEffectOutputDevice();
+        audioDeviceManager.GetAudioDeviceName(Audio.AudioDeviceType.EffectOutput);
 
     [HttpGet]
     public ActionResult<ErrHEnabled> ErrorHEnabled() =>
@@ -69,7 +66,7 @@ public class SettingsController : ControllerBase
     [AuthRequired(AuthDegree.Admin)]
     public IActionResult CurrentVoiceOutputDevice(DeviceRequest deviceRequest)
     {
-        if (!microphoneHandler.UpdateVoiceOutputDevice(deviceRequest.Device))
+        if (!audioDeviceManager.OverrideAudioDevice(Audio.AudioDeviceType.VoiceOutput, deviceRequest.Device))
         {
             return BadRequest();
         }
@@ -81,7 +78,7 @@ public class SettingsController : ControllerBase
     [AuthRequired(AuthDegree.Admin)]
     public IActionResult CurrentVoiceInputDevice(DeviceRequest deviceRequest)
     {
-        if (!microphoneHandler.UpdateVoiceInputDevice(deviceRequest.Device))
+        if (!audioDeviceManager.OverrideAudioDevice(Audio.AudioDeviceType.MicrophoneInput, deviceRequest.Device))
         {
             return BadRequest();
         }
@@ -93,7 +90,7 @@ public class SettingsController : ControllerBase
     [AuthRequired(AuthDegree.Admin)]
     public IActionResult CurrentEffectOutputDevice(DeviceRequest deviceRequest)
     {
-        if (!audioPlayer.UpdateEffectOutputDevice(deviceRequest.Device))
+        if (!audioDeviceManager.OverrideAudioDevice(Audio.AudioDeviceType.EffectOutput, deviceRequest.Device))
         {
             return BadRequest();
         }

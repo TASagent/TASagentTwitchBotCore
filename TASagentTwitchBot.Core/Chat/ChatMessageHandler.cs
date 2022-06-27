@@ -1,5 +1,6 @@
 ﻿namespace TASagentTwitchBot.Core.Chat;
 
+[AutoRegister]
 public interface IChatMessageHandler
 {
     void HandleChatMessage(IRC.IRCMessage message);
@@ -7,7 +8,6 @@ public interface IChatMessageHandler
 
 public class ChatMessageHandler : IChatMessageHandler
 {
-
     private readonly ICommunication communication;
     private readonly IServiceScopeFactory scopeFactory;
 

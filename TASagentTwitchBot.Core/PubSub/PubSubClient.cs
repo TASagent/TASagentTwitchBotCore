@@ -3,10 +3,9 @@ using System.Text.Json;
 using System.Net.WebSockets;
 using BGC.Collections.Generic;
 
-
 namespace TASagentTwitchBot.Core.PubSub;
 
-public class PubSubClient : IShutdownListener, IDisposable
+public class PubSubClient : IStartupListener, IShutdownListener, IDisposable
 {
     private readonly Config.BotConfiguration botConfig;
     private readonly ErrorHandler errorHandler;

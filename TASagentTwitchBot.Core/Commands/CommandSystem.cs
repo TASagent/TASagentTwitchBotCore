@@ -2,7 +2,7 @@
 
 namespace TASagentTwitchBot.Core.Commands;
 
-public class CommandSystem : ICommandRegistrar
+public class CommandSystem : ICommandRegistrar, IStartupListener
 {
     private readonly Config.BotConfiguration botConfig;
     private readonly ICommunication communication;

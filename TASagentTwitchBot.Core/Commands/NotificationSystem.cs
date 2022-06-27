@@ -4,16 +4,13 @@ public class NotificationSystem : ICommandContainer
 {
     private readonly ICommunication communication;
     private readonly Notifications.IActivityDispatcher activityDispatcher;
-    private readonly IMessageAccumulator messageAccumulator;
 
     public NotificationSystem(
         ICommunication communication,
-        Notifications.IActivityDispatcher activityDispatcher,
-        IMessageAccumulator messageAccumulator)
+        Notifications.IActivityDispatcher activityDispatcher)
     {
         this.communication = communication;
         this.activityDispatcher = activityDispatcher;
-        this.messageAccumulator = messageAccumulator;
     }
 
     public void RegisterCommands(ICommandRegistrar commandRegistrar)
@@ -114,12 +111,7 @@ public class NotificationSystem : ICommandContainer
             return Task.CompletedTask;
         }
 
-        bool success = activityDispatcher.UpdatePendingRequest(updateIndex, accept);
-        if (success)
-        {
-            messageAccumulator.RemovePendingNotification(updateIndex);
-        }
-        else
+        if (!activityDispatcher.UpdatePendingRequest(updateIndex, accept))
         {
             communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, unable to {(accept ? "accept" : "reject")} TTS {updateIndex}.");
         }

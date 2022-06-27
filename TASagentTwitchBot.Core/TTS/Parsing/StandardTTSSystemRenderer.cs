@@ -224,7 +224,7 @@ public abstract class StandardTTSSystemRenderer : TTSSystemRenderer
             return null;
         }
 
-        return new Audio.AudioFileRequest(filePath, effectsChain);
+        return new Audio.AudioFileRequest(filePath, true, effectsChain);
     }
 
     protected abstract string FinalizeSSML(string interiorSSML);

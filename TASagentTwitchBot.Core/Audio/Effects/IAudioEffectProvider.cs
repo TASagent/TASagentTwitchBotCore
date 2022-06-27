@@ -1,5 +1,6 @@
 ﻿namespace TASagentTwitchBot.Core.Audio.Effects;
 
+[AutoRegister]
 public interface IAudioEffectProvider
 {
     void RegisterHandler(Dictionary<string, EffectConstructionHandler> handlers);

@@ -8,6 +8,7 @@ using TASagentTwitchBot.Core.Audio.Effects;
 
 namespace TASagentTwitchBot.Plugin.TTTAS;
 
+[AutoRegister]
 public interface ITTTASProvider
 {
     int GetRecordingCount();
@@ -96,7 +97,7 @@ public class TTTASProvider : ITTTASProvider
         if (recordingData.RecordingLookup.TryGetValue(word, out Recording? recording))
         {
             //Return the word
-            return new AudioFileRequest(recording.FilePath, effect);
+            return new AudioFileRequest(recording.FilePath, true, effect);
         }
 
         //Request recording
@@ -105,7 +106,7 @@ public class TTTASProvider : ITTTASProvider
             if (recordingData.RecordingLookup.TryGetValue(word, out recording))
             {
                 //Return the word
-                return new AudioFileRequest(recording.FilePath, effect);
+                return new AudioFileRequest(recording.FilePath, true, effect);
             }
 
             if (!pendingRecordings.TryGetValue(word, out PendingRecording? pendingRecording))

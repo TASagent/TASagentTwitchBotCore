@@ -264,9 +264,17 @@ public abstract class BaseConfigurator : IConfigurator
         bool successful = true;
 
         //Set Audio Devices
-        if (string.IsNullOrEmpty(botConfig.EffectOutputDevice) || string.IsNullOrEmpty(botConfig.VoiceOutputDevice))
+        if (string.IsNullOrEmpty(botConfig.EffectOutputDevice) ||
+            string.IsNullOrEmpty(botConfig.TTSOutputDevice) ||
+            string.IsNullOrEmpty(botConfig.MidiOutputDevice) ||
+            string.IsNullOrEmpty(botConfig.VoiceOutputDevice))
         {
             List<string> devices = GetAudioOutputDevicesList();
+
+            if (devices.Count == 0)
+            {
+                return true;
+            }
 
             Console.WriteLine($"Detected, Active Output devices:");
 
@@ -276,7 +284,9 @@ public abstract class BaseConfigurator : IConfigurator
             }
             Console.WriteLine();
 
-            if (string.IsNullOrEmpty(botConfig.EffectOutputDevice))
+            if (string.IsNullOrEmpty(botConfig.EffectOutputDevice) ||
+                string.IsNullOrEmpty(botConfig.TTSOutputDevice) ||
+                string.IsNullOrEmpty(botConfig.MidiOutputDevice))
             {
                 WritePrompt($"Default Effect Output Device Number");
                 string inputLine = Console.ReadLine()!;
@@ -287,6 +297,8 @@ public abstract class BaseConfigurator : IConfigurator
                     if (value >= 0 && value < devices.Count)
                     {
                         botConfig.EffectOutputDevice = devices[value];
+                        botConfig.TTSOutputDevice = devices[value];
+                        botConfig.MidiOutputDevice = devices[value];
                         botConfig.Serialize();
                     }
                     else
@@ -345,6 +357,11 @@ public abstract class BaseConfigurator : IConfigurator
         if (string.IsNullOrEmpty(botConfig.VoiceInputDevice))
         {
             List<string> devices = GetAudioInputDevicesList();
+
+            if (devices.Count == 0)
+            {
+                return true;
+            }
 
             Console.WriteLine($"Detected, Active Input devices:");
 

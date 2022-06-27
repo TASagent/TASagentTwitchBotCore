@@ -2,23 +2,46 @@
 
 namespace TASagentTwitchBot.Core.Database;
 
+[AutoRegister]
 public interface IUserHelper
 {
+    Task<User> GetBroadcaster();
+    Task<IReadOnlyList<User>> GetModUsers();
+
     Task<User?> GetUserByTwitchLogin(string twitchLogin, bool create = true);
     Task<User?> GetUserByTwitchId(string twitchId, bool create = true);
 }
 
 public class UserHelper : IUserHelper
 {
+    private readonly Config.BotConfiguration botConfig;
     private readonly API.Twitch.HelixHelper helixHelper;
     private readonly IServiceScopeFactory scopeFactory;
 
     public UserHelper(
+        Config.BotConfiguration botConfig,
         API.Twitch.HelixHelper helixHelper,
         IServiceScopeFactory scopeFactory)
     {
+        this.botConfig = botConfig;
         this.helixHelper = helixHelper;
         this.scopeFactory = scopeFactory;
+    }
+
+    public async Task<User> GetBroadcaster()
+    {
+        using IServiceScope scope = scopeFactory.CreateScope();
+        BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+
+        return await db.Users.FirstAsync(x => x.TwitchUserId == botConfig.BroadcasterId);
+    }
+
+    public async Task<IReadOnlyList<User>> GetModUsers()
+    {
+        using IServiceScope scope = scopeFactory.CreateScope();
+        BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+
+        return await db.Users.Where(x => x.AuthorizationLevel == Commands.AuthorizationLevel.Moderator).ToListAsync();
     }
 
     public async Task<User?> GetUserByTwitchId(string twitchId, bool create = true)

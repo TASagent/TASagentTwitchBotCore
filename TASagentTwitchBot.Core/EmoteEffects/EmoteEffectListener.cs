@@ -5,6 +5,7 @@ using TASagentTwitchBot.Core.API.BTTV;
 
 namespace TASagentTwitchBot.Core.EmoteEffects;
 
+[AutoRegister]
 public interface IEmoteEffectListener
 {
     void RefreshEmotes();
@@ -16,8 +17,8 @@ public class EmoteEffectListener : IEmoteEffectListener, IDisposable
 {
     private readonly Config.BotConfiguration botConfig;
     private readonly IHubContext<Web.Hubs.EmoteHub> emoteHubContext;
-    private readonly BTTVHelper bttvHelper;
-    private readonly Bits.CheerHelper cheerHelper;
+    private readonly IBTTVHelper bttvHelper;
+    private readonly Bits.ICheerHelper cheerHelper;
     private readonly EmoteEffectConfiguration emoteEffectConfig;
 
     private readonly Dictionary<string, string> externalEmoteLookup = new Dictionary<string, string>();
@@ -32,8 +33,8 @@ public class EmoteEffectListener : IEmoteEffectListener, IDisposable
         Config.BotConfiguration botConfig,
         ICommunication communication,
         IHubContext<Web.Hubs.EmoteHub> emoteHubContext,
-        BTTVHelper bttvHelper,
-        Bits.CheerHelper cheerHelper,
+        IBTTVHelper bttvHelper,
+        Bits.ICheerHelper cheerHelper,
         EmoteEffectConfiguration emoteEffectConfig)
     {
         this.botConfig = botConfig;

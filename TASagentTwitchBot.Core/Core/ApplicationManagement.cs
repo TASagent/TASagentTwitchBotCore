@@ -43,9 +43,5 @@ public class ApplicationManagement
 
         exitTrigger.TrySetResult();
     }
-}
 
-public interface IShutdownListener
-{
-    void NotifyShuttingDown();
 }

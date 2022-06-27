@@ -11,16 +11,13 @@ namespace TASagentTwitchBot.Core.Web.Controllers;
 public class NotificationController : ControllerBase
 {
     private readonly Notifications.IActivityDispatcher activityDispatcher;
-    private readonly IMessageAccumulator messsageAccumulator;
     private readonly IHubContext<Hubs.MonitorHub> monitorHub;
 
     public NotificationController(
         Notifications.IActivityDispatcher activityDispatcher,
-        IMessageAccumulator messsageAccumulator,
         IHubContext<Hubs.MonitorHub> monitorHub)
     {
         this.activityDispatcher = activityDispatcher;
-        this.messsageAccumulator = messsageAccumulator;
         this.monitorHub = monitorHub;
     }
 
@@ -36,8 +33,7 @@ public class NotificationController : ControllerBase
     [AuthRequired(AuthDegree.Privileged)]
     public async Task<IActionResult> UpdatePendingNotification(UpdatePendingNotificationMessage message)
     {
-        if (!messsageAccumulator.RemovePendingNotification(message.Index) ||
-            !activityDispatcher.UpdatePendingRequest(message.Index, message.Approved))
+        if (!activityDispatcher.UpdatePendingRequest(message.Index, message.Approved))
         {
             return BadRequest();
         }

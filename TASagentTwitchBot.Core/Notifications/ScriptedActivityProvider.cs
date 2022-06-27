@@ -26,12 +26,11 @@ public partial class ScriptedActivityProvider :
     private readonly Audio.Effects.IAudioEffectSystem audioEffectSystem;
     private readonly ITTSRenderer ttsRenderer;
     private readonly NotificationServer notificationServer;
-    private readonly Bits.CheerHelper cheerHelper;
+    private readonly Bits.ICheerHelper cheerHelper;
     private readonly IScriptHelper scriptHelper;
+    private readonly Database.IUserHelper userHelper;
 
     private readonly ScriptedNotificationConfig notificationConfig;
-
-    private readonly Database.IUserHelper userHelper;
 
     private readonly CancellationTokenSource generalTokenSource = new CancellationTokenSource();
 
@@ -67,7 +66,7 @@ public partial class ScriptedActivityProvider :
         Audio.ISoundEffectSystem soundEffectSystem,
         Audio.IAudioPlayer audioPlayer,
         Audio.Effects.IAudioEffectSystem audioEffectSystem,
-        Bits.CheerHelper cheerHelper,
+        Bits.ICheerHelper cheerHelper,
         IActivityDispatcher activityDispatcher,
         ITTSRenderer ttsRenderer,
         NotificationServer notificationServer,
@@ -255,6 +254,7 @@ public partial class ScriptedActivityProvider :
 
     protected async Task HandleAlertData(
         IAlert alertData,
+        string requestingUserId,
         string description,
         GetDefaultImageAsync getDefaultImage,
         bool approved)
@@ -266,6 +266,7 @@ public partial class ScriptedActivityProvider :
                     activity: new ScriptedActivityRequest(
                         activityHandler: this,
                         description: description,
+                        requesterId: requestingUserId,
                         notificationMessage: new ImageNotificationMessage(
                             image: string.IsNullOrEmpty(standardAlertData.ImageOverride) ? (await getDefaultImage()) : standardAlertData.ImageOverride,
                             duration: 1_000 * standardAlertData.Duration,
@@ -287,6 +288,7 @@ public partial class ScriptedActivityProvider :
 
     protected async Task HandleAlertData(
         IAlert alertData,
+        string requestingUserId,
         string description,
         GetDefaultImage getDefaultImage,
         bool approved)
@@ -298,6 +300,7 @@ public partial class ScriptedActivityProvider :
                     activity: new ScriptedActivityRequest(
                         activityHandler: this,
                         description: description,
+                        requesterId: requestingUserId,
                         notificationMessage: new ImageNotificationMessage(
                             image: string.IsNullOrEmpty(standardAlertData.ImageOverride) ? getDefaultImage() : standardAlertData.ImageOverride,
                             duration: 1_000 * standardAlertData.Duration,
@@ -354,6 +357,7 @@ public partial class ScriptedActivityProvider :
                 await HandleAlertData(
                     alertData: alertData,
                     description: $"Sub: {subscriber.TwitchUserName} \"{message}\"",
+                    requestingUserId: subscriber.TwitchUserId,
                     getDefaultImage: notificationServer.GetNextImageURL,
                     approved: approved);
             }
@@ -397,6 +401,7 @@ public partial class ScriptedActivityProvider :
                 await HandleAlertData(
                     alertData: alertData,
                     description: $"Cheer {quantity}: {cheerer.TwitchUserName} \"{message}\"",
+                    requestingUserId: cheerer.TwitchUserId,
                     getDefaultImage: () => cheerHelper.GetCheerImageURL(message, quantity)!,
                     approved: approved);
             }
@@ -447,6 +452,7 @@ public partial class ScriptedActivityProvider :
                 await HandleAlertData(
                     alertData: alertData,
                     description: $"Raid: {raider.TwitchUserName} with {count} viewers",
+                    requestingUserId: raider.TwitchUserId,
                     getDefaultImage: notificationServer.GetNextImageURL,
                     approved: approved);
             }
@@ -509,6 +515,7 @@ public partial class ScriptedActivityProvider :
                 await HandleAlertData(
                     alertData: alertData,
                     description: $"Gift Sub From {sender.TwitchUserName} To {recipient.TwitchUserName}",
+                    requestingUserId: sender.TwitchUserId,
                     getDefaultImage: notificationServer.GetNextImageURL,
                     approved: approved);
             }
@@ -558,6 +565,7 @@ public partial class ScriptedActivityProvider :
                 await HandleAlertData(
                     alertData: alertData,
                     description: $"Gift Sub From Anon To {recipient.TwitchUserName}",
+                    requestingUserId: "",
                     getDefaultImage: notificationServer.GetNextImageURL,
                     approved: approved);
             }
@@ -598,6 +606,7 @@ public partial class ScriptedActivityProvider :
                 await HandleAlertData(
                     alertData: alertData,
                     description: $"Follower: {follower.TwitchUserName}",
+                    requestingUserId: follower.TwitchUserId,
                     getDefaultImage: notificationServer.GetNextImageURL,
                     approved: approved);
             }
@@ -631,6 +640,7 @@ public partial class ScriptedActivityProvider :
             activity: new ScriptedActivityRequest(
                 activityHandler: this,
                 description: $"TTS {user.TwitchUserName} : {message}",
+                requesterId: user.TwitchUserId,
                 notificationMessage: null,
                 audioRequest: await ttsRenderer.TTSRequest(
                     authorizationLevel: user.AuthorizationLevel,
@@ -791,10 +801,11 @@ public partial class ScriptedActivityProvider :
         public ScriptedActivityRequest(
             IActivityHandler activityHandler,
             string description,
+            string requesterId,
             NotificationMessage? notificationMessage = null,
             Audio.AudioRequest? audioRequest = null,
             string? marqueeMessage = null)
-            : base(activityHandler, description)
+            : base(activityHandler, description, requesterId)
         {
             NotificationMessage = notificationMessage;
             AudioRequest = audioRequest;

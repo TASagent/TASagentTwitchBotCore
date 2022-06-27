@@ -79,8 +79,9 @@ public class TTSController : ControllerBase
             BitThreshold: ttsConfig.BitThreshold,
             CommandEnabled: ttsConfig.Command.Enabled,
             CommandCooldown: ttsConfig.Command.CooldownTime,
+            AllowNeuralVoices: ttsConfig.AllowNeuralVoices,
             RedemptionEnabled: ttsConfig.Redemption.Enabled,
-            AllowNeuralVoices: ttsConfig.AllowNeuralVoices);
+            RedemptionPaused: ttsConfig.Redemption.Paused);
     }
 
     [HttpPost]
@@ -104,8 +105,9 @@ public class TTSController : ControllerBase
         ttsConfig.BitThreshold = ttsSettings.BitThreshold;
         ttsConfig.Command.Enabled = ttsSettings.CommandEnabled;
         ttsConfig.Command.CooldownTime = ttsSettings.CommandCooldown;
-        ttsConfig.Redemption.Enabled = ttsSettings.RedemptionEnabled;
         ttsConfig.AllowNeuralVoices = ttsSettings.AllowNeuralVoices;
+
+        ttsConfig.UpdateRedemptionStatus(ttsSettings.RedemptionEnabled, ttsSettings.RedemptionPaused);
 
         ttsConfig.Serialize();
 
@@ -118,8 +120,9 @@ public record TTSSettings(
     int BitThreshold,
     bool CommandEnabled,
     int CommandCooldown,
+    bool AllowNeuralVoices,
     bool RedemptionEnabled,
-    bool AllowNeuralVoices);
+    bool RedemptionPaused = false);
 
 
 public record TTSRequest(

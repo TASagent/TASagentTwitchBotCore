@@ -6,13 +6,16 @@ namespace TASagentTwitchBot.Core.Commands;
 public class PermissionSystem : ICommandContainer
 {
     private readonly ICommunication communication;
+    private readonly Notifications.IActivityDispatcher activityDispatcher;
     private readonly IServiceScopeFactory scopeFactory;
 
     public PermissionSystem(
         ICommunication communication,
+        Notifications.IActivityDispatcher activityDispatcher,
         IServiceScopeFactory scopeFactory)
     {
         this.communication = communication;
+        this.activityDispatcher = activityDispatcher;
         this.scopeFactory = scopeFactory;
     }
 
@@ -97,6 +100,7 @@ public class PermissionSystem : ICommandContainer
                 matchingUser.AuthorizationLevel = AuthorizationLevel.Elevated;
                 await db.SaveChangesAsync();
                 communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, user {matchingUser.TwitchUserName} has been elevated!");
+                activityDispatcher.UpdateAllRequests(matchingUser.TwitchUserId, true);
             }
             else
             {
@@ -110,12 +114,14 @@ public class PermissionSystem : ICommandContainer
                 matchingUser.AuthorizationLevel = AuthorizationLevel.None;
                 await db.SaveChangesAsync();
                 communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, user {matchingUser.TwitchUserName} has been demoted!");
+                activityDispatcher.UpdateAllRequests(matchingUser.TwitchUserId, false);
             }
             else if (matchingUser.AuthorizationLevel == AuthorizationLevel.None)
             {
                 matchingUser.AuthorizationLevel = AuthorizationLevel.Restricted;
                 await db.SaveChangesAsync();
                 communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, user {matchingUser.TwitchUserName} has been restricted!");
+                activityDispatcher.UpdateAllRequests(matchingUser.TwitchUserId, false);
             }
             else
             {
@@ -264,6 +270,7 @@ public class PermissionSystem : ICommandContainer
                 matchingUser.AuthorizationLevel = AuthorizationLevel.Restricted;
                 await db.SaveChangesAsync();
                 communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, user {matchingUser.TwitchUserName} has been restricted!");
+                activityDispatcher.UpdateAllRequests(matchingUser.TwitchUserId, false);
             }
             else
             {
@@ -277,6 +284,7 @@ public class PermissionSystem : ICommandContainer
             matchingUser.AuthorizationLevel = AuthorizationLevel.Restricted;
             await db.SaveChangesAsync();
             communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, user {matchingUser.TwitchUserName} has been restricted!");
+            activityDispatcher.UpdateAllRequests(matchingUser.TwitchUserId, false);
         }
     }
 }

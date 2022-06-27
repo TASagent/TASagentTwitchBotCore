@@ -6,6 +6,7 @@ using Microsoft.Extensions.FileProviders;
 
 
 using TASagentTwitchBot.Core;
+using TASagentTwitchBot.Core.Web;
 using TASagentTwitchBot.Core.WebServer;
 using TASagentTwitchBot.Core.WebServer.Config;
 using TASagentTwitchBot.Core.WebServer.Database;
@@ -72,18 +73,18 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 });
 
-builder.Services.AddSingleton(configFile);
+builder.Services.AddTASSingleton(configFile);
 
 builder.Services
-    .AddSingleton<ICommunication, WebServerCommunicationHandler>()
-    .AddSingleton<IServerEventSubHandler, ServerEventSubHandler>();
+    .AddTASSingleton<WebServerCommunicationHandler>()
+    .AddTASSingleton<ServerEventSubHandler>();
 
 builder.Services
-    .AddSingleton<HelixServerHelper>()
-    .AddSingleton<HelixEventSubHelper>()
-    .AddSingleton<AppAccessTokenManager>();
+    .AddTASSingleton<HelixServerHelper>()
+    .AddTASSingleton<HelixEventSubHelper>()
+    .AddTASSingleton<AppAccessTokenManager>();
 
-builder.Services.AddSingleton<IServerTTSRenderer, ServerTTSRenderer>();
+builder.Services.AddTASSingleton<ServerTTSRenderer>();
 
 
 using WebApplication app = builder.Build();

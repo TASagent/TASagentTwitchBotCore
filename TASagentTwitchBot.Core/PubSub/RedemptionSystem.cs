@@ -3,11 +3,21 @@ using System.Threading.Channels;
 
 namespace TASagentTwitchBot.Core.PubSub;
 
+[AutoRegister]
 public interface IRedemptionSystem
 {
     Task Initialize();
     void HandleRedemption(ChannelPointMessageData.Datum redemption);
 }
+
+public delegate Task RedemptionHandler(Database.User user, ChannelPointMessageData.Datum.RedemptionData redemption);
+
+[AutoRegister]
+public interface IRedemptionContainer
+{
+    Task RegisterHandler(Dictionary<string, RedemptionHandler> handlers);
+}
+
 
 public class RedemptionSystem : IRedemptionSystem, IDisposable
 {
@@ -173,11 +183,4 @@ public class RedemptionSystem : IRedemptionSystem, IDisposable
     }
 
     #endregion IDisposable
-}
-
-public delegate Task RedemptionHandler(Database.User user, ChannelPointMessageData.Datum.RedemptionData redemption);
-
-public interface IRedemptionContainer
-{
-    Task RegisterHandler(Dictionary<string, RedemptionHandler> handlers);
 }

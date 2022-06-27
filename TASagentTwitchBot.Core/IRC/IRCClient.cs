@@ -5,7 +5,7 @@ using System.Threading.Channels;
 namespace TASagentTwitchBot.Core.IRC;
 
 // Reference: https://www.youtube.com/watch?v=Ss-OzV9aUZg
-public class IrcClient : IShutdownListener, IDisposable
+public class IrcClient : IStartupListener, IShutdownListener, IDisposable
 {
     private readonly Config.BotConfiguration botConfig;
     private readonly ErrorHandler errorHandler;

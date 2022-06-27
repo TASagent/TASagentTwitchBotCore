@@ -1,25 +1,16 @@
-﻿#define USE_STANDARD_DEBUG_OUTPUT 
-
-using NAudio.CoreAudioApi;
+﻿using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using NAudio.MediaFoundation;
 using BGC.Mathematics;
 
 namespace TASagentTwitchBot.Core.Audio;
 
+[AutoRegister]
 public interface IMicrophoneHandler : IDisposable
 {
     void ResetVoiceStream();
 
-    List<string> GetOutputDevices();
-    List<string> GetInputDevices();
-
-    string GetCurrentVoiceOutputDevice();
-    string GetCurrentVoiceInputDevice();
-
     void UpdateVoiceEffect(Effects.Effect effect);
-    bool UpdateVoiceOutputDevice(string device);
-    bool UpdateVoiceInputDevice(string device);
 
     void BumpPitch(bool up);
     void SetPitch(double pitchFactor);
@@ -32,10 +23,11 @@ public interface IMicrophoneHandler : IDisposable
 /// <summary>
 /// Coordinates different requested display features so they don't collide
 /// </summary>
-public class MicrophoneHandler : IMicrophoneHandler, IShutdownListener, IDisposable
+public class NAudioMicrophoneHandler : IMicrophoneHandler, IAudioDeviceUpdateListener, IStartupListener, IShutdownListener, IDisposable
 {
     private readonly Config.BotConfiguration botConfig;
     private readonly ICommunication communication;
+    private readonly INAudioDeviceManager audioDeviceManager;
 
     private bool disposedValue;
 
@@ -50,45 +42,22 @@ public class MicrophoneHandler : IMicrophoneHandler, IShutdownListener, IDisposa
     private Effects.Effect? currentEffect = null;
     private Effects.PitchShiftEffect? lastPitchShiftEffect = null;
 
-    public MicrophoneHandler(
+    public NAudioMicrophoneHandler(
         Config.BotConfiguration botConfig,
         ApplicationManagement applicationManagement,
-        ICommunication communication)
+        ICommunication communication,
+        INAudioDeviceManager audioDeviceManager)
     {
         this.communication = communication;
         this.botConfig = botConfig;
+        this.audioDeviceManager = audioDeviceManager;
 
         applicationManagement.RegisterShutdownListener(this);
+        audioDeviceManager.RegisterUpdateListener(this);
 
         //Start
         UpdateVoiceEffect(new Effects.NoEffect());
     }
-
-    public List<string> GetOutputDevices()
-    {
-        using MMDeviceEnumerator enumerator = new MMDeviceEnumerator();
-
-        return enumerator
-            .EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active)
-            .Select(x => x.FriendlyName)
-            .ToList();
-    }
-
-    public List<string> GetInputDevices()
-    {
-        using MMDeviceEnumerator enumerator = new MMDeviceEnumerator();
-
-        return enumerator
-            .EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active)
-            .Select(x => x.FriendlyName)
-            .ToList();
-    }
-
-    public string GetCurrentVoiceOutputDevice() =>
-        targetOutputDevice?.FriendlyName ?? botConfig.VoiceOutputDevice;
-
-    public string GetCurrentVoiceInputDevice() =>
-        targetInputDevice?.FriendlyName ?? botConfig.VoiceInputDevice;
 
     public void UpdateVoiceEffect(Effects.Effect effect)
     {
@@ -110,68 +79,40 @@ public class MicrophoneHandler : IMicrophoneHandler, IShutdownListener, IDisposa
         }
     }
 
-    public bool UpdateVoiceOutputDevice(string device)
+    void IAudioDeviceUpdateListener.NotifyAudioDeviceUpdate(AudioDeviceType audioDevice)
     {
-        if (string.IsNullOrEmpty(device))
+        switch (audioDevice)
         {
-            return false;
+            case AudioDeviceType.VoiceOutput:
+                {
+                    MMDevice? newOutputDevice = audioDeviceManager.GetAudioDevice(audioDevice);
+
+                    CleanUpActiveStream();
+
+                    targetOutputDevice?.Dispose();
+                    targetOutputDevice = newOutputDevice;
+
+                    ResetVoiceStream();
+                }
+                break;
+
+            case AudioDeviceType.MicrophoneInput:
+                {
+                    MMDevice? newInputDevice = audioDeviceManager.GetAudioDevice(audioDevice);
+
+                    CleanUpActiveStream();
+
+                    targetInputDevice?.Dispose();
+                    targetInputDevice = newInputDevice;
+
+                    ResetVoiceStream();
+                }
+                break;
+
+            default:
+                //Do nothing
+                return;
         }
-
-        if (targetOutputDevice is not null && targetOutputDevice.FriendlyName == device)
-        {
-            //Tried to set to current device
-            return true;
-        }
-
-        MMDevice? newOutputDevice = GetOutputDevice(device);
-
-        if (newOutputDevice is null)
-        {
-            //Device not found
-            return false;
-        }
-
-        CleanUpActiveStream();
-
-        //Switch devices
-        targetOutputDevice?.Dispose();
-        targetOutputDevice = newOutputDevice;
-
-        ResetVoiceStream();
-
-        return true;
-    }
-
-    public bool UpdateVoiceInputDevice(string device)
-    {
-        if (string.IsNullOrEmpty(device))
-        {
-            return false;
-        }
-
-        if (targetInputDevice is not null && targetInputDevice.FriendlyName == device)
-        {
-            //Tried to set to current device
-            return true;
-        }
-
-        MMDevice? newInputDevice = GetInputDevice(device);
-
-        if (newInputDevice is null)
-        {
-            //Device not found
-            return false;
-        }
-
-        CleanUpActiveStream();
-
-        //Switch devices
-        targetInputDevice?.Dispose();
-        targetInputDevice = newInputDevice;
-
-        ResetVoiceStream();
-
-        return true;
     }
 
     private void CleanUpActiveStream()
@@ -205,54 +146,18 @@ public class MicrophoneHandler : IMicrophoneHandler, IShutdownListener, IDisposa
         if (targetOutputDevice is null)
         {
             //Set up device
-#if DEBUG && USE_STANDARD_DEBUG_OUTPUT
-            targetOutputDevice = GetDefaultOutputDevice();
-#else
-            targetOutputDevice = GetOutputDevice(botConfig.VoiceOutputDevice);
-#endif
-            if (targetOutputDevice is null)
-            {
-                targetOutputDevice = GetDefaultOutputDevice();
-
-                if (targetOutputDevice is null)
-                {
-                    //Failed to get a device
-                    communication.SendErrorMessage("Unable to initialize voice output device.");
-                    return;
-                }
-                else
-                {
-                    communication.SendWarningMessage($"Audio output device {botConfig.VoiceOutputDevice} not found. " +
-                        $"Fell back to default audio output device: {targetOutputDevice.DeviceFriendlyName}");
-                }
-            }
+            targetOutputDevice = audioDeviceManager.GetAudioDevice(AudioDeviceType.VoiceOutput);
         }
 
         if (targetInputDevice is null)
         {
             //Set up device
-            targetInputDevice = GetInputDevice(botConfig.VoiceInputDevice);
-            if (targetInputDevice is null)
-            {
-                targetInputDevice = GetDefaultInputDevice();
-
-                if (targetInputDevice is null)
-                {
-                    //Failed to get a device
-                    communication.SendErrorMessage("Unable to initialize voice input device.");
-                    return;
-                }
-                else
-                {
-                    communication.SendWarningMessage($"Audio input device {botConfig.VoiceInputDevice} not found. " +
-                        $"Fell back to default audio input device: {targetInputDevice.DeviceFriendlyName}");
-                }
-            }
+            targetInputDevice = audioDeviceManager.GetAudioDevice(AudioDeviceType.MicrophoneInput);
         }
 
         CleanUpActiveStream();
 
-        if (botConfig.MicConfiguration.Enabled)
+        if (targetOutputDevice is not null && targetInputDevice is not null && botConfig.MicConfiguration.Enabled)
         {
             outputDevice = new WasapiOut(targetOutputDevice, AudioClientShareMode.Shared, true, 10);
 
@@ -267,22 +172,12 @@ public class MicrophoneHandler : IMicrophoneHandler, IShutdownListener, IDisposa
         if (targetInputDevice is null)
         {
             //Set up device
-            targetInputDevice = GetInputDevice(botConfig.VoiceInputDevice);
+            targetInputDevice = audioDeviceManager.GetAudioDevice(AudioDeviceType.MicrophoneInput);
+
             if (targetInputDevice is null)
             {
-                targetInputDevice = GetDefaultInputDevice();
-
-                if (targetInputDevice is null)
-                {
-                    //Failed to get a device
-                    communication.SendErrorMessage("Unable to initialize voice input device.");
-                    return;
-                }
-                else
-                {
-                    communication.SendWarningMessage($"Audio input device {botConfig.VoiceInputDevice} not found. " +
-                        $"Fell back to default audio input device: {targetInputDevice.DeviceFriendlyName}");
-                }
+                communication.SendErrorMessage("Unable to initialize voice input device.");
+                return;
             }
         }
 
@@ -345,35 +240,7 @@ public class MicrophoneHandler : IMicrophoneHandler, IShutdownListener, IDisposa
 
     public string GetCurrentEffect() => currentEffect?.GetEffectsChain() ?? "None";
 
-    private static MMDevice GetDefaultOutputDevice()
-    {
-        using MMDeviceEnumerator enumerator = new MMDeviceEnumerator();
-        return enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-    }
-
-    private static MMDevice? GetOutputDevice(string defaultAudioOutputDevice)
-    {
-        using MMDeviceEnumerator enumerator = new MMDeviceEnumerator();
-        return enumerator
-                .EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active)
-                .FirstOrDefault(x => x.FriendlyName == defaultAudioOutputDevice);
-    }
-
-    private static MMDevice GetDefaultInputDevice()
-    {
-        using MMDeviceEnumerator enumerator = new MMDeviceEnumerator();
-        return enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
-    }
-
-    private static MMDevice? GetInputDevice(string defaultAudioInputDevice)
-    {
-        using MMDeviceEnumerator enumerator = new MMDeviceEnumerator();
-        return enumerator
-            .EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active)
-            .FirstOrDefault(x => x.FriendlyName == defaultAudioInputDevice);
-    }
-
-    public void NotifyShuttingDown()
+    void IShutdownListener.NotifyShuttingDown()
     {
         CleanUpActiveStream();
     }

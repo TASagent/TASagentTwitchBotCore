@@ -3,6 +3,7 @@
 namespace TASagentTwitchBot.Core.Database;
 
 //Create the database 
+[AutoRegister]
 public abstract class BaseDatabaseContext : DbContext
 {
     public DbSet<User> Users { get; set; } = null!;

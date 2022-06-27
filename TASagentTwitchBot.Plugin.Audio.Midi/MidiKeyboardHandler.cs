@@ -1,6 +1,4 @@
-﻿#define USE_STANDARD_DEBUG_OUTPUT 
-
-using NAudio.CoreAudioApi;
+﻿using NAudio.CoreAudioApi;
 using NAudio.Midi;
 using NAudio.Wave;
 using BGC.Audio;
@@ -12,25 +10,42 @@ using TASagentTwitchBot.Core.Audio;
 
 namespace TASagentTwitchBot.Plugin.Audio.Midi;
 
-public class MidiKeyboardHandler : IShutdownListener, IDisposable
+[AutoRegister]
+public interface IMidiKeyboardHandler
+{
+    List<string> GetSupportedInstruments();
+    bool BindToInstrument(string instrumentString);
+    bool BindToSoundEffect(string soundEffectName);
+    void BindToCustomBinding(MidiKeyboardHandler.MidiBinding binding);
+}
+
+public class MidiKeyboardHandler :
+    IAudioDeviceUpdateListener,
+    IMidiDeviceUpdateListener,
+    IStartupListener,
+    IShutdownListener,
+    IMidiKeyboardHandler,
+    IDisposable
 {
     private readonly Core.Config.BotConfiguration botConfig;
 
     private readonly ICommunication communication;
     private readonly ISoundEffectSystem soundEffectsSystem;
 
+    private readonly INAudioDeviceManager audioDeviceManager;
+    private readonly INAudioMidiDeviceManager midiDeviceManager;
+
     private MMDevice? targetInputDevice;
     private MMDevice? targetOutputDevice;
     private WasapiOut? outputDevice;
     private MidiIn? currentMidiDevice;
-    private string? currentMidiDeviceName;
 
     private bool disposedValue;
 
     private readonly Dictionary<int, MidiBinding> bindings = new Dictionary<int, MidiBinding>()
-        {
-            { 1, new SimpleInstrumentBinding(Instrument.Organ) }
-        };
+    {
+        { 1, new SimpleInstrumentBinding(Instrument.Organ) }
+    };
 
     private enum Instrument
     {
@@ -46,12 +61,18 @@ public class MidiKeyboardHandler : IShutdownListener, IDisposable
         Core.Config.BotConfiguration botConfig,
         ApplicationManagement applicationManagement,
         ICommunication communication,
-        ISoundEffectSystem soundEffectsSystem)
+        ISoundEffectSystem soundEffectsSystem,
+        INAudioDeviceManager audioDeviceManager,
+        INAudioMidiDeviceManager midiDeviceManager)
     {
         this.botConfig = botConfig;
         this.communication = communication;
         this.soundEffectsSystem = soundEffectsSystem;
+        this.audioDeviceManager = audioDeviceManager;
+        this.midiDeviceManager = midiDeviceManager;
 
+        audioDeviceManager.RegisterUpdateListener(this);
+        midiDeviceManager.RegisterUpdateListener(this);
         applicationManagement.RegisterShutdownListener(this);
     }
 
@@ -84,89 +105,7 @@ public class MidiKeyboardHandler : IShutdownListener, IDisposable
         }
     }
 
-    public List<string> GetMidiDevices()
-    {
-        List<string> devices = new List<string>();
 
-        for (int i = 0; i < MidiIn.NumberOfDevices; i++)
-        {
-            devices.Add(MidiIn.DeviceInfo(i).ProductName);
-        }
-
-        return devices;
-    }
-
-    public string GetCurrentMidiDevice()
-    {
-        if (currentMidiDevice is null || currentMidiDeviceName is null)
-        {
-            return "";
-        }
-
-        return currentMidiDeviceName;
-    }
-
-    public bool UpdateCurrentMidiDevice(string name)
-    {
-        if (currentMidiDevice is not null)
-        {
-            try
-            {
-                currentMidiDevice.Stop();
-                currentMidiDevice.Dispose();
-                currentMidiDevice = null;
-                currentMidiDeviceName = "";
-            }
-            catch (Exception ex)
-            {
-                communication.SendWarningMessage($"Exception closing Midi Device: {ex}");
-                currentMidiDevice = null;
-                currentMidiDeviceName = "";
-            }
-        }
-
-        if (string.IsNullOrEmpty(name))
-        {
-            return true;
-        }
-
-        int newDevice = -1;
-        for (int i = 0; i < MidiIn.NumberOfDevices; i++)
-        {
-            if (MidiIn.DeviceInfo(i).ProductName == name)
-            {
-                newDevice = i;
-                break;
-            }
-        }
-
-        if (newDevice == -1)
-        {
-            //Not found
-            return false;
-        }
-
-        try
-        {
-            currentMidiDeviceName = MidiIn.DeviceInfo(newDevice).ProductName;
-            currentMidiDevice = new MidiIn(newDevice);
-            currentMidiDevice.MessageReceived += MidiMessageReceived;
-            currentMidiDevice.ErrorReceived += MidiErrorReceived;
-            currentMidiDevice.Start();
-        }
-        catch (Exception ex)
-        {
-            communication.SendErrorMessage($"Exception starting Midi Device: {ex}");
-            currentMidiDevice = null;
-            currentMidiDeviceName = "";
-            return false;
-        }
-
-        RecreateAudioStream();
-
-        //Success
-        return true;
-    }
 
     private void MidiErrorReceived(object? sender, MidiInMessageEventArgs e)
     {
@@ -225,22 +164,12 @@ public class MidiKeyboardHandler : IShutdownListener, IDisposable
                     if (targetInputDevice is null)
                     {
                         //Set up device
-                        targetInputDevice = GetInputDevice(botConfig.VoiceInputDevice);
+                        targetInputDevice = audioDeviceManager.GetAudioDevice(AudioDeviceType.MicrophoneInput);
+
                         if (targetInputDevice is null)
                         {
-                            targetInputDevice = GetDefaultInputDevice();
-
-                            if (targetInputDevice is null)
-                            {
-                                //Failed to get a device
-                                communication.SendErrorMessage("Unable to initialize voice input device.");
-                                return false;
-                            }
-                            else
-                            {
-                                communication.SendWarningMessage($"Audio input device {botConfig.VoiceInputDevice} not found. " +
-                                    $"Fell back to default audio input device: {targetInputDevice.DeviceFriendlyName}");
-                            }
+                            communication.SendErrorMessage("Unable to initialize voice input device for Midi.");
+                            return false;
                         }
                     }
 
@@ -309,26 +238,12 @@ public class MidiKeyboardHandler : IShutdownListener, IDisposable
         if (targetOutputDevice is null)
         {
             //Set up device
-#if DEBUG && USE_STANDARD_DEBUG_OUTPUT
-                targetOutputDevice = GetDefaultOutputDevice();
-#else
-            targetOutputDevice = GetOutputDevice(botConfig.EffectOutputDevice);
-#endif
+            targetOutputDevice = audioDeviceManager.GetAudioDevice(AudioDeviceType.MidiOutput);
+
             if (targetOutputDevice is null)
             {
-                targetOutputDevice = GetDefaultOutputDevice();
-
-                if (targetOutputDevice is null)
-                {
-                    //Failed to get a device
-                    communication.SendErrorMessage("Unable to initialize voice output device.");
-                    return;
-                }
-                else
-                {
-                    communication.SendWarningMessage($"Audio output device {botConfig.EffectOutputDevice} not found. " +
-                        $"Fell back to default audio output device: {targetOutputDevice.DeviceFriendlyName}");
-                }
+                communication.SendErrorMessage("Unable to initialize midi output device.");
+                return;
             }
         }
 
@@ -339,72 +254,101 @@ public class MidiKeyboardHandler : IShutdownListener, IDisposable
         outputDevice.Play();
     }
 
-    public string GetCurrentMidiOutputDevice() =>
-        targetOutputDevice?.FriendlyName ??
-#if DEBUG && USE_STANDARD_DEBUG_OUTPUT
-                GetDefaultOutputDevice().FriendlyName;
-#else
-                botConfig.EffectOutputDevice;
-#endif
-
-    public bool UpdateCurrentMidiOutputDevice(string device)
+    void IMidiDeviceUpdateListener.CloseMidiDevices(int slot)
     {
-        if (string.IsNullOrEmpty(device))
+        if (slot != 0)
         {
-            return false;
+            //We just use slot 0 for now
+            return;
         }
 
-        if (targetOutputDevice is not null && targetOutputDevice.FriendlyName == device)
+        if (currentMidiDevice is not null)
         {
-            //Tried to set to current device
-            return true;
+            try
+            {
+                currentMidiDevice.Stop();
+                currentMidiDevice.Dispose();
+                currentMidiDevice = null;
+            }
+            catch (Exception ex)
+            {
+                communication.SendWarningMessage($"Exception closing Midi Device: {ex}");
+                currentMidiDevice = null;
+            }
+        }
+    }
+
+
+    void IMidiDeviceUpdateListener.NotifyMidiDeviceUpdate(int slot)
+    {
+        if (slot != 0)
+        {
+            //We just use slot 0 for now
+            return;
         }
 
-        MMDevice? newOutputDevice = GetOutputDevice(device);
-
-        if (newOutputDevice is null)
+        try
         {
-            //Device not found
-            return false;
+            currentMidiDevice = midiDeviceManager.GetMidiDevice(0);
+            if (currentMidiDevice is null)
+            {
+                communication.SendErrorMessage($"Unable to start Midi Device");
+                return;
+            }
+
+            currentMidiDevice.MessageReceived += MidiMessageReceived;
+            currentMidiDevice.ErrorReceived += MidiErrorReceived;
+            currentMidiDevice.Start();
+
+            RecreateAudioStream();
         }
-
-        CleanUpActiveStream();
-
-        //Switch devices
-        targetOutputDevice?.Dispose();
-        targetOutputDevice = newOutputDevice;
-
-        RecreateAudioStream();
-
-        return true;
+        catch (Exception ex)
+        {
+            communication.SendErrorMessage($"Exception starting Midi Device: {ex}");
+            currentMidiDevice = null;
+        }
     }
 
-    private static MMDevice GetDefaultOutputDevice()
+    void IAudioDeviceUpdateListener.NotifyAudioDeviceUpdate(AudioDeviceType audioDevice)
     {
-        using MMDeviceEnumerator enumerator = new MMDeviceEnumerator();
-        return enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-    }
+        switch (audioDevice)
+        {
+            case AudioDeviceType.MidiOutput:
+                {
+                    MMDevice? newOutputDevice = audioDeviceManager.GetAudioDevice(audioDevice);
 
-    private static MMDevice? GetOutputDevice(string audioDevice)
-    {
-        using MMDeviceEnumerator enumerator = new MMDeviceEnumerator();
-        return enumerator
-                .EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active)
-                .FirstOrDefault(x => x.FriendlyName == audioDevice);
-    }
+                    CleanUpActiveStream();
 
-    private static MMDevice GetDefaultInputDevice()
-    {
-        using MMDeviceEnumerator enumerator = new MMDeviceEnumerator();
-        return enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
-    }
+                    targetOutputDevice?.Dispose();
+                    targetOutputDevice = newOutputDevice;
 
-    private static MMDevice? GetInputDevice(string inputDevice)
-    {
-        using MMDeviceEnumerator enumerator = new MMDeviceEnumerator();
-        return enumerator
-            .EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active)
-            .FirstOrDefault(x => x.FriendlyName == inputDevice);
+                    RecreateAudioStream();
+                }
+                break;
+
+            case AudioDeviceType.MicrophoneInput:
+                {
+                    if (targetInputDevice is null)
+                    {
+                        //Input not in use
+                        return;
+                    }
+
+                    MMDevice? newInputDevice = audioDeviceManager.GetAudioDevice(audioDevice);
+
+                    CleanUpActiveStream();
+
+                    targetInputDevice?.Dispose();
+                    targetInputDevice = newInputDevice;
+
+                    RecreateAudioStream();
+                }
+                break;
+
+            default:
+                //Do nothing
+                return;
+        }
     }
 
     public void NotifyShuttingDown()

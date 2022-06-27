@@ -9,6 +9,7 @@ using TASagentTwitchBot.Core.WebServer.Models;
 
 namespace TASagentTwitchBot.Core.WebServer.EventSub;
 
+[AutoRegister]
 public interface IServerEventSubHandler
 {
     Task SubscribeToStandardEvent(ApplicationUser user, string subType);

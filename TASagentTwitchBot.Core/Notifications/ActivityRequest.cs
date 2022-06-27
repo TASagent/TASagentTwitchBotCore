@@ -4,6 +4,8 @@ public abstract class ActivityRequest
 {
     public int Id { get; set; } = 0;
 
+    public string RequesterId { get; }
+
     public bool Played { get; set; } = false;
 
     private readonly IActivityHandler activityHandler;
@@ -11,16 +13,20 @@ public abstract class ActivityRequest
 
     public ActivityRequest(
         IActivityHandler activityHandler,
-        string description)
+        string description,
+        string requesterId)
     {
         this.description = description;
         this.activityHandler = activityHandler;
+        RequesterId = requesterId;
     }
 
     public override string ToString() => description;
 
     public virtual Task Execute() => activityHandler.Execute(this);
 }
+
+//These interfaces are used to extract features from Activity Requests
 
 public interface IAudioActivity
 {

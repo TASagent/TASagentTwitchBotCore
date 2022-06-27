@@ -5,6 +5,7 @@ using TASagentTwitchBot.Core.Database;
 namespace TASagentTwitchBot.Plugin.Quotes;
 
 //Create the database 
+[Core.AutoRegister]
 public interface IQuoteDatabaseContext
 {
     DbSet<Quote> Quotes { get; set; }

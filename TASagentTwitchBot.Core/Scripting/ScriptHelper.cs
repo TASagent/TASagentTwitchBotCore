@@ -2,6 +2,7 @@
 
 namespace TASagentTwitchBot.Core.Scripting;
 
+[AutoRegister]
 public interface IScriptHelper
 {
     [ScriptingAccess]

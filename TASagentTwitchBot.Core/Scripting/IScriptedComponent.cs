@@ -1,5 +1,6 @@
 ﻿namespace TASagentTwitchBot.Core.Scripting;
 
+[AutoRegister]
 public interface IScriptedComponent
 {
     void Initialize(IScriptRegistrar scriptRegistrar);

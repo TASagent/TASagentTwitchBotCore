@@ -10,6 +10,7 @@ using TASagentTwitchBot.Core.WebServer.Models;
 
 namespace TASagentTwitchBot.Core.WebServer.TTS;
 
+[AutoRegister]
 public interface IServerTTSRenderer
 {
     Task HandleTTSRequest(UserManager<ApplicationUser> userManager, ApplicationUser user, ServerTTSRequest ttsRequest);

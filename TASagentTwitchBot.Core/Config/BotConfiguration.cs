@@ -28,11 +28,15 @@ public class BotConfiguration
     public bool ExhaustiveRedemptionLogging { get; set; } = true;
 
     //Output configuration
-    public string EffectOutputDevice { get; set; } = "";
     public string VoiceOutputDevice { get; set; } = "";
+    public string EffectOutputDevice { get; set; } = "";
+    public string TTSOutputDevice { get; set; } = "";
+    public string MidiOutputDevice { get; set; } = "";
     public string VoiceInputDevice { get; set; } = "";
 
     public bool UseThreadedMonitors { get; init; } = true;
+    public int Version { get; set; } = 1;
+    public const int CURRENT_VERSION = 2;
 
     public MicConfiguration MicConfiguration { get; set; } = new MicConfiguration();
     public AuthConfiguration AuthConfiguration { get; set; } = new AuthConfiguration();
@@ -46,10 +50,20 @@ public class BotConfiguration
         {
             //Load existing config
             config = JsonSerializer.Deserialize<BotConfiguration>(File.ReadAllText(ConfigFilePath))!;
+
+            if (config.Version < CURRENT_VERSION)
+            {
+                if (config.Version == 1)
+                {
+                    config.TTSOutputDevice = config.EffectOutputDevice;
+                    config.MidiOutputDevice = config.EffectOutputDevice;
+                    config.Version = 2;
+                }
+            }
         }
         else
         {
-            config = defaultConfig ?? new BotConfiguration();
+            config = defaultConfig ?? new BotConfiguration() { Version = CURRENT_VERSION };
         }
 
         config.AuthConfiguration.RegenerateAuthStrings();

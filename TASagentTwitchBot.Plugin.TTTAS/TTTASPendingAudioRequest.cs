@@ -13,7 +13,7 @@ public class TTTASPendingAudioRequest : AudioFileRequest
     public TTTASPendingAudioRequest(
         TTTASProvider.PendingRecording recording,
         Effect effectsChain)
-        : base(recording.FilePath, effectsChain)
+        : base(recording.FilePath, true, effectsChain)
     {
         pendingRecording = recording;
     }

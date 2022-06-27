@@ -7,14 +7,14 @@ namespace TASagentTwitchBot.Core.Web.Hubs;
 public class MonitorHub : Hub
 {
     private readonly Config.BotConfiguration botConfig;
-    private readonly IMessageAccumulator messsageAccumulator;
+    private readonly IMessageAccumulator messageAccumulator;
 
     public MonitorHub(
         Config.BotConfiguration botConfig,
-        IMessageAccumulator messsageAccumulator)
+        IMessageAccumulator messageAccumulator)
     {
         this.botConfig = botConfig;
-        this.messsageAccumulator = messsageAccumulator;
+        this.messageAccumulator = messageAccumulator;
     }
 
     public async Task<bool> Authenticate(string token)
@@ -31,7 +31,7 @@ public class MonitorHub : Hub
             return false;
         }
 
-        messsageAccumulator.AddAuthenticatedUser(Context.ConnectionId);
+        messageAccumulator.AddAuthenticatedUser(Context.ConnectionId);
 
         await Groups.AddToGroupAsync(Context.ConnectionId, "Authenticated");
 
@@ -40,9 +40,9 @@ public class MonitorHub : Hub
 
     public MessageBlock<SimpleMessage> RequestAllChats()
     {
-        if (messsageAccumulator.IsAuthenticatedUser(Context.ConnectionId))
+        if (messageAccumulator.IsAuthenticatedUser(Context.ConnectionId))
         {
-            return messsageAccumulator.GetAllChats();
+            return messageAccumulator.GetAllChats();
         }
 
         //Failed to authenticate
@@ -51,9 +51,9 @@ public class MonitorHub : Hub
 
     public MessageBlock<SimpleMessage> RequestAllEvents()
     {
-        if (messsageAccumulator.IsAuthenticatedUser(Context.ConnectionId))
+        if (messageAccumulator.IsAuthenticatedUser(Context.ConnectionId))
         {
-            return messsageAccumulator.GetAllEvents();
+            return messageAccumulator.GetAllEvents();
         }
 
         //Failed to authenticate
@@ -62,9 +62,9 @@ public class MonitorHub : Hub
 
     public MessageBlock<SimpleMessage> RequestAllDebugs()
     {
-        if (messsageAccumulator.IsAuthenticatedUser(Context.ConnectionId))
+        if (messageAccumulator.IsAuthenticatedUser(Context.ConnectionId))
         {
-            return messsageAccumulator.GetAllDebugs();
+            return messageAccumulator.GetAllDebugs();
         }
 
         //Failed to authenticate
@@ -73,9 +73,9 @@ public class MonitorHub : Hub
 
     public MessageBlock<NotificationMessage> RequestAllNotifications()
     {
-        if (messsageAccumulator.IsAuthenticatedUser(Context.ConnectionId))
+        if (messageAccumulator.IsAuthenticatedUser(Context.ConnectionId))
         {
-            return messsageAccumulator.GetAllNotifications();
+            return messageAccumulator.GetAllNotifications();
         }
 
         //Failed to authenticate
@@ -84,9 +84,9 @@ public class MonitorHub : Hub
 
     public MessageBlock<NotificationMessage> RequestAllPendingNotifications()
     {
-        if (messsageAccumulator.IsAuthenticatedUser(Context.ConnectionId))
+        if (messageAccumulator.IsAuthenticatedUser(Context.ConnectionId))
         {
-            return messsageAccumulator.GetAllPendingNotifications();
+            return messageAccumulator.GetAllPendingNotifications();
         }
 
         //Failed to authenticate

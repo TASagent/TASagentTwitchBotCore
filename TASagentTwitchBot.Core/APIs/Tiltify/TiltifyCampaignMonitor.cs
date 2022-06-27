@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace TASagentTwitchBot.Core.API.Tiltify;
 
-public class TiltifyCampaignMonitor : IDisposable
+public class TiltifyCampaignMonitor : IStartupListener, IDisposable
 {
     private readonly TiltifyHelper tiltifyHelper;
     private readonly TiltifyConfiguration tiltifyConfig;

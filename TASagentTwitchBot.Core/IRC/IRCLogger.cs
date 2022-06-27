@@ -4,6 +4,7 @@ using TASagentTwitchBot.Core.Logs;
 
 namespace TASagentTwitchBot.Core.IRC;
 
+[AutoRegister]
 public interface IIRCLogger
 {
     void WriteLine(string line);

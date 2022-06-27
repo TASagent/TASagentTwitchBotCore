@@ -1,5 +1,6 @@
 ﻿namespace TASagentTwitchBot.Core.Credit;
 
+[AutoRegister]
 public interface ICreditManager
 {
     bool IsEnabled { get; }
