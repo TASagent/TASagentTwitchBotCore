@@ -19,13 +19,15 @@ public interface ITTTASProvider
     void StartRecording();
     void EndRecording();
 
+    void CancelCurrentPrompt();
+
     void ClearPrompt();
 
     List<string> GetPendingRecordings();
 
     void Rerecord(string words);
 
-    AudioRequest GetWord(string word, Effect? effect = null);
+    AudioRequest GetWord(string word, string requestId, Effect? effect = null);
 }
 
 public class TTTASProvider : ITTTASProvider
@@ -73,6 +75,7 @@ public class TTTASProvider : ITTTASProvider
     /// </summary>
     public AudioRequest GetWord(
         string word,
+        string requestId,
         Effect? effect = null)
     {
         if (string.IsNullOrWhiteSpace(word))
@@ -124,7 +127,7 @@ public class TTTASProvider : ITTTASProvider
 
                 string filePath = Path.Combine(TTTASFilesPath, $"{fileName}_{Guid.NewGuid()}.mp3");
 
-                pendingRecording = new PendingRecording(word, filePath);
+                pendingRecording = new PendingRecording(word, filePath, requestId);
                 pendingRecordings.Add(word, pendingRecording);
             }
 
@@ -218,9 +221,46 @@ public class TTTASProvider : ITTTASProvider
         }
     }
 
+    public void CancelCurrentPrompt()
+    {
+        if (preppedWord is null)
+        {
+            //Can only cancel a prompt if one is selected
+            return;
+        }
+
+        if (recording)
+        {
+            //End any ongoing recording
+            recording = false;
+            microphoneHandler.StopRecordingVoiceStream();
+            ClearPrompt();
+        }
+
+        lock (pendingRecordings)
+        {
+            string requestId = preppedWord.RequestId;
+            preppedWord.AbortRecording();
+            pendingRecordings.Remove(preppedWord.Name);
+            preppedWord = null;
+
+            foreach (PendingRecording pendingRecording in pendingRecordings.Values.Where(x => x.RequestId == requestId).ToList())
+            {
+                pendingRecording.AbortRecording();
+                pendingRecordings.Remove(pendingRecording.Name);
+            }
+        }
+
+        if (!ShowPrompt())
+        {
+            ClearPrompt();
+        }
+    }
+
     public void Rerecord(string words)
     {
         string[] wordList = words.Trim().ToLowerInvariant().Split(' ');
+        string newRequestId = Guid.NewGuid().ToString();
 
         foreach (string rerecordWord in wordList)
         {
@@ -253,7 +293,7 @@ public class TTTASProvider : ITTTASProvider
 
                 string filePath = Path.Combine(TTTASFilesPath, $"{fileName}_{Guid.NewGuid()}.mp3");
 
-                pendingRecordings.Add(word, new PendingRecording(word, filePath));
+                pendingRecordings.Add(word, new PendingRecording(word, filePath, newRequestId));
             }
         }
     }
@@ -300,16 +340,22 @@ public class TTTASProvider : ITTTASProvider
     {
         public string Name { get; init; }
         public string FilePath { get; init; }
+        public string RequestId { get; init; }
 
-        private readonly TaskCompletionSource requestReadyTrigger = new TaskCompletionSource();
+        private readonly TaskCompletionSource<bool> requestReadyTrigger = new TaskCompletionSource<bool>();
 
-        public PendingRecording(string name, string filePath)
+        public PendingRecording(
+            string name,
+            string filePath,
+            string requestId)
         {
             Name = name;
             FilePath = filePath;
+            RequestId = requestId;
         }
 
-        public Task WaitForReadyAsync() => requestReadyTrigger.Task;
-        public void MarkReady() => requestReadyTrigger.TrySetResult();
+        public Task<bool> WaitForReadyAsync() => requestReadyTrigger.Task;
+        public void MarkReady() => requestReadyTrigger.TrySetResult(true);
+        public void AbortRecording() => requestReadyTrigger.TrySetResult(false);
     }
 }

@@ -8,7 +8,7 @@ namespace TASagentTwitchBot.Plugin.TTTAS;
 [AutoRegister]
 public interface ITTTASRenderer
 {
-    Task<AudioRequest> TTTASRequest(string tttasText);
+    Task<AudioRequest?> TTTASRequest(string tttasText);
 }
 
 public class TTTASRenderer : ITTTASRenderer
@@ -43,12 +43,12 @@ public class TTTASRenderer : ITTTASRenderer
         this.tttasConfig = tttasConfig;
     }
 
-    public Task<AudioRequest> TTTASRequest(string tttasText)
+    public Task<AudioRequest?> TTTASRequest(string tttasText)
     {
         if (string.IsNullOrWhiteSpace(tttasText))
         {
             communication.SendWarningMessage($"{tttasConfig.FeatureNameBrief} Request of null or whitespace.");
-            return Task.FromResult<AudioRequest>(new AudioDelay(500));
+            return Task.FromResult<AudioRequest?>(new AudioDelay(500));
         }
 
         //Trim, lowercase, and normalize the text
@@ -60,30 +60,43 @@ public class TTTASRenderer : ITTTASRenderer
         if (splitTTTASText.Count == 0)
         {
             communication.SendWarningMessage($"{tttasConfig.FeatureNameBrief} Request of {tttasText} yielded no words.");
-            return Task.FromResult<AudioRequest>(new AudioDelay(500));
+            return Task.FromResult<AudioRequest?>(new AudioDelay(500));
         }
 
         return TTTASRequest(splitTTTASText);
     }
 
 
-    private async Task<AudioRequest> TTTASRequest(List<string> splitTTTASText)
+    private async Task<AudioRequest?> TTTASRequest(List<string> splitTTTASText)
     {
         List<AudioRequest> audioFragments = new List<AudioRequest>();
-        List<Task> pendingRequests = new List<Task>();
+        List<Task<bool>> pendingRequests = new List<Task<bool>>();
+
+        string requestId = Guid.NewGuid().ToString();
 
         foreach (string tttasWord in splitTTTASText)
         {
-            HandleWord(tttasWord, audioFragments, pendingRequests);
+            HandleWord(tttasWord, requestId, audioFragments, pendingRequests);
         }
 
-        await Task.WhenAll(pendingRequests);
+        bool[] results = await Task.WhenAll(pendingRequests);
+
+        if (!results.All(x => x))
+        {
+            //At least one recording was rejected
+            communication.SendWarningMessage($"TTTAS Aborted");
+            return null;
+        }
 
         return new ConcatenatedAudioRequest(audioFragments);
     }
 
 
-    private void HandleWord(string tttasWord, List<AudioRequest> audioFragments, List<Task> pendingRequests)
+    private void HandleWord(
+        string tttasWord,
+        string requestId,
+        List<AudioRequest> audioFragments,
+        List<Task<bool>> pendingRequests)
     {
         //Just in case
         if (tttasWord.Length == 0)
@@ -97,29 +110,29 @@ public class TTTASRenderer : ITTTASRenderer
             switch (tttasWord[0])
             {
                 case '/':
-                    HandleWord("slash", audioFragments, pendingRequests);
+                    HandleWord("slash", requestId, audioFragments, pendingRequests);
                     return;
 
                 case '\\':
-                    HandleWord("backslash", audioFragments, pendingRequests);
+                    HandleWord("backslash", requestId, audioFragments, pendingRequests);
                     return;
 
                 case '!':
-                    HandleWord("exclamation", audioFragments, pendingRequests);
-                    HandleWord("mark", audioFragments, pendingRequests);
+                    HandleWord("exclamation", requestId, audioFragments, pendingRequests);
+                    HandleWord("mark", requestId, audioFragments, pendingRequests);
                     return;
 
                 case '"':
-                    HandleWord("quote", audioFragments, pendingRequests);
+                    HandleWord("quote", requestId, audioFragments, pendingRequests);
                     return;
 
                 case '-':
-                    HandleWord("hyphen", audioFragments, pendingRequests);
+                    HandleWord("hyphen", requestId, audioFragments, pendingRequests);
                     return;
 
                 case '?':
-                    HandleWord("question", audioFragments, pendingRequests);
-                    HandleWord("mark", audioFragments, pendingRequests);
+                    HandleWord("question", requestId, audioFragments, pendingRequests);
+                    HandleWord("mark", requestId, audioFragments, pendingRequests);
                     return;
 
                 default:
@@ -136,8 +149,8 @@ public class TTTASRenderer : ITTTASRenderer
             if (soundEffect is null)
             {
                 //Unrecognized, append as is
-                HandleWord("/", audioFragments, pendingRequests);
-                HandleWord(tttasWord[1..], audioFragments, pendingRequests);
+                HandleWord("/", requestId, audioFragments, pendingRequests);
+                HandleWord(tttasWord[1..], requestId, audioFragments, pendingRequests);
 
                 return;
             }
@@ -155,8 +168,8 @@ public class TTTASRenderer : ITTTASRenderer
             if (commandRequest is null)
             {
                 //Unrecognized, append as is
-                HandleWord("!", audioFragments, pendingRequests);
-                HandleWord(tttasWord[1..], audioFragments, pendingRequests);
+                HandleWord("!", requestId, audioFragments, pendingRequests);
+                HandleWord(tttasWord[1..], requestId, audioFragments, pendingRequests);
 
                 return;
             }
@@ -169,7 +182,7 @@ public class TTTASRenderer : ITTTASRenderer
         if (char.IsDigit(tttasWord[0]) || (tttasWord[0] == '-' && tttasWord.Length > 1 && char.IsDigit(tttasWord[1])))
         {
             //Handle number
-            HandleNumberPhrase(tttasWord, audioFragments, pendingRequests);
+            HandleNumberPhrase(tttasWord, requestId, audioFragments, pendingRequests);
 
             return;
         }
@@ -182,7 +195,7 @@ public class TTTASRenderer : ITTTASRenderer
             tttasWord = tttasWord[..^1];
         }
 
-        AudioRequest request = tttasProvider.GetWord(tttasWord);
+        AudioRequest request = tttasProvider.GetWord(tttasWord, requestId);
         audioFragments.Add(request);
 
         if (request is TTTASPendingAudioRequest pendingAudioRequest)
@@ -192,7 +205,11 @@ public class TTTASRenderer : ITTTASRenderer
     }
 
 
-    private void HandleNumberPhrase(string tttasWord, List<AudioRequest> audioFragments, List<Task> pendingRequests)
+    private void HandleNumberPhrase(
+        string tttasWord,
+        string requestId,
+        List<AudioRequest> audioFragments,
+        List<Task<bool>> pendingRequests)
     {
         //Just in case
         if (tttasWord.Length == 0)
@@ -211,7 +228,7 @@ public class TTTASRenderer : ITTTASRenderer
 
         if (tttasWord.StartsWith('-'))
         {
-            HandleWord("negative", audioFragments, pendingRequests);
+            HandleWord("negative", requestId, audioFragments, pendingRequests);
             tttasWord = tttasWord[1..];
         }
 
@@ -225,11 +242,11 @@ public class TTTASRenderer : ITTTASRenderer
             {
                 if (numberSegment == ".")
                 {
-                    HandleWord("dot", audioFragments, pendingRequests);
+                    HandleWord("dot", requestId, audioFragments, pendingRequests);
                 }
                 else
                 {
-                    HandleBareNumber(numberSegment, audioFragments, pendingRequests);
+                    HandleBareNumber(numberSegment, requestId, audioFragments, pendingRequests);
                 }
             }
         }
@@ -240,25 +257,29 @@ public class TTTASRenderer : ITTTASRenderer
 
             if (decimalIndex > 0)
             {
-                HandleBareNumber(tttasWord[0..decimalIndex], audioFragments, pendingRequests);
-                HandleWord("point", audioFragments, pendingRequests);
-                HandleNumberSequence(tttasWord[(decimalIndex + 1)..], audioFragments, pendingRequests);
+                HandleBareNumber(tttasWord[0..decimalIndex], requestId, audioFragments, pendingRequests);
+                HandleWord("point", requestId, audioFragments, pendingRequests);
+                HandleNumberSequence(tttasWord[(decimalIndex + 1)..], requestId, audioFragments, pendingRequests);
             }
         }
         else
         {
             //No decimal
-            HandleBareNumber(tttasWord, audioFragments, pendingRequests);
+            HandleBareNumber(tttasWord, requestId, audioFragments, pendingRequests);
         }
     }
 
 
-    private void HandleBareNumber(string tttasWord, List<AudioRequest> audioFragments, List<Task> pendingRequests)
+    private void HandleBareNumber(
+        string tttasWord,
+        string requestId,
+        List<AudioRequest> audioFragments,
+        List<Task<bool>> pendingRequests)
     {
         //Just in case
         while (tttasWord.Length > 0 && tttasWord[0] == '0')
         {
-            HandleWord("zero", audioFragments, pendingRequests);
+            HandleWord("zero", requestId, audioFragments, pendingRequests);
             tttasWord = tttasWord[1..];
         }
 
@@ -280,13 +301,17 @@ public class TTTASRenderer : ITTTASRenderer
                 continue;
             }
 
-            HandleBareNumberTriplet(tripletString, audioFragments, pendingRequests);
-            HandleNumberTripletWord(tripletCount - triplet - 1, audioFragments, pendingRequests);
+            HandleBareNumberTriplet(tripletString, requestId, audioFragments, pendingRequests);
+            HandleNumberTripletWord(tripletCount - triplet - 1, requestId, audioFragments, pendingRequests);
         }
     }
 
 
-    private void HandleBareNumberTriplet(string tttasWord, List<AudioRequest> audioFragments, List<Task> pendingRequests)
+    private void HandleBareNumberTriplet(
+        string tttasWord,
+        string requestId,
+        List<AudioRequest> audioFragments,
+        List<Task<bool>> pendingRequests)
     {
         if (tttasWord.Length > 3)
         {
@@ -308,8 +333,8 @@ public class TTTASRenderer : ITTTASRenderer
         if (tttasWord[0] != '0')
         {
             //100's place is populated
-            HandleNumberChar(tttasWord[0], audioFragments, pendingRequests);
-            HandleWord("hundred", audioFragments, pendingRequests);
+            HandleNumberChar(tttasWord[0], requestId, audioFragments, pendingRequests);
+            HandleWord("hundred", requestId, audioFragments, pendingRequests);
         }
 
         if (tttasWord[1] == '0')
@@ -322,7 +347,7 @@ public class TTTASRenderer : ITTTASRenderer
                 return;
             }
 
-            HandleNumberChar(tttasWord[2], audioFragments, pendingRequests);
+            HandleNumberChar(tttasWord[2], requestId, audioFragments, pendingRequests);
             return;
         }
         else if (tttasWord[1] == '1')
@@ -331,43 +356,43 @@ public class TTTASRenderer : ITTTASRenderer
             switch (tttasWord[2])
             {
                 case '0':
-                    HandleWord("ten", audioFragments, pendingRequests);
+                    HandleWord("ten", requestId, audioFragments, pendingRequests);
                     return;
 
                 case '1':
-                    HandleWord("eleven", audioFragments, pendingRequests);
+                    HandleWord("eleven", requestId, audioFragments, pendingRequests);
                     return;
 
                 case '2':
-                    HandleWord("twelve", audioFragments, pendingRequests);
+                    HandleWord("twelve", requestId, audioFragments, pendingRequests);
                     return;
 
                 case '3':
-                    HandleWord("thirteen", audioFragments, pendingRequests);
+                    HandleWord("thirteen", requestId, audioFragments, pendingRequests);
                     return;
 
                 case '4':
-                    HandleWord("fourteen", audioFragments, pendingRequests);
+                    HandleWord("fourteen", requestId, audioFragments, pendingRequests);
                     return;
 
                 case '5':
-                    HandleWord("fifteen", audioFragments, pendingRequests);
+                    HandleWord("fifteen", requestId, audioFragments, pendingRequests);
                     return;
 
                 case '6':
-                    HandleWord("sixteen", audioFragments, pendingRequests);
+                    HandleWord("sixteen", requestId, audioFragments, pendingRequests);
                     return;
 
                 case '7':
-                    HandleWord("seventeen", audioFragments, pendingRequests);
+                    HandleWord("seventeen", requestId, audioFragments, pendingRequests);
                     return;
 
                 case '8':
-                    HandleWord("eighteen", audioFragments, pendingRequests);
+                    HandleWord("eighteen", requestId, audioFragments, pendingRequests);
                     return;
 
                 case '9':
-                    HandleWord("nineteen", audioFragments, pendingRequests);
+                    HandleWord("nineteen", requestId, audioFragments, pendingRequests);
                     return;
 
                 default:
@@ -381,35 +406,35 @@ public class TTTASRenderer : ITTTASRenderer
             switch (tttasWord[1])
             {
                 case '2':
-                    HandleWord("twenty", audioFragments, pendingRequests);
+                    HandleWord("twenty", requestId, audioFragments, pendingRequests);
                     break;
 
                 case '3':
-                    HandleWord("thirty", audioFragments, pendingRequests);
+                    HandleWord("thirty", requestId, audioFragments, pendingRequests);
                     break;
 
                 case '4':
-                    HandleWord("fourty", audioFragments, pendingRequests);
+                    HandleWord("fourty", requestId, audioFragments, pendingRequests);
                     break;
 
                 case '5':
-                    HandleWord("fifty", audioFragments, pendingRequests);
+                    HandleWord("fifty", requestId, audioFragments, pendingRequests);
                     break;
 
                 case '6':
-                    HandleWord("sixty", audioFragments, pendingRequests);
+                    HandleWord("sixty", requestId, audioFragments, pendingRequests);
                     break;
 
                 case '7':
-                    HandleWord("seventy", audioFragments, pendingRequests);
+                    HandleWord("seventy", requestId, audioFragments, pendingRequests);
                     break;
 
                 case '8':
-                    HandleWord("eighty", audioFragments, pendingRequests);
+                    HandleWord("eighty", requestId, audioFragments, pendingRequests);
                     break;
 
                 case '9':
-                    HandleWord("ninety", audioFragments, pendingRequests);
+                    HandleWord("ninety", requestId, audioFragments, pendingRequests);
                     break;
 
                 default:
@@ -419,12 +444,16 @@ public class TTTASRenderer : ITTTASRenderer
 
             if (tttasWord[2] != '0')
             {
-                HandleNumberChar(tttasWord[2], audioFragments, pendingRequests);
+                HandleNumberChar(tttasWord[2], requestId, audioFragments, pendingRequests);
             }
         }
     }
 
-    private void HandleNumberSequence(string tttasWord, List<AudioRequest> audioFragments, List<Task> pendingRequests)
+    private void HandleNumberSequence(
+        string tttasWord,
+        string requestId,
+        List<AudioRequest> audioFragments,
+        List<Task<bool>> pendingRequests)
     {
         //Just in case
         if (tttasWord.Length == 0)
@@ -434,52 +463,56 @@ public class TTTASRenderer : ITTTASRenderer
 
         for (int i = 0; i < tttasWord.Length; i++)
         {
-            HandleNumberChar(tttasWord[i], audioFragments, pendingRequests);
+            HandleNumberChar(tttasWord[i], requestId, audioFragments, pendingRequests);
         }
     }
 
-    private void HandleNumberChar(char tttasDigit, List<AudioRequest> audioFragments, List<Task> pendingRequests)
+    private void HandleNumberChar(
+        char tttasDigit,
+        string requestId,
+        List<AudioRequest> audioFragments,
+        List<Task<bool>> pendingRequests)
     {
         switch (tttasDigit)
         {
             case '0':
-                HandleWord("zero", audioFragments, pendingRequests);
+                HandleWord("zero", requestId, audioFragments, pendingRequests);
                 return;
 
             case '1':
-                HandleWord("one", audioFragments, pendingRequests);
+                HandleWord("one", requestId, audioFragments, pendingRequests);
                 return;
 
             case '2':
-                HandleWord("two", audioFragments, pendingRequests);
+                HandleWord("two", requestId, audioFragments, pendingRequests);
                 return;
 
             case '3':
-                HandleWord("three", audioFragments, pendingRequests);
+                HandleWord("three", requestId, audioFragments, pendingRequests);
                 return;
 
             case '4':
-                HandleWord("four", audioFragments, pendingRequests);
+                HandleWord("four", requestId, audioFragments, pendingRequests);
                 return;
 
             case '5':
-                HandleWord("five", audioFragments, pendingRequests);
+                HandleWord("five", requestId, audioFragments, pendingRequests);
                 return;
 
             case '6':
-                HandleWord("six", audioFragments, pendingRequests);
+                HandleWord("six", requestId, audioFragments, pendingRequests);
                 return;
 
             case '7':
-                HandleWord("seven", audioFragments, pendingRequests);
+                HandleWord("seven", requestId, audioFragments, pendingRequests);
                 return;
 
             case '8':
-                HandleWord("eight", audioFragments, pendingRequests);
+                HandleWord("eight", requestId, audioFragments, pendingRequests);
                 return;
 
             case '9':
-                HandleWord("nine", audioFragments, pendingRequests);
+                HandleWord("nine", requestId, audioFragments, pendingRequests);
                 return;
 
             default:
@@ -488,7 +521,11 @@ public class TTTASRenderer : ITTTASRenderer
         }
     }
 
-    private void HandleNumberTripletWord(int tripletNum, List<AudioRequest> audioFragments, List<Task> pendingRequests)
+    private void HandleNumberTripletWord(
+        int tripletNum,
+        string requestId,
+        List<AudioRequest> audioFragments,
+        List<Task<bool>> pendingRequests)
     {
         switch (tripletNum)
         {
@@ -497,243 +534,243 @@ public class TTTASRenderer : ITTTASRenderer
                 return;
 
             case 1:
-                HandleWord("thousand", audioFragments, pendingRequests);
+                HandleWord("thousand", requestId, audioFragments, pendingRequests);
                 return;
 
             case 2:
-                HandleWord("million", audioFragments, pendingRequests);
+                HandleWord("million", requestId, audioFragments, pendingRequests);
                 return;
 
             case 3:
-                HandleWord("billion", audioFragments, pendingRequests);
+                HandleWord("billion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 4:
-                HandleWord("trillion", audioFragments, pendingRequests);
+                HandleWord("trillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 5:
-                HandleWord("quadrillion", audioFragments, pendingRequests);
+                HandleWord("quadrillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 6:
-                HandleWord("quintillion", audioFragments, pendingRequests);
+                HandleWord("quintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 7:
-                HandleWord("sextillion", audioFragments, pendingRequests);
+                HandleWord("sextillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 8:
-                HandleWord("septillion", audioFragments, pendingRequests);
+                HandleWord("septillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 9:
-                HandleWord("octillion", audioFragments, pendingRequests);
+                HandleWord("octillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 10:
-                HandleWord("nonillion", audioFragments, pendingRequests);
+                HandleWord("nonillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 11:
-                HandleWord("decillion", audioFragments, pendingRequests);
+                HandleWord("decillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 12:
-                HandleWord("undecillion", audioFragments, pendingRequests);
+                HandleWord("undecillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 13:
-                HandleWord("duodecillion", audioFragments, pendingRequests);
+                HandleWord("duodecillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 14:
-                HandleWord("tredecillion", audioFragments, pendingRequests);
+                HandleWord("tredecillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 15:
-                HandleWord("quattuordecillion", audioFragments, pendingRequests);
+                HandleWord("quattuordecillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 16:
-                HandleWord("quindecillion", audioFragments, pendingRequests);
+                HandleWord("quindecillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 17:
-                HandleWord("sexdecillion", audioFragments, pendingRequests);
+                HandleWord("sexdecillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 18:
-                HandleWord("septendecillion", audioFragments, pendingRequests);
+                HandleWord("septendecillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 19:
-                HandleWord("octodecillion", audioFragments, pendingRequests);
+                HandleWord("octodecillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 20:
-                HandleWord("novemdecillion", audioFragments, pendingRequests);
+                HandleWord("novemdecillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 21:
-                HandleWord("vigintillion", audioFragments, pendingRequests);
+                HandleWord("vigintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 22:
-                HandleWord("unvigintillion", audioFragments, pendingRequests);
+                HandleWord("unvigintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 23:
-                HandleWord("duovigintillion", audioFragments, pendingRequests);
+                HandleWord("duovigintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 24:
-                HandleWord("tresvigintillion", audioFragments, pendingRequests);
+                HandleWord("tresvigintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 25:
-                HandleWord("quattuorvigintillion", audioFragments, pendingRequests);
+                HandleWord("quattuorvigintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 26:
-                HandleWord("quinvigintillion", audioFragments, pendingRequests);
+                HandleWord("quinvigintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 27:
-                HandleWord("sesvigintillion", audioFragments, pendingRequests);
+                HandleWord("sesvigintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 28:
-                HandleWord("septemvigintillion", audioFragments, pendingRequests);
+                HandleWord("septemvigintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 29:
-                HandleWord("octovigintillion", audioFragments, pendingRequests);
+                HandleWord("octovigintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 30:
-                HandleWord("novemvigintillion", audioFragments, pendingRequests);
+                HandleWord("novemvigintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 31:
-                HandleWord("trigintillion", audioFragments, pendingRequests);
+                HandleWord("trigintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 32:
-                HandleWord("untrigintillion", audioFragments, pendingRequests);
+                HandleWord("untrigintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 33:
-                HandleWord("duotrigintillion", audioFragments, pendingRequests);
+                HandleWord("duotrigintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 34:
-                HandleWord("trestrigintillion", audioFragments, pendingRequests);
+                HandleWord("trestrigintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 35:
-                HandleWord("quattuortrigintillion", audioFragments, pendingRequests);
+                HandleWord("quattuortrigintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 36:
-                HandleWord("quintrigintillion", audioFragments, pendingRequests);
+                HandleWord("quintrigintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 37:
-                HandleWord("sestrigintillion", audioFragments, pendingRequests);
+                HandleWord("sestrigintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 38:
-                HandleWord("septentrigintillion", audioFragments, pendingRequests);
+                HandleWord("septentrigintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 39:
-                HandleWord("octotrigintillion", audioFragments, pendingRequests);
+                HandleWord("octotrigintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 40:
-                HandleWord("noventrigintillion", audioFragments, pendingRequests);
+                HandleWord("noventrigintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 41:
-                HandleWord("quadragintillion", audioFragments, pendingRequests);
+                HandleWord("quadragintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 42:
-                HandleWord("unquadragintillion", audioFragments, pendingRequests);
+                HandleWord("unquadragintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 43:
-                HandleWord("duoquadragintillion", audioFragments, pendingRequests);
+                HandleWord("duoquadragintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 44:
-                HandleWord("tresquadragintillion", audioFragments, pendingRequests);
+                HandleWord("tresquadragintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 45:
-                HandleWord("quattuorquadragintillion", audioFragments, pendingRequests);
+                HandleWord("quattuorquadragintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 46:
-                HandleWord("quinquadragintillion", audioFragments, pendingRequests);
+                HandleWord("quinquadragintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 47:
-                HandleWord("sesquadragintillion", audioFragments, pendingRequests);
+                HandleWord("sesquadragintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 48:
-                HandleWord("septenquadragintillion", audioFragments, pendingRequests);
+                HandleWord("septenquadragintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 49:
-                HandleWord("octoquadragintillion", audioFragments, pendingRequests);
+                HandleWord("octoquadragintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 50:
-                HandleWord("novenquadragintillion", audioFragments, pendingRequests);
+                HandleWord("novenquadragintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 51:
-                HandleWord("quinquagintillion", audioFragments, pendingRequests);
+                HandleWord("quinquagintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 52:
-                HandleWord("unquinquagintillion", audioFragments, pendingRequests);
+                HandleWord("unquinquagintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 53:
-                HandleWord("duoquinquagintillion", audioFragments, pendingRequests);
+                HandleWord("duoquinquagintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 54:
-                HandleWord("tresquinquagintillion", audioFragments, pendingRequests);
+                HandleWord("tresquinquagintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 55:
-                HandleWord("quattuorquinquagintillion", audioFragments, pendingRequests);
+                HandleWord("quattuorquinquagintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 56:
-                HandleWord("quinquinquagintillion", audioFragments, pendingRequests);
+                HandleWord("quinquinquagintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 57:
-                HandleWord("sesquinquagintillion", audioFragments, pendingRequests);
+                HandleWord("sesquinquagintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 58:
-                HandleWord("septenquinquagintillion", audioFragments, pendingRequests);
+                HandleWord("septenquinquagintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 59:
-                HandleWord("octoquinquagintillion", audioFragments, pendingRequests);
+                HandleWord("octoquinquagintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             case 60:
-                HandleWord("novenquinquagintillion", audioFragments, pendingRequests);
+                HandleWord("novenquinquagintillion", requestId, audioFragments, pendingRequests);
                 return;
 
             default:

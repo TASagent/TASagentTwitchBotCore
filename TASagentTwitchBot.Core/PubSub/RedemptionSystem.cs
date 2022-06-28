@@ -21,6 +21,7 @@ public interface IRedemptionContainer
 
 public class RedemptionSystem : IRedemptionSystem, IDisposable
 {
+    private readonly Config.BotConfiguration botConfig;
     private readonly ErrorHandler errorHandler;
     private readonly ICommunication communication;
 
@@ -37,7 +38,6 @@ public class RedemptionSystem : IRedemptionSystem, IDisposable
     private readonly Lazy<Logs.LocalLogger> unhandledRedemptionLog =
         new Lazy<Logs.LocalLogger>(() => new Logs.LocalLogger("RedemptionLogs", "UnhandledRedemptions"));
 
-    private readonly bool logRedemptions;
     private readonly Task logHandlerTask;
 
     private bool disposedValue;
@@ -49,6 +49,7 @@ public class RedemptionSystem : IRedemptionSystem, IDisposable
         IEnumerable<IRedemptionContainer> redemptionContainers,
         Database.IUserHelper userHelper)
     {
+        this.botConfig = botConfig;
         this.errorHandler = errorHandler;
         this.communication = communication;
 
@@ -56,13 +57,11 @@ public class RedemptionSystem : IRedemptionSystem, IDisposable
 
         this.redemptionContainers = redemptionContainers.ToArray();
 
-        logRedemptions = botConfig.ExhaustiveRedemptionLogging;
-
         Channel<(bool, string)> logChannel = Channel.CreateUnbounded<(bool, string)>();
         logWriterChannel = logChannel.Writer;
         logReaderChannel = logChannel.Reader;
 
-        if (logRedemptions)
+        if (botConfig.ExhaustiveRedemptionLogging)
         {
             logHandlerTask = Task.Run(HandleLogs);
         }
@@ -71,7 +70,6 @@ public class RedemptionSystem : IRedemptionSystem, IDisposable
             logWriterChannel.TryComplete();
             logHandlerTask = Task.CompletedTask;
         }
-
     }
 
     private async Task HandleLogs()
@@ -96,7 +94,7 @@ public class RedemptionSystem : IRedemptionSystem, IDisposable
 
         if (!redemptionHandlers.TryGetValue(rewardID, out RedemptionHandler? redemptionHandler))
         {
-            if (logRedemptions)
+            if (botConfig.ExhaustiveRedemptionLogging)
             {
                 logWriterChannel.TryWrite((false, $"*** Handler Not Found:\n{JsonSerializer.Serialize(redemption)}"));
             }
@@ -109,7 +107,7 @@ public class RedemptionSystem : IRedemptionSystem, IDisposable
 
         if (user is null)
         {
-            if (logRedemptions)
+            if (botConfig.ExhaustiveRedemptionLogging)
             {
                 logWriterChannel.TryWrite((false, $"*** User Not Found:\n{JsonSerializer.Serialize(redemption)}"));
             }
@@ -118,7 +116,7 @@ public class RedemptionSystem : IRedemptionSystem, IDisposable
             return;
         }
 
-        if (logRedemptions)
+        if (botConfig.ExhaustiveRedemptionLogging)
         {
             logWriterChannel.TryWrite((true, JsonSerializer.Serialize(redemption)));
         }

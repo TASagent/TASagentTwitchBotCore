@@ -8,7 +8,7 @@ public class TTTASPendingAudioRequest : AudioFileRequest
 {
     public readonly TTTASProvider.PendingRecording pendingRecording;
 
-    public Task WaitForReadyAsync() => pendingRecording.WaitForReadyAsync();
+    public Task<bool> WaitForReadyAsync() => pendingRecording.WaitForReadyAsync();
 
     public TTTASPendingAudioRequest(
         TTTASProvider.PendingRecording recording,

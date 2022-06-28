@@ -10,6 +10,9 @@ public class BotConfiguration
     private static string ConfigFilePath => BGC.IO.DataManagement.PathForDataFile("Config", "Config.json");
     private static readonly object _lock = new object();
 
+    public int Version { get; set; } = 1;
+    public const int CURRENT_VERSION = 2;
+
     public string BotName { get; set; } = "";
     public string Broadcaster { get; set; } = "";
     public string BroadcasterId { get; set; } = "";
@@ -33,9 +36,6 @@ public class BotConfiguration
     public string TTSOutputDevice { get; set; } = "";
     public string MidiOutputDevice { get; set; } = "";
     public string VoiceInputDevice { get; set; } = "";
-
-    public int Version { get; set; } = 1;
-    public const int CURRENT_VERSION = 2;
 
     public MicConfiguration MicConfiguration { get; set; } = new MicConfiguration();
     public AuthConfiguration AuthConfiguration { get; set; } = new AuthConfiguration();
@@ -160,7 +160,6 @@ public class CredentialSet
 public class CommandConfiguration
 {
     public bool HelpEnabled { get; set; } = true;
-    public bool ScopedEnabled { get; set; } = true;
 
     public bool GlobalErrorHandlingEnabled { get; set; } = true;
 

@@ -120,7 +120,7 @@ public class CommandSystem : ICommandRegistrar, IStartupListener
         }
 
         //Try Scoped Commands
-        if (botConfig.CommandConfiguration.ScopedEnabled && scopedCommands.Contains(command) && splitMessage.Length > 1)
+        if (scopedCommands.Contains(command) && splitMessage.Length > 1)
         {
             if (scopedHandlers.TryGetValue((command, splitMessage[1].ToLowerInvariant()), out CommandHandler? handler))
             {

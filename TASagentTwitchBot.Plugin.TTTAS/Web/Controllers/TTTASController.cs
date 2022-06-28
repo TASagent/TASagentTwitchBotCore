@@ -50,6 +50,14 @@ public class TTTASController : ControllerBase
         return Ok();
     }
 
+    [HttpPost]
+    [AuthRequired(AuthDegree.Admin)]
+    public IActionResult CancelRequest()
+    {
+        tttasProvider.CancelCurrentPrompt();
+        return Ok();
+    }
+
     [HttpGet]
     [AuthRequired(AuthDegree.Admin)]
     public ActionResult<PendingRecordings> GetPendingRecordings()

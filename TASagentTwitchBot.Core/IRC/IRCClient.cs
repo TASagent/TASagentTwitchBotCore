@@ -33,8 +33,6 @@ public class IrcClient : IStartupListener, IShutdownListener, IDisposable
     private StreamReader? inputStream = null;
     private StreamWriter? outputStream = null;
 
-    private readonly bool exhaustiveLogging;
-
     private const string TWITCH_IRC_SERVER = "irc.chat.twitch.tv";
     private const int TWITCH_IRC_PORT = 6697;
 
@@ -85,8 +83,6 @@ public class IrcClient : IStartupListener, IShutdownListener, IDisposable
         Channel<string> chatChannel = Channel.CreateUnbounded<string>();
         outgoingChatWriter = chatChannel.Writer;
         outgoingChatReader = chatChannel.Reader;
-
-        exhaustiveLogging = botConfig.ExhaustiveIRCLogging;
 
         communication.SendMessageHandlers += SendMessage;
         communication.SendWhisperHandlers += SendWhisper;
@@ -234,7 +230,7 @@ public class IrcClient : IStartupListener, IShutdownListener, IDisposable
 
     private void WriteToIRCLogRaw(string message)
     {
-        if (exhaustiveLogging)
+        if (botConfig.ExhaustiveIRCLogging)
         {
             ircLogger.WriteLine(message);
         }
@@ -242,7 +238,7 @@ public class IrcClient : IStartupListener, IShutdownListener, IDisposable
 
     private void WriteToIRCLog(string message)
     {
-        if (exhaustiveLogging)
+        if (botConfig.ExhaustiveIRCLogging)
         {
             ircLogger.WriteLine($"{LogDateString} {message}");
         }
@@ -250,7 +246,7 @@ public class IrcClient : IStartupListener, IShutdownListener, IDisposable
 
     private void LogIRCMessage(string message, bool incoming)
     {
-        if (exhaustiveLogging)
+        if (botConfig.ExhaustiveIRCLogging)
         {
             ircLogger.WriteLine($"{LogDateString} {(incoming ? '<' : '>')} {message}");
         }

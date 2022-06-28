@@ -9,7 +9,6 @@ public class ChatLogger : IStartupListener, IDisposable
     private readonly ChannelWriter<string> logWriterChannel;
     private readonly ChannelReader<string> logReaderChannel;
 
-    private readonly bool logChat;
     private readonly Task logHandlerTask;
 
     private bool disposedValue;
@@ -20,13 +19,11 @@ public class ChatLogger : IStartupListener, IDisposable
     {
         this.botConfig = botConfig;
 
-        logChat = botConfig.LogChat;
-
         Channel<string> lineChannel = Channel.CreateUnbounded<string>();
         logWriterChannel = lineChannel.Writer;
         logReaderChannel = lineChannel.Reader;
 
-        if (logChat)
+        if (botConfig.LogChat)
         {
             communication.SendMessageHandlers += WriteOutgoingMessage;
             communication.SendWhisperHandlers += WriteOutgoingWhisper;

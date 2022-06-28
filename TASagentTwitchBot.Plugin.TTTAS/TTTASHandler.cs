@@ -39,14 +39,19 @@ public class TTTASHandler : ITTTASHandler
         string message,
         bool approved)
     {
-        activityDispatcher.QueueActivity(
-            activity: new TTTASActivityRequest(
-                activityHandler: activityHandler,
-                description: $"{tttasConfig.FeatureNameBrief} {user.TwitchUserName}: {message}",
-                requesterId: user.TwitchUserId,
-                audioRequest: await GetTTTASAudioRequest(user, message),
-                marqueeMessage: GetStandardMarqueeMessage(user, message)),
-            approved: approved);
+        Core.Audio.AudioRequest? tttasAudio = await GetTTTASAudioRequest(user, message);
+
+        if (tttasAudio is not null)
+        {
+            activityDispatcher.QueueActivity(
+                activity: new TTTASActivityRequest(
+                    activityHandler: activityHandler,
+                    description: $"{tttasConfig.FeatureNameBrief} {user.TwitchUserName}: {message}",
+                    requesterId: user.TwitchUserId,
+                    audioRequest: tttasAudio,
+                    marqueeMessage: GetStandardMarqueeMessage(user, message)),
+                approved: approved);
+        }
     }
 
     private async Task<Core.Audio.AudioRequest?> GetTTTASAudioRequest(Core.Database.User _, string message)
@@ -71,8 +76,12 @@ public class TTTASHandler : ITTTASHandler
 
         if (!string.IsNullOrWhiteSpace(message))
         {
-            tttasRequest = await tttasRenderer.TTTASRequest(
-                tttasText: message);
+            tttasRequest = await tttasRenderer.TTTASRequest(message);
+        }
+
+        if (tttasRequest is null)
+        {
+            return null;
         }
 
         return Core.Audio.AudioTools.JoinRequests(300, soundEffectRequest, tttasRequest);
