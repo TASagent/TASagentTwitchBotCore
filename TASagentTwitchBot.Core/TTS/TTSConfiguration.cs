@@ -17,9 +17,6 @@ public class TTSConfiguration
     public bool Enabled { get; set; } = true;
 
     public bool AllowNeuralVoices { get; set; } = true;
-    public bool UseAWSPolly { get; set; } = true;
-    public bool UseGoogleCloudTTS { get; set; } = true;
-    public bool UseAzureSpeechSynthesis { get; set; } = true;
 
     public bool OverrideVoices { get; set; } = false;
 
@@ -192,40 +189,6 @@ public class TTSConfiguration
                 BGC.Debug.LogError($"Unsupported AuthorizationLevel: {authorizationLevel}");
                 return false;
         }
-    }
-
-    public bool IsServiceSupported(TTSService service)
-    {
-        switch (service)
-        {
-            case TTSService.Amazon: return UseAWSPolly;
-            case TTSService.Google: return UseGoogleCloudTTS;
-            case TTSService.Azure: return UseAzureSpeechSynthesis;
-
-            default:
-                BGC.Debug.LogError($"Unsupported TTSService: {service}");
-                return false;
-        }
-    }
-
-    public TTSService GetASupportedService()
-    {
-        if (UseAWSPolly)
-        {
-            return TTSService.Amazon;
-        }
-
-        if (UseGoogleCloudTTS)
-        {
-            return TTSService.Google;
-        }
-
-        if (UseAzureSpeechSynthesis)
-        {
-            return TTSService.Azure;
-        }
-
-        return TTSService.MAX;
     }
 
     public class CommandRolePermissions

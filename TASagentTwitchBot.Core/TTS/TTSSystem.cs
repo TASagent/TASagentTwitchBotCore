@@ -173,8 +173,7 @@ public class TTSSystem : ICommandContainer
             switch (remainingCommand[0].ToLowerInvariant())
             {
                 case "voice":
-                    TTSVoice newTTSVoice = remainingCommand[1].TranslateTTSVoice();
-                    if (newTTSVoice != TTSVoice.MAX)
+                    if (ttsHandler.IsTTSVoiceValid(remainingCommand[1]))
                     {
                         //Looks like a Set TTS Voice command. Set and return.
                         await HandleTTSSetRequest(chatter, remainingCommand);
@@ -299,34 +298,33 @@ public class TTSSystem : ICommandContainer
                     return;
                 }
 
-                TTSVoice voicePreference = remainingCommand[1].TranslateTTSVoice();
+                string requestedVoice = remainingCommand[1];
 
-                if (voicePreference == TTSVoice.MAX)
+                if (!ttsHandler.IsTTSVoiceValid(requestedVoice))
                 {
                     //Invalid voice
                     communication.SendPublicChatMessage(
-                        $"@{chatter.User.TwitchUserName}, TTS Voice not in approved list: https://tas.wtf/info/tts#setting-voice " +
+                        $"@{chatter.User.TwitchUserName}, TTS Voice not supported: https://tas.wtf/info/tts#setting-voice " +
                         $"submitted: ({remainingCommand[1]})");
                     return;
                 }
 
-                //Check if service is approved
-                if (!ttsConfig.IsServiceSupported(voicePreference.GetTTSService()))
+                TTSVoiceInfo? voiceInfo = ttsHandler.GetTTSVoiceInfo(requestedVoice);
+
+                if (voiceInfo is null)
                 {
-                    //Invalid voice
                     communication.SendPublicChatMessage(
-                        $"@{chatter.User.TwitchUserName}, TTS Service {voicePreference.GetTTSService()} for voice {voicePreference.Serialize()} is not enabled.");
-                    return;
+                        $"@{chatter.User.TwitchUserName}, TTS Voice not supported: https://tas.wtf/info/tts#setting-voice " +
+                        $"submitted: ({remainingCommand[1]})");
                 }
 
-                if (voicePreference.IsNeuralVoice() && !ttsConfig.CanUseNeuralVoice(chatter.User.AuthorizationLevel))
+                if (voiceInfo!.IsNeural && !ttsConfig.CanUseNeuralVoice(chatter.User.AuthorizationLevel))
                 {
                     //Invalid neural voice
                     communication.SendPublicChatMessage(
-                        $"@{chatter.User.TwitchUserName}, you are not authorized to select neural voice {voicePreference.Serialize()}.");
+                        $"@{chatter.User.TwitchUserName}, you are not authorized to select neural voice {requestedVoice}.");
                     return;
                 }
-
 
                 {
                     //Accepted voice
@@ -340,13 +338,13 @@ public class TTSSystem : ICommandContainer
                         return;
                     }
 
-                    dbUser.TTSVoicePreference = voicePreference;
+                    dbUser.TTSVoicePreference = voiceInfo.VoiceName;
                     await db.SaveChangesAsync();
 
                     communication.SendPublicChatMessage(
                         $"@{chatter.User.TwitchUserName}, your TTS Voice has been updated.");
 
-                    communication.SendDebugMessage($"Updated User voice preference: {chatter.User.TwitchUserName} to {voicePreference}");
+                    communication.SendDebugMessage($"Updated User voice preference: {chatter.User.TwitchUserName} to {requestedVoice}");
                     await db.SaveChangesAsync();
                 }
                 break;
@@ -485,17 +483,7 @@ public class TTSSystem : ICommandContainer
     }
 
     private static string GetUserTTSSettings(User user) =>
-        $"{DisplayTTSVoice(user.TTSVoicePreference)} with {DisplayTTSPitch(user.TTSPitchPreference)} pitch and {DisplayTTSSpeed(user.TTSSpeedPreference)} speed. Effects: {user.TTSEffectsChain}";
-
-    private static string DisplayTTSVoice(TTSVoice voice)
-    {
-        if (voice == TTSVoice.Unassigned)
-        {
-            return "Joanna";
-        }
-
-        return voice.Serialize();
-    }
+        $"{user.TTSVoicePreference} with {DisplayTTSPitch(user.TTSPitchPreference)} pitch and {DisplayTTSSpeed(user.TTSSpeedPreference)} speed. Effects: {user.TTSEffectsChain}";
 
     private static string DisplayTTSPitch(TTSPitch pitch) =>
         pitch switch

@@ -84,7 +84,11 @@ builder.Services
     .AddTASSingleton<HelixEventSubHelper>()
     .AddTASSingleton<AppAccessTokenManager>();
 
-builder.Services.AddTASSingleton<ServerTTSRenderer>();
+builder.Services
+    .AddTASSingleton<ServerTTSRenderer>()
+    .AddTASSingleton<TASagentTwitchBot.Plugin.TTS.AmazonTTS.AmazonTTSLocalSystem>()
+    .AddTASSingleton<TASagentTwitchBot.Plugin.TTS.AzureTTS.AzureTTSLocalSystem>()
+    .AddTASSingleton<TASagentTwitchBot.Plugin.TTS.GoogleTTS.GoogleTTSLocalSystem>();
 
 
 using WebApplication app = builder.Build();

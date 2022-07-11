@@ -7,7 +7,7 @@ namespace TASagentTwitchBot.Core.TTS.Parsing;
 
 public abstract class StandardTTSSystemRenderer : TTSSystemRenderer
 {
-    protected readonly TTSVoice voice;
+    protected readonly string voice;
     protected readonly TTSPitch pitch;
     protected readonly TTSSpeed speed;
     protected readonly Effect effectsChain;
@@ -19,7 +19,7 @@ public abstract class StandardTTSSystemRenderer : TTSSystemRenderer
     public StandardTTSSystemRenderer(
         ICommunication? communication,
         ILogger? logger,
-        TTSVoice voice,
+        string voice,
         TTSPitch pitch,
         TTSSpeed speed,
         Effect effectsChain)

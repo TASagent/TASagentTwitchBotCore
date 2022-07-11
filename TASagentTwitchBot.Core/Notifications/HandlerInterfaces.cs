@@ -40,6 +40,8 @@ public interface IFollowerHandler
 [AutoRegister]
 public interface ITTSHandler
 {
+    bool IsTTSVoiceValid(string voice);
+    TTS.TTSVoiceInfo? GetTTSVoiceInfo(string voice);
     Task<bool> SetTTSEnabled(bool enabled); 
     void HandleTTS(Database.User user, string message, bool approved);
 }

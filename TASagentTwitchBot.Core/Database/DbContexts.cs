@@ -23,7 +23,7 @@ public class User
     public DateTime? FirstSeen { get; set; }
     public DateTime? FirstFollowed { get; set; }
 
-    public TTS.TTSVoice TTSVoicePreference { get; set; }
+    public string TTSVoicePreference { get; set; } = string.Empty;
     public TTS.TTSPitch TTSPitchPreference { get; set; }
     public TTS.TTSSpeed TTSSpeedPreference { get; set; }
     public string? TTSEffectsChain { get; set; }

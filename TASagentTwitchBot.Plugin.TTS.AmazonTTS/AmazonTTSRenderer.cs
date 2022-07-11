@@ -1,33 +1,40 @@
 ﻿using Amazon.Polly;
+using Amazon.Polly.Model;
 
+using TASagentTwitchBot.Core;
 using TASagentTwitchBot.Core.Audio.Effects;
-using AmazonSynthesizeSpeechResponse = Amazon.Polly.Model.SynthesizeSpeechResponse;
-using AmazonSynthesizeSpeechRequest = Amazon.Polly.Model.SynthesizeSpeechRequest;
+using TASagentTwitchBot.Core.TTS;
+using TASagentTwitchBot.Core.TTS.Parsing;
 
-namespace TASagentTwitchBot.Core.TTS.Parsing;
+namespace TASagentTwitchBot.Plugin.TTS.AmazonTTS;
+
 
 public abstract class AmazonTTSRenderer : StandardTTSSystemRenderer
 {
+    protected readonly AmazonTTSVoice amazonVoice;
+
     public AmazonTTSRenderer(
         ICommunication? communication,
         ILogger? logger,
-        TTSVoice voice,
+        AmazonTTSVoice voice,
         TTSPitch pitch,
         TTSSpeed speed,
         Effect effectsChain)
         : base(
               communication: communication,
               logger: logger,
-              voice: (voice == TTSVoice.Unassigned) ? TTSVoice.en_US_Joanna : voice,
+              voice: voice.Serialize(),
               pitch: pitch,
               speed: speed,
               effectsChain: effectsChain)
     {
+        amazonVoice = voice;
     }
+
 
     protected override string GetModeMarkup(TTSRenderMode mode, bool start)
     {
-        if (voice.IsNeuralVoice())
+        if (amazonVoice.IsNeuralVoice())
         {
             switch (mode)
             {
@@ -66,7 +73,7 @@ public abstract class AmazonTTSRenderer : StandardTTSSystemRenderer
 
     protected override string FinalizeSSML(string interiorSSML)
     {
-        if (voice.IsNeuralVoice())
+        if (amazonVoice.IsNeuralVoice())
         {
             if (speed != TTSSpeed.Medium)
             {
@@ -81,7 +88,7 @@ public abstract class AmazonTTSRenderer : StandardTTSSystemRenderer
             }
         }
 
-        if (voice.GetRequiresLangTag())
+        if (amazonVoice.GetRequiresLangTag())
         {
             interiorSSML = $"<lang xml:lang=\"en-US\">{interiorSSML}</lang>";
         }
@@ -99,14 +106,14 @@ public class AmazonTTSLocalRenderer : AmazonTTSRenderer
     public AmazonTTSLocalRenderer(
         AmazonPollyClient amazonClient,
         ICommunication? communication,
-        TTSVoice voice,
+        AmazonTTSVoice voice,
         TTSPitch pitch,
         TTSSpeed speed,
         Effect effectsChain)
         : base(
               communication: communication,
               logger: null,
-              voice: (voice == TTSVoice.Unassigned) ? TTSVoice.en_US_Joanna : voice,
+              voice: voice,
               pitch: pitch,
               speed: speed,
               effectsChain: effectsChain)
@@ -117,14 +124,14 @@ public class AmazonTTSLocalRenderer : AmazonTTSRenderer
     public AmazonTTSLocalRenderer(
         AmazonPollyClient amazonClient,
         ILogger? logger,
-        TTSVoice voice,
+        AmazonTTSVoice voice,
         TTSPitch pitch,
         TTSSpeed speed,
         Effect effectsChain)
         : base(
               communication: null,
               logger: logger,
-              voice: (voice == TTSVoice.Unassigned) ? TTSVoice.en_US_Joanna : voice,
+              voice: voice,
               pitch: pitch,
               speed: speed,
               effectsChain: effectsChain)
@@ -134,7 +141,7 @@ public class AmazonTTSLocalRenderer : AmazonTTSRenderer
 
     public override async Task<string?> SynthesizeSpeech(string finalSSML)
     {
-        AmazonSynthesizeSpeechRequest synthesisRequest = voice.GetAmazonTTSSpeechRequest();
+        SynthesizeSpeechRequest synthesisRequest = amazonVoice.GetAmazonTTSSpeechRequest();
         synthesisRequest.TextType = TextType.Ssml;
         synthesisRequest.Text = finalSSML;
 
@@ -142,7 +149,7 @@ public class AmazonTTSLocalRenderer : AmazonTTSRenderer
 
         // Perform the Text-to-Speech request, passing the text input
         // with the selected voice parameters and audio file type
-        AmazonSynthesizeSpeechResponse synthesisResponse = await amazonClient.SynthesizeSpeechAsync(synthesisRequest);
+        SynthesizeSpeechResponse synthesisResponse = await amazonClient.SynthesizeSpeechAsync(synthesisRequest);
 
         // Write the binary AudioContent of the response to file.
         string filepath = Path.Combine(TTSFilesPath, $"{Guid.NewGuid()}.mp3");
@@ -160,29 +167,29 @@ public class AmazonTTSLocalRenderer : AmazonTTSRenderer
 
 public class AmazonTTSWebRenderer : AmazonTTSRenderer
 {
-    private readonly TTSWebRenderer ttsWebRenderer;
+    private readonly TTSWebRequestHandler ttsWebRequestHandler;
 
     public AmazonTTSWebRenderer(
-        TTSWebRenderer ttsWebRenderer,
+        TTSWebRequestHandler ttsWebRequestHandler,
         ICommunication? communication,
-        TTSVoice voice,
+        AmazonTTSVoice voice,
         TTSPitch pitch,
         TTSSpeed speed,
         Effect effectsChain)
         : base(
               communication: communication,
               logger: null,
-              voice: (voice == TTSVoice.Unassigned) ? TTSVoice.en_US_Joanna : voice,
+              voice: voice,
               pitch: pitch,
               speed: speed,
               effectsChain: effectsChain)
     {
-        this.ttsWebRenderer = ttsWebRenderer;
+        this.ttsWebRequestHandler = ttsWebRequestHandler;
     }
 
     public override Task<string?> SynthesizeSpeech(string finalSSML)
     {
-        return ttsWebRenderer.SubmitTTSWebRequest(new ServerTTSRequest(
+        return ttsWebRequestHandler.SubmitTTSWebRequest(new ServerTTSRequest(
             RequestIdentifier: Guid.NewGuid().ToString(),
             Ssml: finalSSML,
             Voice: voice,

@@ -26,6 +26,8 @@ public class ActivityProviderStubs :
     public virtual void HandleSubscription(string userId, string message, int monthCount, int tier, bool approved) { }
 
     public virtual void HandleTTS(User user, string message, bool approved) { }
+    bool ITTSHandler.IsTTSVoiceValid(string voice) => false;
+    TTS.TTSVoiceInfo? ITTSHandler.GetTTSVoiceInfo(string voice) => null;
 
     //Always return Success for disabling, and Failure from enabling
     Task<bool> ITTSHandler.SetTTSEnabled(bool enabled) => Task.FromResult(!enabled);
@@ -59,6 +61,8 @@ public sealed class SubscriptionHandlerStub : ISubscriptionHandler
 
 public sealed class TTSHandlerStub : ITTSHandler
 {
+    public bool IsTTSVoiceValid(string voice) => false;
+    public TTS.TTSVoiceInfo? GetTTSVoiceInfo(string voice) => null;
     public void HandleTTS(User user, string message, bool approved) { }
 
     //Always return Success for disabling, and Failure from enabling

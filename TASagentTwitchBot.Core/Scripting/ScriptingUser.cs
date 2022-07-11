@@ -10,7 +10,7 @@ public class ScriptingUser
     public string TwitchUserId { get; }
     public string Color { get; set; }
     public AuthorizationLevel AuthorizationLevel { get; set; }
-    public TTSVoice TTSVoice { get; }
+    public string TTSVoice { get; }
     public TTSPitch TTSPitch { get; }
     public TTSSpeed TTSSpeed { get; }
     public string TTSEffect { get; }
@@ -22,7 +22,7 @@ public class ScriptingUser
         string twitchUserId,
         string color,
         AuthorizationLevel authorizationLevel,
-        TTSVoice ttsVoice,
+        string ttsVoice,
         TTSPitch ttsPitch,
         TTSSpeed ttsSpeed,
         string ttsEffect,

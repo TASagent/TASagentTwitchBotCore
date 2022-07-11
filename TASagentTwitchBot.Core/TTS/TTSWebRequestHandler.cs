@@ -1,18 +1,13 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
 
-using TASagentTwitchBot.Core.Audio;
-using TASagentTwitchBot.Core.Audio.Effects;
-using TASagentTwitchBot.Core.TTS.Parsing;
-
 namespace TASagentTwitchBot.Core.TTS;
 
-public class TTSWebRenderer : ITTSRenderer, IDisposable
+public class TTSWebRequestHandler : IDisposable
 {
     private readonly TTSConfiguration ttsConfig;
     private readonly Config.ServerConfig serverConfig;
 
     private readonly ICommunication communication;
-    private readonly ISoundEffectSystem soundEffectSystem;
 
     private HubConnection? serverHubConnection;
     private readonly ErrorHandler errorHandler;
@@ -26,17 +21,15 @@ public class TTSWebRenderer : ITTSRenderer, IDisposable
     private bool disposedValue;
     private static string TTSFilesPath => BGC.IO.DataManagement.PathForDataDirectory("TTSFiles");
 
-    public TTSWebRenderer(
+    public TTSWebRequestHandler(
         TTSConfiguration ttsConfig,
         Config.ServerConfig serverConfig,
         ICommunication communication,
-        ISoundEffectSystem soundEffectSystem,
         ErrorHandler errorHandler)
     {
         this.ttsConfig = ttsConfig;
         this.serverConfig = serverConfig;
         this.communication = communication;
-        this.soundEffectSystem = soundEffectSystem;
         this.errorHandler = errorHandler;
 
         if (ttsConfig.Enabled)
@@ -52,8 +45,7 @@ public class TTSWebRenderer : ITTSRenderer, IDisposable
         if (!await initializationTask)
         {
             //Initialization Failed
-            communication.SendErrorMessage($"TTSWebRenderer failed to initialize properly. Disabling TTS Service.");
-            ttsConfig.Enabled = false;
+            communication.SendErrorMessage($"TTSWebRenderer failed to initialize properly.");
         }
     }
 
@@ -156,69 +148,6 @@ public class TTSWebRenderer : ITTSRenderer, IDisposable
         return Task.CompletedTask;
     }
 
-    public async Task<AudioRequest?> TTSRequest(
-        Commands.AuthorizationLevel authorizationLevel,
-        TTSVoice voice,
-        TTSPitch pitch,
-        TTSSpeed speed,
-        Effect effectsChain,
-        string ttsText)
-    {
-        if (!ttsConfig.Enabled)
-        {
-            communication.SendDebugMessage($"TTS currently disabled - Rejecting request.");
-            return null;
-        }
-
-        TTSService service = voice.GetTTSService();
-
-        if (!ttsConfig.IsServiceSupported(service))
-        {
-            communication.SendWarningMessage($"TTS Service {service} unsupported.");
-
-            service = ttsConfig.GetASupportedService();
-            voice = TTSVoice.Unassigned;
-        }
-
-        //Make sure Neural Voices are allowed
-        if (voice.IsNeuralVoice() && !ttsConfig.CanUseNeuralVoice(authorizationLevel))
-        {
-            communication.SendWarningMessage($"Neural voice {voice} disallowed.  Changing voice to service default.");
-            voice = TTSVoice.Unassigned;
-        }
-
-        TTSSystemRenderer ttsSystemRenderer;
-
-        switch (service)
-        {
-            case TTSService.Amazon:
-                ttsSystemRenderer = new AmazonTTSWebRenderer(this, communication, voice, pitch, speed, effectsChain);
-                break;
-
-            case TTSService.Google:
-                ttsSystemRenderer = new GoogleTTSWebRenderer(this, communication, voice, pitch, speed, effectsChain);
-                break;
-
-            case TTSService.Azure:
-                ttsSystemRenderer = new AzureTTSWebRenderer(this, communication, voice, pitch, speed, effectsChain);
-                break;
-
-            default:
-                communication.SendErrorMessage($"Unsupported TTSVoice for TTSService {service}");
-                goto case TTSService.Google;
-        }
-
-        try
-        {
-            return await TTSParser.ParseTTS(ttsText, ttsSystemRenderer, soundEffectSystem);
-        }
-        catch (Exception ex)
-        {
-            errorHandler.LogCommandException(ex, $"!tts {ttsText}");
-            return null;
-        }
-    }
-
     public void ReceiveMessage(string message) => communication.SendDebugMessage($"TTS WebServer Message: {message}");
     public void ReceiveWarning(string message) => communication.SendWarningMessage($"TTS WebServer Warning: {message}");
     public void ReceiveError(string message) => communication.SendErrorMessage($"TTS WebServer Error: {message}");
@@ -282,7 +211,7 @@ public class TTSWebRenderer : ITTSRenderer, IDisposable
         TaskCompletionSource<string?> completionSource = new TaskCompletionSource<string?>();
         waitingDownloads.Add(request.RequestIdentifier, completionSource);
 
-        await serverHubConnection!.InvokeAsync("RequestTTS", request);
+        await serverHubConnection!.InvokeAsync("RequestNewTTS", request);
         return await completionSource.Task;
     }
 

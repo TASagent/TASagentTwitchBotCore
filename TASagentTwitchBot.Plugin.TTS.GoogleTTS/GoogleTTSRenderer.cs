@@ -1,11 +1,12 @@
 ﻿using System.Text.RegularExpressions;
 using Google.Cloud.TextToSpeech.V1;
 
+using TASagentTwitchBot.Core;
+using TASagentTwitchBot.Core.TTS;
+using TASagentTwitchBot.Core.TTS.Parsing;
 using TASagentTwitchBot.Core.Audio.Effects;
 
-using GoogleSynthesizeSpeechResponse = Google.Cloud.TextToSpeech.V1.SynthesizeSpeechResponse;
-
-namespace TASagentTwitchBot.Core.TTS.Parsing;
+namespace TASagentTwitchBot.Plugin.TTS.GoogleTTS;
 
 public abstract class GoogleTTSRenderer : StandardTTSSystemRenderer
 {
@@ -27,21 +28,24 @@ public abstract class GoogleTTSRenderer : StandardTTSSystemRenderer
     //    No Match TASagenta
     private static readonly Regex tasAgentRegex = new Regex(@"\bTASagent\b", RegexOptions.IgnoreCase);
 
+    protected readonly GoogleTTSVoice googleVoice;
+
     public GoogleTTSRenderer(
         ICommunication? communication,
         ILogger? logger,
-        TTSVoice voice,
+        GoogleTTSVoice voice,
         TTSPitch pitch,
         TTSSpeed speed,
         Effect effectsChain)
         : base(
               communication: communication,
               logger: logger,
-              voice: (voice == TTSVoice.Unassigned) ? TTSVoice.en_US_Standard_B : voice,
+              voice: voice.Serialize(),
               pitch: pitch,
               speed: speed,
               effectsChain: effectsChain)
     {
+        googleVoice = voice;
     }
 
     protected override string GetModeMarkup(TTSRenderMode mode, bool start)
@@ -85,14 +89,14 @@ public class GoogleTTSLocalRenderer : GoogleTTSRenderer
     public GoogleTTSLocalRenderer(
         TextToSpeechClient googleClient,
         ICommunication communication,
-        TTSVoice voice,
+        GoogleTTSVoice voice,
         TTSPitch pitch,
         TTSSpeed speed,
         Effect effectsChain)
         : base(
               communication: communication,
               logger: null,
-              voice: (voice == TTSVoice.Unassigned) ? TTSVoice.en_US_Standard_B : voice,
+              voice: voice,
               pitch: pitch,
               speed: speed,
               effectsChain: effectsChain)
@@ -103,14 +107,14 @@ public class GoogleTTSLocalRenderer : GoogleTTSRenderer
     public GoogleTTSLocalRenderer(
         TextToSpeechClient googleClient,
         ILogger logger,
-        TTSVoice voice,
+        GoogleTTSVoice voice,
         TTSPitch pitch,
         TTSSpeed speed,
         Effect effectsChain)
         : base(
               communication: null,
               logger: logger,
-              voice: (voice == TTSVoice.Unassigned) ? TTSVoice.en_US_Standard_B : voice,
+              voice: voice,
               pitch: pitch,
               speed: speed,
               effectsChain: effectsChain)
@@ -120,7 +124,7 @@ public class GoogleTTSLocalRenderer : GoogleTTSRenderer
 
     public override async Task<string?> SynthesizeSpeech(string finalSSML)
     {
-        VoiceSelectionParams voiceParams = voice.GetGoogleVoiceSelectionParams();
+        VoiceSelectionParams voiceParams = googleVoice.GetGoogleVoiceSelectionParams();
 
         AudioConfig config = new AudioConfig
         {
@@ -137,7 +141,7 @@ public class GoogleTTSLocalRenderer : GoogleTTSRenderer
 
         // Perform the Text-to-Speech request, passing the text input
         // with the selected voice parameters and audio file type
-        GoogleSynthesizeSpeechResponse response = await googleClient.SynthesizeSpeechAsync(input, voiceParams, config);
+        SynthesizeSpeechResponse response = await googleClient.SynthesizeSpeechAsync(input, voiceParams, config);
 
         // Write the binary AudioContent of the response to file.
         string filepath = Path.Combine(TTSFilesPath, $"{Guid.NewGuid()}.mp3");
@@ -153,29 +157,29 @@ public class GoogleTTSLocalRenderer : GoogleTTSRenderer
 
 public class GoogleTTSWebRenderer : GoogleTTSRenderer
 {
-    private readonly TTSWebRenderer ttsWebRenderer;
+    private readonly TTSWebRequestHandler ttsWebRequestHandler;
 
     public GoogleTTSWebRenderer(
-        TTSWebRenderer ttsWebRenderer,
+        TTSWebRequestHandler ttsWebRequestHandler,
         ICommunication communication,
-        TTSVoice voice,
+        GoogleTTSVoice voice,
         TTSPitch pitch,
         TTSSpeed speed,
         Effect effectsChain)
         : base(
               communication: communication,
               logger: null,
-              voice: (voice == TTSVoice.Unassigned) ? TTSVoice.en_US_Standard_B : voice,
+              voice: voice,
               pitch: pitch,
               speed: speed,
               effectsChain: effectsChain)
     {
-        this.ttsWebRenderer = ttsWebRenderer;
+        this.ttsWebRequestHandler = ttsWebRequestHandler;
     }
 
     public override Task<string?> SynthesizeSpeech(string finalSSML)
     {
-        return ttsWebRenderer.SubmitTTSWebRequest(new ServerTTSRequest(
+        return ttsWebRequestHandler.SubmitTTSWebRequest(new ServerTTSRequest(
             RequestIdentifier: Guid.NewGuid().ToString(),
             Ssml: finalSSML,
             Voice: voice,

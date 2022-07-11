@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "TASagentTwitchBot.Plugin.TTS.GoogleTTS": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:2832;http://localhost:2833"
+    }
+  }
+}

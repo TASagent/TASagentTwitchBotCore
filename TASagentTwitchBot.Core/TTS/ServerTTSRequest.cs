@@ -3,6 +3,6 @@
 public record ServerTTSRequest(
     string RequestIdentifier,
     string Ssml,
-    TTSVoice Voice,
+    string Voice,
     TTSPitch Pitch,
     TTSSpeed Speed);

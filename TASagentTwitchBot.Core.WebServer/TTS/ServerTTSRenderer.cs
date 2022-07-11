@@ -23,90 +23,32 @@ public class ServerTTSRenderer : IServerTTSRenderer
     private readonly ILogger<ServerTTSRenderer> logger;
     private readonly IHubContext<Web.Hubs.BotTTSHub> botTTSHub;
 
-    private readonly Google.Cloud.TextToSpeech.V1.TextToSpeechClient? googleClient = null;
-    private readonly Amazon.Polly.AmazonPollyClient? amazonClient = null;
-    private readonly Microsoft.CognitiveServices.Speech.SpeechConfig? azureClient = null;
+    private readonly ITTSSystem[] ttsSystems;
+    private readonly Dictionary<string, ITTSSystem> voiceLookup = new Dictionary<string, ITTSSystem>();
 
     public ServerTTSRenderer(
         ILogger<ServerTTSRenderer> logger,
-        IHubContext<Web.Hubs.BotTTSHub> botTTSHub)
+        IHubContext<Web.Hubs.BotTTSHub> botTTSHub,
+        IEnumerable<ITTSSystem> ttsSystems)
     {
         this.logger = logger;
         this.botTTSHub = botTTSHub;
 
+        this.ttsSystems = ttsSystems.ToArray();
 
-        //
-        // Prepare Google TTS
-        //
-        try
+        foreach (ITTSSystem system in this.ttsSystems)
         {
-            Google.Cloud.TextToSpeech.V1.TextToSpeechClientBuilder builder = new Google.Cloud.TextToSpeech.V1.TextToSpeechClientBuilder();
-
-            string googleCredentialsPath = BGC.IO.DataManagement.PathForDataFile("Config", "googleCloudCredentials.json");
-
-            if (!File.Exists(googleCredentialsPath))
+            foreach (string voice in system.GetVoices())
             {
-                throw new FileNotFoundException($"Could not find credentials for Google TTS at {googleCredentialsPath}");
+                voiceLookup.Add(voice.ToLowerInvariant(), system);
             }
-
-            builder.CredentialsPath = googleCredentialsPath;
-            googleClient = builder.Build();
-        }
-        catch (Exception e)
-        {
-            logger.LogError(e, $"Exception thrown while trying to initialize Google TTS.");
-        }
-
-        //
-        // Prepare Amazon TTS
-        //
-        try
-        {
-            string awsCredentialsPath = BGC.IO.DataManagement.PathForDataFile("Config", "awsPollyCredentials.json");
-
-            if (!File.Exists(awsCredentialsPath))
-            {
-                throw new FileNotFoundException($"Could not find credentials for AWS Polly at {awsCredentialsPath}");
-            }
-
-            AWSPollyCredentials awsPolyCredentials = JsonSerializer.Deserialize<AWSPollyCredentials>(File.ReadAllText(awsCredentialsPath))!;
-
-            Amazon.Runtime.BasicAWSCredentials awsCredentials = new Amazon.Runtime.BasicAWSCredentials(
-                awsPolyCredentials.AccessKey,
-                awsPolyCredentials.SecretKey);
-
-            amazonClient = new Amazon.Polly.AmazonPollyClient(awsCredentials, Amazon.RegionEndpoint.USWest2);
-        }
-        catch (Exception e)
-        {
-            logger.LogError(e, $"Exception thrown while trying to initialize AWS Polly.");
-        }
-
-        //
-        // Prepare Azure TTS
-        //
-        try
-        {
-            string azureCredentialsPath = BGC.IO.DataManagement.PathForDataFile("Config", "azureSpeechSynthesisCredentials.json");
-
-            if (!File.Exists(azureCredentialsPath))
-            {
-                throw new FileNotFoundException($"Could not find credentials for Azure SpeechSynthesis at {azureCredentialsPath}");
-            }
-
-            AzureSpeechSynthesisCredentials azureCredentials = JsonSerializer.Deserialize<AzureSpeechSynthesisCredentials>(File.ReadAllText(azureCredentialsPath))!;
-
-            azureClient = Microsoft.CognitiveServices.Speech.SpeechConfig.FromSubscription(azureCredentials.AccessKey, azureCredentials.Region);
-            azureClient.SetSpeechSynthesisOutputFormat(Microsoft.CognitiveServices.Speech.SpeechSynthesisOutputFormat.Audio24Khz48KBitRateMonoMp3);
-        }
-        catch (Exception e)
-        {
-            logger.LogError(e, $"Exception thrown while trying to initialize Azure Speech Synthesis.");
         }
     }
 
-
-    public async Task HandleTTSRequest(UserManager<ApplicationUser> userManager, ApplicationUser user, ServerTTSRequest ttsRequest)
+    public async Task HandleTTSRequest(
+        UserManager<ApplicationUser> userManager,
+        ApplicationUser user,
+        ServerTTSRequest ttsRequest)
     {
         if (string.IsNullOrEmpty(user.TwitchBroadcasterId))
         {
@@ -118,13 +60,23 @@ public class ServerTTSRenderer : IServerTTSRenderer
         {
             int requestedCharacters = ttsRequest.Ssml.Length;
 
+            //Deduce TTS System
+            if (!voiceLookup.TryGetValue(ttsRequest.Voice.ToLowerInvariant(), out ITTSSystem? ttsSystem))
+            {
+                ttsSystem = ttsSystems[0];
+            }
+
+            TTSVoiceInfo voiceInfo = ttsSystem.GetTTSVoiceInfo(ttsRequest.Voice);
+
             //Check permissions
-            if (ttsRequest.Voice.IsNeuralVoice())
+            if (voiceInfo.IsNeural)
             {
                 if (!await userManager.IsInRoleAsync(user, "TTSNeural"))
                 {
                     //Fix neural request for unauthorized user
-                    ttsRequest = ttsRequest with { Voice = TTSVoice.Unassigned };
+                    ttsRequest = ttsRequest with { Voice = ttsSystem.GetDefaultVoice() };
+                    //Refresh TTSVoiceInfo
+                    voiceInfo = ttsSystem.GetTTSVoiceInfo(ttsRequest.Voice);
 
                     logger.LogInformation("{UserName} requested unauthorized Neural TTS", user.TwitchBroadcasterName);
 
@@ -134,8 +86,8 @@ public class ServerTTSRenderer : IServerTTSRenderer
                 }
             }
 
-            //Check Neural voices
-            if (ttsRequest.Voice.IsNeuralVoice())
+            //Check Neural voices and apply increased cost
+            if (voiceInfo.IsNeural)
             {
                 //Neural voices are 4 times the cost across all services
                 requestedCharacters *= 4;
@@ -160,27 +112,15 @@ public class ServerTTSRenderer : IServerTTSRenderer
             user.MonthlyTTSUsage += requestedCharacters;
             await userManager.UpdateAsync(user);
 
-            StandardTTSSystemRenderer renderer;
+            TTSSystemRenderer renderer = ttsSystem.CreateRenderer(ttsRequest.Voice, ttsRequest.Pitch, ttsRequest.Speed, new NoEffect());
 
-            switch (ttsRequest.Voice.GetTTSService())
+            if (renderer is not StandardTTSSystemRenderer standardTTSRenderer)
             {
-                case TTSService.Amazon:
-                    renderer = new AmazonTTSLocalRenderer(amazonClient!, logger, ttsRequest.Voice, ttsRequest.Pitch, ttsRequest.Speed, new NoEffect());
-                    break;
-
-                case TTSService.Google:
-                    renderer = new GoogleTTSLocalRenderer(googleClient!, logger, ttsRequest.Voice, ttsRequest.Pitch, ttsRequest.Speed, new NoEffect());
-                    break;
-
-                case TTSService.Azure:
-                    renderer = new AzureTTSLocalRenderer(azureClient!, logger, ttsRequest.Voice, ttsRequest.Pitch, ttsRequest.Speed, new NoEffect());
-                    break;
-
-                default:
-                    throw new Exception($"Unrecognized Service: {ttsRequest.Voice.GetTTSService()}");
+                //Only standard renderers supported for web at the moment
+                throw new NotSupportedException($"Non-standard renderer received: {renderer}");
             }
 
-            string? fileName = await renderer.SynthesizeSpeech(ttsRequest.Ssml);
+            string? fileName = await standardTTSRenderer.SynthesizeSpeech(ttsRequest.Ssml);
 
             if (string.IsNullOrEmpty(fileName))
             {
@@ -243,17 +183,28 @@ public class ServerTTSRenderer : IServerTTSRenderer
         {
             int requestedCharacters = ttsRequest.Text.Length;
 
-            TTSVoice voice = ttsRequest.Voice?.TranslateTTSVoice() ?? TTSVoice.Unassigned;
+            string voice = ttsRequest.Voice ?? "unassigned";
             TTSPitch pitch = ttsRequest.Pitch?.TranslateTTSPitch() ?? TTSPitch.Unassigned;
             TTSSpeed speed = ttsRequest.Speed?.TranslateTTSSpeed() ?? TTSSpeed.Unassigned;
 
+            //Deduce TTS System
+            if (!voiceLookup.TryGetValue(voice.ToLowerInvariant(), out ITTSSystem? ttsSystem))
+            {
+                ttsSystem = ttsSystems[0];
+            }
+
+            TTSVoiceInfo voiceInfo = ttsSystem.GetTTSVoiceInfo(voice);
+
             //Check permissions
-            if (voice.IsNeuralVoice())
+            if (voiceInfo.IsNeural)
             {
                 if (!await userManager.IsInRoleAsync(user, "TTSNeural"))
                 {
                     //Fix neural request for unauthorized user
-                    voice = TTSVoice.Unassigned;
+                    voice = ttsSystem.GetDefaultVoice();
+
+                    //Refresh TTSVoiceInfo
+                    voiceInfo = ttsSystem.GetTTSVoiceInfo(voice);
 
                     logger.LogInformation("{UserName} requested unauthorized Neural TTS", user.TwitchBroadcasterName);
 
@@ -264,7 +215,7 @@ public class ServerTTSRenderer : IServerTTSRenderer
             }
 
             //Check Neural voices
-            if (voice.IsNeuralVoice())
+            if (voiceInfo.IsNeural)
             {
                 //Neural voices are 4 times the cost across all services
                 requestedCharacters *= 4;
@@ -289,25 +240,7 @@ public class ServerTTSRenderer : IServerTTSRenderer
             user.MonthlyTTSUsage += requestedCharacters;
             await userManager.UpdateAsync(user);
 
-            StandardTTSSystemRenderer renderer;
-
-            switch (voice.GetTTSService())
-            {
-                case TTSService.Amazon:
-                    renderer = new AmazonTTSLocalRenderer(amazonClient!, logger, voice, pitch, speed, new NoEffect());
-                    break;
-
-                case TTSService.Google:
-                    renderer = new GoogleTTSLocalRenderer(googleClient!, logger, voice, pitch, speed, new NoEffect());
-                    break;
-
-                case TTSService.Azure:
-                    renderer = new AzureTTSLocalRenderer(azureClient!, logger, voice, pitch, speed, new NoEffect());
-                    break;
-
-                default:
-                    throw new Exception($"Unrecognized Service: {voice.GetTTSService()}");
-            }
+            TTSSystemRenderer renderer = ttsSystem.CreateRenderer(voice, pitch, speed, new NoEffect());
 
             (string? fileName, int finalCharCount) = await TTSParser.ParseTTSNoSoundEffects(ttsRequest.Text, renderer);
 
@@ -318,7 +251,7 @@ public class ServerTTSRenderer : IServerTTSRenderer
             }
 
             //Check Neural voices
-            if (voice.IsNeuralVoice())
+            if (voiceInfo.IsNeural)
             {
                 //Neural voices are 4 times the cost across all services
                 finalCharCount *= 4;
@@ -379,23 +312,35 @@ public class ServerTTSRenderer : IServerTTSRenderer
         {
             int requestedCharacters = rawTTSRequest.Text.Length;
 
-            TTSVoice voice = rawTTSRequest.Voice?.TranslateTTSVoice() ?? TTSVoice.Unassigned;
+            string voice = rawTTSRequest.Voice ?? "unassigned";
             TTSPitch pitch = rawTTSRequest.Pitch?.TranslateTTSPitch() ?? TTSPitch.Unassigned;
             TTSSpeed speed = rawTTSRequest.Speed?.TranslateTTSSpeed() ?? TTSSpeed.Unassigned;
 
+            //Deduce TTS System
+            if (!voiceLookup.TryGetValue(voice.ToLowerInvariant(), out ITTSSystem? ttsSystem))
+            {
+                ttsSystem = ttsSystems[0];
+            }
+
+            TTSVoiceInfo voiceInfo = ttsSystem.GetTTSVoiceInfo(voice);
+
             //Check permissions
-            if (voice.IsNeuralVoice())
+            if (voiceInfo.IsNeural)
             {
                 if (!await userManager.IsInRoleAsync(user, "TTSNeural"))
                 {
                     //Fix neural request for unauthorized user
-                    voice = TTSVoice.Unassigned;
+                    voice = ttsSystem.GetDefaultVoice();
+
+                    //Refresh TTSVoiceInfo
+                    voiceInfo = ttsSystem.GetTTSVoiceInfo(voice);
+
                     logger.LogInformation("{UserName} requested unauthorized Neural TTS", user.TwitchBroadcasterName);
                 }
             }
 
             //Check Neural voices
-            if (voice.IsNeuralVoice())
+            if (voiceInfo.IsNeural)
             {
                 //Neural voices are 4 times the cost across all services
                 requestedCharacters *= 4;
@@ -412,25 +357,7 @@ public class ServerTTSRenderer : IServerTTSRenderer
             user.MonthlyTTSUsage += requestedCharacters;
             await userManager.UpdateAsync(user);
 
-            StandardTTSSystemRenderer renderer;
-
-            switch (voice.GetTTSService())
-            {
-                case TTSService.Amazon:
-                    renderer = new AmazonTTSLocalRenderer(amazonClient!, logger, voice, pitch, speed, new NoEffect());
-                    break;
-
-                case TTSService.Google:
-                    renderer = new GoogleTTSLocalRenderer(googleClient!, logger, voice, pitch, speed, new NoEffect());
-                    break;
-
-                case TTSService.Azure:
-                    renderer = new AzureTTSLocalRenderer(azureClient!, logger, voice, pitch, speed, new NoEffect());
-                    break;
-
-                default:
-                    throw new Exception($"Unrecognized Service: {voice.GetTTSService()}");
-            }
+            TTSSystemRenderer renderer = ttsSystem.CreateRenderer(voice, pitch, speed, new NoEffect());
 
             (string? fileName, int finalCharCount) = await TTSParser.ParseTTSNoSoundEffects(rawTTSRequest.Text, renderer);
 
@@ -441,7 +368,7 @@ public class ServerTTSRenderer : IServerTTSRenderer
             }
 
             //Check Neural voices
-            if (voice.IsNeuralVoice())
+            if (voiceInfo.IsNeural)
             {
                 //Neural voices are 4 times the cost across all services
                 finalCharCount *= 4;
@@ -479,5 +406,4 @@ public class ServerTTSRenderer : IServerTTSRenderer
             return null;
         }
     }
-
 }

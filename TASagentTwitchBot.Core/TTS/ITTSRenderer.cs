@@ -7,11 +7,13 @@ namespace TASagentTwitchBot.Core.TTS;
 [AutoRegister]
 public interface ITTSRenderer
 {
+    bool IsTTSVoiceValid(string voice);
+    TTSVoiceInfo? GetTTSVoiceInfo(string voice);
     Task<bool> SetTTSEnabled(bool enabled);
 
     Task<AudioRequest?> TTSRequest(
         Commands.AuthorizationLevel authorizationLevel,
-        TTSVoice voicePreference,
+        string voicePreference,
         TTSPitch pitchPreference,
         TTSSpeed speedPreference,
         Effect effectsChain,

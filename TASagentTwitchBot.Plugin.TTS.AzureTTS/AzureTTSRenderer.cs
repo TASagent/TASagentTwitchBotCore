@@ -1,26 +1,33 @@
 ﻿using Microsoft.CognitiveServices.Speech;
 
+using TASagentTwitchBot.Core;
 using TASagentTwitchBot.Core.Audio.Effects;
+using TASagentTwitchBot.Core.TTS;
+using TASagentTwitchBot.Core.TTS.Parsing;
 
-namespace TASagentTwitchBot.Core.TTS.Parsing;
+namespace TASagentTwitchBot.Plugin.TTS.AzureTTS;
+
 
 public abstract class AzureTTSRenderer : StandardTTSSystemRenderer
 {
+    protected readonly AzureTTSVoice azureVoice;
+
     public AzureTTSRenderer(
         ICommunication? communication,
         ILogger? logger,
-        TTSVoice voice,
+        AzureTTSVoice voice,
         TTSPitch pitch,
         TTSSpeed speed,
         Effect effectsChain)
         : base(
               communication: communication,
               logger: logger,
-              voice: (voice == TTSVoice.Unassigned) ? TTSVoice.en_US_BenjaminRUS : voice,
+              voice: voice.Serialize(),
               pitch: pitch,
               speed: speed,
               effectsChain: effectsChain)
     {
+        azureVoice = voice;
     }
 
     protected override string GetModeMarkup(TTSRenderMode mode, bool start)
@@ -52,12 +59,13 @@ public abstract class AzureTTSRenderer : StandardTTSSystemRenderer
         }
 
         return $"<speak version=\"1.0\" xml:lang=\"en-US\" xmlns:mstts=\"http://www.w3.org/2001/mstts\">" +
-            $"<voice name=\"{voice.GetTTSVoiceString()}\">" +
+            $"<voice name=\"{azureVoice.GetTTSVoiceString()}\">" +
             $"<mstts:silence type=\"Sentenceboundary\" value=\"250ms\"/>" +
             $"<mstts:silence type=\"Tailing\" value=\"0ms\"/>" +
             $"{interiorSSML}" +
             $"</voice></speak>";
     }
+
 }
 
 public class AzureTTSLocalRenderer : AzureTTSRenderer
@@ -67,14 +75,14 @@ public class AzureTTSLocalRenderer : AzureTTSRenderer
     public AzureTTSLocalRenderer(
         SpeechConfig azureClient,
         ICommunication? communication,
-        TTSVoice voice,
+        AzureTTSVoice voice,
         TTSPitch pitch,
         TTSSpeed speed,
         Effect effectsChain)
         : base(
               communication: communication,
               logger: null,
-              voice: (voice == TTSVoice.Unassigned) ? TTSVoice.en_US_BenjaminRUS : voice,
+              voice: voice,
               pitch: pitch,
               speed: speed,
               effectsChain: effectsChain)
@@ -85,14 +93,14 @@ public class AzureTTSLocalRenderer : AzureTTSRenderer
     public AzureTTSLocalRenderer(
         SpeechConfig azureClient,
         ILogger? logger,
-        TTSVoice voice,
+        AzureTTSVoice voice,
         TTSPitch pitch,
         TTSSpeed speed,
         Effect effectsChain)
         : base(
               communication: null,
               logger: logger,
-              voice: (voice == TTSVoice.Unassigned) ? TTSVoice.en_US_BenjaminRUS : voice,
+              voice: voice,
               pitch: pitch,
               speed: speed,
               effectsChain: effectsChain)
@@ -161,29 +169,29 @@ public class AzureTTSLocalRenderer : AzureTTSRenderer
 
 public class AzureTTSWebRenderer : AzureTTSRenderer
 {
-    private readonly TTSWebRenderer ttsWebRenderer;
+    private readonly TTSWebRequestHandler ttsWebRequestHandler;
 
     public AzureTTSWebRenderer(
-        TTSWebRenderer ttsWebRenderer,
+        TTSWebRequestHandler ttsWebRequestHandler,
         ICommunication? communication,
-        TTSVoice voice,
+        AzureTTSVoice voice,
         TTSPitch pitch,
         TTSSpeed speed,
         Effect effectsChain)
         : base(
               communication: communication,
               logger: null,
-              voice: (voice == TTSVoice.Unassigned) ? TTSVoice.en_US_BenjaminRUS : voice,
+              voice: voice,
               pitch: pitch,
               speed: speed,
               effectsChain: effectsChain)
     {
-        this.ttsWebRenderer = ttsWebRenderer;
+        this.ttsWebRequestHandler = ttsWebRequestHandler;
     }
 
     public override Task<string?> SynthesizeSpeech(string finalSSML)
     {
-        return ttsWebRenderer.SubmitTTSWebRequest(new ServerTTSRequest(
+        return ttsWebRequestHandler.SubmitTTSWebRequest(new ServerTTSRequest(
             RequestIdentifier: Guid.NewGuid().ToString(),
             Ssml: finalSSML,
             Voice: voice,

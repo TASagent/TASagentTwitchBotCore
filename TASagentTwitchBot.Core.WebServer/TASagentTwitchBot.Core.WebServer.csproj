@@ -8,13 +8,9 @@
 
 	<ItemGroup>
 		<PackageReference Include="AspNet.Security.OAuth.Twitch" Version="6.0.6" />
-		<PackageReference Include="AWSSDK.Core" Version="3.7.12.3" />
-		<PackageReference Include="AWSSDK.Polly" Version="3.7.5.26" />
-		<PackageReference Include="Google.Cloud.TextToSpeech.V1" Version="3.0.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="6.0.6" />
 		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="6.0.6" />
 		<PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="6.0.6" />
-		<PackageReference Include="Microsoft.CognitiveServices.Speech" Version="1.22.0" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.6" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="6.0.6">
 			<PrivateAssets>all</PrivateAssets>
@@ -25,6 +21,9 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\TASagentTwitchBot.Core\TASagentTwitchBot.Core.csproj" />
+		<ProjectReference Include="..\TASagentTwitchBot.Plugin.TTS.AmazonTTS\TASagentTwitchBot.Plugin.TTS.AmazonTTS.csproj" />
+		<ProjectReference Include="..\TASagentTwitchBot.Plugin.TTS.AzureTTS\TASagentTwitchBot.Plugin.TTS.AzureTTS.csproj" />
+		<ProjectReference Include="..\TASagentTwitchBot.Plugin.TTS.GoogleTTS\TASagentTwitchBot.Plugin.TTS.GoogleTTS.csproj" />
 	</ItemGroup>
 
 </Project>

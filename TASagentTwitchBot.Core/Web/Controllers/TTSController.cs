@@ -58,7 +58,7 @@ public class TTSController : ControllerBase
             {
                 AuthorizationLevel = Commands.AuthorizationLevel.Elevated,
                 TwitchUserName = user,
-                TTSVoicePreference = request.Voice.TranslateTTSVoice(),
+                TTSVoicePreference = request.Voice,
                 TTSPitchPreference = request.Pitch.TranslateTTSPitch(),
                 TTSSpeedPreference = request.Speed.TranslateTTSSpeed(),
                 TTSEffectsChain = effect.GetEffectsChain()

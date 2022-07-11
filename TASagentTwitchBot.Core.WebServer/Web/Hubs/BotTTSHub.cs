@@ -40,11 +40,30 @@ public class BotTTSHub : Hub
         await base.OnDisconnectedAsync(exception);
     }
 
-    public async Task RequestTTS(ServerTTSRequest ttsRequest)
+    public async Task RequestNewTTS(ServerTTSRequest ttsRequest)
     {
         ApplicationUser user = await userManager.GetUserAsync(Context.User);
         await ttsHandler.HandleTTSRequest(userManager, user, ttsRequest);
     }
+
+#pragma warning disable CS0618 // Type or member is obsolete
+    /// <summary>
+    /// Handles legacy requests using the old TTSVoice enum. Included for backwards compatibility
+    /// </summary>
+    public async Task RequestTTS(LegacyServerTTSRequest legacyTTSRequest)
+    {
+        ApplicationUser user = await userManager.GetUserAsync(Context.User);
+
+        ServerTTSRequest ttsRequest = new ServerTTSRequest(
+                RequestIdentifier: legacyTTSRequest.RequestIdentifier,
+                Ssml: legacyTTSRequest.Ssml,
+                Voice: legacyTTSRequest.Voice.Serialize(),
+                Pitch: legacyTTSRequest.Pitch,
+                Speed: legacyTTSRequest.Speed);
+
+        await ttsHandler.HandleTTSRequest(userManager, user, ttsRequest);
+    }
+#pragma warning restore CS0618 // Type or member is obsolete
 
     public async Task RequestRawTTS(RawServerTTSRequest rawTTSRequest)
     {

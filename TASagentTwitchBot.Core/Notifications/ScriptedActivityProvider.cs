@@ -624,6 +624,8 @@ public partial class ScriptedActivityProvider :
     #endregion IFollowerHandler
     #region ITTSHandler
 
+    bool ITTSHandler.IsTTSVoiceValid(string voice) => ttsRenderer.IsTTSVoiceValid(voice);
+    TTSVoiceInfo? ITTSHandler.GetTTSVoiceInfo(string voice) => ttsRenderer.GetTTSVoiceInfo(voice);
     Task<bool> ITTSHandler.SetTTSEnabled(bool enabled) => ttsRenderer.SetTTSEnabled(enabled);
 
     public virtual async void HandleTTS(
@@ -928,7 +930,7 @@ public partial class ScriptedActivityProvider :
 
     public class NotificationTTS : NotificationAudio
     {
-        public TTSVoice TTSVoice { get; set; } = TTSVoice.Unassigned;
+        public string TTSVoice { get; set; } = "";
         public TTSPitch TTSPitch { get; set; } = TTSPitch.Unassigned;
         public TTSSpeed TTSSpeed { get; set; } = TTSSpeed.Unassigned;
         public string TTSEffect { get; set; } = "";
@@ -953,24 +955,9 @@ public partial class ScriptedActivityProvider :
             string ttsEffect,
             string message)
         {
-            TTSVoice = ttsVoice.TranslateTTSVoice();
+            TTSVoice = ttsVoice;
             TTSPitch = ttsPitch.TranslateTTSPitch();
             TTSSpeed = ttsSpeed.TranslateTTSSpeed();
-            TTSEffect = ttsEffect;
-
-            Message = message;
-        }
-
-        public NotificationTTS(
-            TTSVoice ttsVoice,
-            TTSPitch ttsPitch,
-            TTSSpeed ttsSpeed,
-            string ttsEffect,
-            string message)
-        { 
-            TTSVoice = ttsVoice;
-            TTSPitch = ttsPitch;
-            TTSSpeed = ttsSpeed;
             TTSEffect = ttsEffect;
 
             Message = message;

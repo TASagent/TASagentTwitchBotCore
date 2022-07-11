@@ -780,6 +780,9 @@ public class FullActivityProvider :
     #endregion IFollowerHandler
     #region ITTSHandler
 
+    bool ITTSHandler.IsTTSVoiceValid(string voice) => ttsRenderer.IsTTSVoiceValid(voice);
+    TTSVoiceInfo? ITTSHandler.GetTTSVoiceInfo(string voice) => ttsRenderer.GetTTSVoiceInfo(voice);
+
     Task<bool> ITTSHandler.SetTTSEnabled(bool enabled) => ttsRenderer.SetTTSEnabled(enabled);
 
     public virtual async void HandleTTS(
