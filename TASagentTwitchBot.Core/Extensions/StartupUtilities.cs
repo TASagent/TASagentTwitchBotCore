@@ -4,6 +4,25 @@ namespace TASagentTwitchBot.Core.Extensions;
 
 public static class StartupUtilities
 {
+    public static void UseDocumentsOverrideContent(this WebApplication app)
+    {
+        string wwwRootPath = BGC.IO.DataManagement.PathForDataDirectory("wwwroot");
+
+        PhysicalFileProvider fileProvider = new PhysicalFileProvider(wwwRootPath);
+
+        app.UseDefaultFiles(new DefaultFilesOptions
+        {
+            FileProvider = fileProvider,
+            RequestPath = ""
+        });
+
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = fileProvider,
+            RequestPath = ""
+        });
+    }
+
     public static void UseCoreLibraryContent(
         this WebApplication app,
         string libraryName,
