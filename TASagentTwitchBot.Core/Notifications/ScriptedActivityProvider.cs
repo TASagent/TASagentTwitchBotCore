@@ -19,18 +19,22 @@ public partial class ScriptedActivityProvider :
     IScriptedComponent,
     IDisposable
 {
+    private readonly ScriptedNotificationConfig notificationConfig;
+
     private readonly ICommunication communication;
-    private readonly IActivityDispatcher activityDispatcher;
-    private readonly Audio.ISoundEffectSystem soundEffectSystem;
     private readonly Audio.IAudioPlayer audioPlayer;
+
+    private readonly Audio.ISoundEffectSystem soundEffectSystem;
     private readonly Audio.Effects.IAudioEffectSystem audioEffectSystem;
+    private readonly Bits.ICheerHelper cheerHelper;
+    private readonly INotificationImageHelper notificationImageHelper;
+
+    private readonly IActivityDispatcher activityDispatcher;
     private readonly ITTSRenderer ttsRenderer;
     private readonly NotificationServer notificationServer;
-    private readonly Bits.ICheerHelper cheerHelper;
+
     private readonly IScriptHelper scriptHelper;
     private readonly Database.IUserHelper userHelper;
-
-    private readonly ScriptedNotificationConfig notificationConfig;
 
     private readonly CancellationTokenSource generalTokenSource = new CancellationTokenSource();
 
@@ -63,10 +67,11 @@ public partial class ScriptedActivityProvider :
     public ScriptedActivityProvider(
         ScriptedNotificationConfig notificationConfig,
         ICommunication communication,
-        Audio.ISoundEffectSystem soundEffectSystem,
         Audio.IAudioPlayer audioPlayer,
+        Audio.ISoundEffectSystem soundEffectSystem,
         Audio.Effects.IAudioEffectSystem audioEffectSystem,
         Bits.ICheerHelper cheerHelper,
+        INotificationImageHelper notificationImageHelper,
         IActivityDispatcher activityDispatcher,
         ITTSRenderer ttsRenderer,
         NotificationServer notificationServer,
@@ -76,11 +81,12 @@ public partial class ScriptedActivityProvider :
         this.notificationConfig = notificationConfig;
 
         this.communication = communication;
+        this.audioPlayer = audioPlayer;
 
         this.soundEffectSystem = soundEffectSystem;
         this.audioEffectSystem = audioEffectSystem;
-        this.audioPlayer = audioPlayer;
         this.cheerHelper = cheerHelper;
+        this.notificationImageHelper = notificationImageHelper;
 
         this.activityDispatcher = activityDispatcher;
         this.ttsRenderer = ttsRenderer;
@@ -358,7 +364,7 @@ public partial class ScriptedActivityProvider :
                     alertData: alertData,
                     description: $"Sub: {subscriber.TwitchUserName} \"{message}\"",
                     requestingUserId: subscriber.TwitchUserId,
-                    getDefaultImage: notificationServer.GetNextImageURL,
+                    getDefaultImage: notificationImageHelper.GetRandomDefaultImageURL,
                     approved: approved);
             }
             catch (Exception ex)
@@ -453,7 +459,7 @@ public partial class ScriptedActivityProvider :
                     alertData: alertData,
                     description: $"Raid: {raider.TwitchUserName} with {count} viewers",
                     requestingUserId: raider.TwitchUserId,
-                    getDefaultImage: notificationServer.GetNextImageURL,
+                    getDefaultImage: notificationImageHelper.GetRandomDefaultImageURL,
                     approved: approved);
             }
             catch (Exception ex)
@@ -516,7 +522,7 @@ public partial class ScriptedActivityProvider :
                     alertData: alertData,
                     description: $"Gift Sub From {sender.TwitchUserName} To {recipient.TwitchUserName}",
                     requestingUserId: sender.TwitchUserId,
-                    getDefaultImage: notificationServer.GetNextImageURL,
+                    getDefaultImage: notificationImageHelper.GetRandomDefaultImageURL,
                     approved: approved);
             }
             catch (Exception ex)
@@ -566,7 +572,7 @@ public partial class ScriptedActivityProvider :
                     alertData: alertData,
                     description: $"Gift Sub From Anon To {recipient.TwitchUserName}",
                     requestingUserId: "",
-                    getDefaultImage: notificationServer.GetNextImageURL,
+                    getDefaultImage: notificationImageHelper.GetRandomDefaultImageURL,
                     approved: approved);
             }
             catch (Exception ex)
@@ -607,7 +613,7 @@ public partial class ScriptedActivityProvider :
                     alertData: alertData,
                     description: $"Follower: {follower.TwitchUserName}",
                     requestingUserId: follower.TwitchUserId,
-                    getDefaultImage: notificationServer.GetNextImageURL,
+                    getDefaultImage: notificationImageHelper.GetRandomDefaultImageURL,
                     approved: approved);
             }
             catch (Exception ex)

@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.SignalR;
-using BGC.Collections.Generic;
 
 using TASagentTwitchBot.Core.Web.Hubs;
 
@@ -10,35 +9,13 @@ public class NotificationServer
     private readonly IHubContext<OverlayHub> _overlayHubContext;
     private readonly IHubContext<TTSMarqueeHub> _ttsMarqueeHubContext;
 
-    private const string ASSET_URL = "/Assets/Images";
-
-    private readonly string imagePath;
-
-    private readonly DepletableBag<string> imageURLs;
-
     public NotificationServer(
         IHubContext<OverlayHub> overlayHubContext,
-        IHubContext<TTSMarqueeHub> ttsMarqueeHubContext,
-        IWebHostEnvironment env)
+        IHubContext<TTSMarqueeHub> ttsMarqueeHubContext)
     {
         _overlayHubContext = overlayHubContext;
         _ttsMarqueeHubContext = ttsMarqueeHubContext;
-
-        imagePath = Path.Combine(env.WebRootPath, "Assets", "Images");
-
-        imageURLs = new DepletableBag<string>()
-        {
-            AutoRefill = true
-        };
-
-        foreach (string imagePath in Directory.GetFiles(imagePath))
-        {
-            string url = $"{ASSET_URL}/{Path.GetFileName(imagePath)}";
-            imageURLs.Add(url);
-        }
     }
-
-    public string GetNextImageURL() => imageURLs.PopNext()!;
 
     public async Task ShowNotificationAsync(NotificationMessage message)
     {

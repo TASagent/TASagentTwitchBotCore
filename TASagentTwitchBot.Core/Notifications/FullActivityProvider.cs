@@ -22,6 +22,7 @@ public class FullActivityProvider :
     protected readonly Audio.Effects.IAudioEffectSystem audioEffectSystem;
     protected readonly ITTSRenderer ttsRenderer;
     protected readonly NotificationServer notificationServer;
+    protected readonly INotificationImageHelper notificationImageHelper;
     protected readonly Bits.ICheerHelper cheerHelper;
 
     protected readonly NotificationConfig notificationConfig;
@@ -44,6 +45,7 @@ public class FullActivityProvider :
         IActivityDispatcher activityDispatcher,
         ITTSRenderer ttsRenderer,
         NotificationServer notificationServer,
+        INotificationImageHelper notificationImageHelper,
         Database.IUserHelper userHelper)
     {
         this.notificationConfig = notificationConfig;
@@ -58,6 +60,7 @@ public class FullActivityProvider :
         this.activityDispatcher = activityDispatcher;
         this.ttsRenderer = ttsRenderer;
         this.notificationServer = notificationServer;
+        this.notificationImageHelper = notificationImageHelper;
 
         this.userHelper = userHelper;
     }
@@ -147,7 +150,7 @@ public class FullActivityProvider :
         int tier)
     {
         return Task.FromResult<NotificationMessage>(new ImageNotificationMessage(
-            image: notificationServer.GetNextImageURL(),
+            image: notificationImageHelper.GetRandomDefaultImageURL(),
             duration: 5000,
             message: GetSubscriberNotificationMessage(subscriber, message, monthCount, tier)));
     }
@@ -393,7 +396,7 @@ public class FullActivityProvider :
         int count)
     {
         return Task.FromResult<NotificationMessage>(new ImageNotificationMessage(
-            image: notificationServer.GetNextImageURL(),
+            image: notificationImageHelper.GetRandomDefaultImageURL(),
             duration: 10_000,
             message: $"WOW! {count} raiders incoming from {HttpUtility.HtmlEncode(raider.TwitchUserName)}!"));
     }
@@ -494,7 +497,7 @@ public class FullActivityProvider :
         int months)
     {
         return Task.FromResult<NotificationMessage>(new ImageNotificationMessage(
-            image: notificationServer.GetNextImageURL(),
+            image: notificationImageHelper.GetRandomDefaultImageURL(),
             duration: 5_000,
             message: GetGiftSubNotificationMessage(sender, recipient, tier, months)));
     }
@@ -620,7 +623,7 @@ public class FullActivityProvider :
         int months)
     {
         return Task.FromResult<NotificationMessage>(new ImageNotificationMessage(
-            image: notificationServer.GetNextImageURL(),
+            image: notificationImageHelper.GetRandomDefaultImageURL(),
             duration: 5_000,
             message: GetAnonGiftSubNotificationMessage(recipient, tier, months)));
     }
@@ -739,7 +742,7 @@ public class FullActivityProvider :
     protected virtual Task<NotificationMessage> GetFollowNotificationRequest(Database.User follower)
     {
         return Task.FromResult<NotificationMessage>(new ImageNotificationMessage(
-            image: notificationServer.GetNextImageURL(),
+            image: notificationImageHelper.GetRandomDefaultImageURL(),
             duration: 4_000,
             message: GetFollowNotificationMessage(follower)));
     }
