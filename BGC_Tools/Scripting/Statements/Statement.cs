@@ -253,7 +253,7 @@ public abstract class Statement : IExecutable
                     tokens.CautiousAdvance();
                     IExecutable returnStatement = new ReturnStatement(
                         keywordToken: kwToken,
-                        returnValue: Expression.ParseNextGetterExpression(tokens, context),
+                        returnValue: Expression.ParseNextOptionalGetterExpression(tokens, context),
                         context: context);
                     tokens.AssertAndAdvance(Separator.Semicolon, false);
                     return returnStatement;

@@ -2,6 +2,28 @@
 
 public static class Expression
 {
+    public static IValueGetter? ParseNextOptionalGetterExpression(
+        IEnumerator<Token> tokens,
+        CompilationContext context)
+    {
+        Token currentToken = tokens.Current;
+        IExpression? nextExpression = ParseNextExpression(tokens, context);
+
+        if (nextExpression is null)
+        {
+            return null;
+        }
+
+        if (nextExpression is not IValueGetter nextValueGetter)
+        {
+            throw new ScriptParsingException(
+                source: currentToken,
+                message: $"Expected a Value expression, but found: {nextExpression}");
+        }
+
+        return nextValueGetter;
+    }
+
     public static IValueGetter ParseNextGetterExpression(
         IEnumerator<Token> tokens,
         CompilationContext context)

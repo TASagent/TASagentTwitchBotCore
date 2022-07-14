@@ -2,12 +2,12 @@
 
 public class ReturnStatement : Statement
 {
-    private readonly IValueGetter returnValue;
+    private readonly IValueGetter? returnValue;
     private readonly Type returnType;
 
     public ReturnStatement(
         KeywordToken keywordToken,
-        IValueGetter returnValue,
+        IValueGetter? returnValue,
         CompilationContext context)
     {
         this.returnValue = returnValue;
@@ -31,7 +31,7 @@ public class ReturnStatement : Statement
         }
         else
         {
-            if (returnType.IsAssignableFrom(returnValue.GetValueType()))
+            if (returnType.IsAssignableFrom(returnValue!.GetValueType()))
             {
                 context.PushReturnValue(returnValue.GetAs<object>(context));
             }
