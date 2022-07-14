@@ -1,7 +1,4 @@
-﻿using System.Text;
-using System.Text.RegularExpressions;
-
-using TASagentTwitchBot.Core.Database;
+﻿using TASagentTwitchBot.Core.Database;
 
 namespace TASagentTwitchBot.Core.Commands;
 
@@ -54,6 +51,24 @@ public class CustomCommands : ICommandContainer
         commandRegistrar.RegisterScopedCommand("disable", "command", (chatter, remainingCommand) => SetCommandState(chatter, remainingCommand, false));
         commandRegistrar.RegisterScopedCommand("command", "disable", (chatter, remainingCommand) => SetCommandState(chatter, remainingCommand, false));
 
+        commandRegistrar.RegisterGlobalCommand("showcommand", (chatter, remainingCommand) => SetCommandShownState(chatter, remainingCommand, true));
+        commandRegistrar.RegisterScopedCommand("show", "command", (chatter, remainingCommand) => SetCommandShownState(chatter, remainingCommand, true));
+        commandRegistrar.RegisterScopedCommand("command", "show", (chatter, remainingCommand) => SetCommandShownState(chatter, remainingCommand, true));
+        commandRegistrar.RegisterGlobalCommand("unhidecommand", (chatter, remainingCommand) => SetCommandShownState(chatter, remainingCommand, true));
+        commandRegistrar.RegisterScopedCommand("unhide", "command", (chatter, remainingCommand) => SetCommandShownState(chatter, remainingCommand, true));
+        commandRegistrar.RegisterScopedCommand("command", "unhide", (chatter, remainingCommand) => SetCommandShownState(chatter, remainingCommand, true));
+
+        commandRegistrar.RegisterGlobalCommand("hidecommand", (chatter, remainingCommand) => SetCommandShownState(chatter, remainingCommand, false));
+        commandRegistrar.RegisterScopedCommand("hide", "command", (chatter, remainingCommand) => SetCommandShownState(chatter, remainingCommand, false));
+        commandRegistrar.RegisterScopedCommand("command", "hide", (chatter, remainingCommand) => SetCommandShownState(chatter, remainingCommand, false));
+
+        commandRegistrar.RegisterGlobalCommand("listcommand", ListCommands);
+        commandRegistrar.RegisterGlobalCommand("listcommands", ListCommands);
+        commandRegistrar.RegisterScopedCommand("list", "command", ListCommands);
+        commandRegistrar.RegisterScopedCommand("list", "commands", ListCommands);
+        commandRegistrar.RegisterScopedCommand("command", "list", ListCommands);
+        commandRegistrar.RegisterScopedCommand("commands", "list", ListCommands);
+
         using IServiceScope scope = scopeFactory.CreateScope();
         BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
 
@@ -71,7 +86,7 @@ public class CustomCommands : ICommandContainer
         using IServiceScope scope = scopeFactory.CreateScope();
         BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
 
-        foreach (CustomTextCommand customTextCommand in db.CustomTextCommands.Where(x => x.Enabled))
+        foreach (CustomTextCommand customTextCommand in db.CustomTextCommands.Where(x => x.Enabled && x.Shown))
         {
             yield return customTextCommand.Command;
         }
@@ -152,7 +167,8 @@ public class CustomCommands : ICommandContainer
         {
             Command = command,
             Text = message,
-            Enabled = true
+            Enabled = true,
+            Shown = true
         };
 
         db.CustomTextCommands.Add(newTextCommand);
@@ -269,6 +285,63 @@ public class CustomCommands : ICommandContainer
         return SetCommandState(chatter, remainingCommand[0].ToLowerInvariant(), enabled);
     }
 
+    private Task SetCommandShownState(IRC.TwitchChatter chatter, string[] remainingCommand, bool shown)
+    {
+        if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
+        {
+            //Only Admins and Mods can Add commands
+            communication.SendPublicChatMessage($"I'm afraid I can't let you do that, @{chatter.User.TwitchUserName}.");
+            return Task.CompletedTask;
+        }
+
+        if (remainingCommand is null || remainingCommand.Length != 1)
+        {
+            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, {(shown ? "Show Command" : "Hide Command")} requires a command.");
+            return Task.CompletedTask;
+        }
+
+        return SetCommandShownState(chatter, remainingCommand[0].ToLowerInvariant(), shown);
+    }
+
+    private async Task SetCommandShownState(IRC.TwitchChatter chatter, string command, bool shown)
+    {
+        if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
+        {
+            //Only Admins and Mods can Change command visibility
+            communication.SendPublicChatMessage($"I'm afraid I can't let you do that, @{chatter.User.TwitchUserName}.");
+            return;
+        }
+
+        if (command.StartsWith('!'))
+        {
+            //Remove leading Bang
+            command = command[1..];
+        }
+
+        using IServiceScope scope = scopeFactory.CreateScope();
+        BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+
+        CustomTextCommand? editedTextCommand = db.CustomTextCommands.Where(x => x.Command == command).FirstOrDefault();
+
+        if (editedTextCommand is null)
+        {
+            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, cannot {(shown ? "show" : "hide")} custom command !{command} - does not exists.");
+            return;
+        }
+
+        if (editedTextCommand.Shown != shown)
+        {
+            editedTextCommand.Shown = shown;
+            await db.SaveChangesAsync();
+
+            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, {(shown ? "Showing" : "Hiding")} !{command} command.");
+        }
+        else
+        {
+            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, !{command} command already {(shown ? "shown" : "hidden")}.");
+        }
+    }
+
     private async Task SetCommandState(IRC.TwitchChatter chatter, string command, bool enabled)
     {
         if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
@@ -369,5 +442,48 @@ public class CustomCommands : ICommandContainer
         }
 
         communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, Edited !{command} command.");
+    }
+
+    private Task ListCommands(IRC.TwitchChatter chatter, string[] remainingCommand)
+    {
+        if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
+        {
+            //Only Admins and Mods can List commands
+            communication.SendPublicChatMessage($"I'm afraid I can't let you do that, @{chatter.User.TwitchUserName}.");
+            return Task.CompletedTask;
+        }
+
+        using IServiceScope scope = scopeFactory.CreateScope();
+        BaseDatabaseContext db = scope.ServiceProvider.GetRequiredService<BaseDatabaseContext>();
+
+        string enabledShownCommands = string.Join(", ", db.CustomTextCommands.Where(x => x.Enabled && x.Shown).Select(x => x.Command));
+        string enabledHiddenCommands = string.Join(", ", db.CustomTextCommands.Where(x => x.Enabled && !x.Shown).Select(x => x.Command));
+        string disabledCommands = string.Join(", ", db.CustomTextCommands.Where(x => !x.Enabled).Select(x => x.Command));
+
+        string response = "";
+
+        if (!string.IsNullOrEmpty(enabledShownCommands))
+        {
+            response += "Enabled Commands: " + enabledShownCommands + " ";
+        }
+
+        if (!string.IsNullOrEmpty(enabledHiddenCommands))
+        {
+            response += "Hidden Commands: " + enabledHiddenCommands + " ";
+        }
+
+        if (!string.IsNullOrEmpty(disabledCommands))
+        {
+            response += "Disabled Commands: " + disabledCommands;
+        }
+
+        if (string.IsNullOrEmpty(response))
+        {
+            communication.SendPublicChatMessage($"No commands defined");
+            return Task.CompletedTask;
+        }
+
+        communication.SendPublicChatMessage(response);
+        return Task.CompletedTask;
     }
 }

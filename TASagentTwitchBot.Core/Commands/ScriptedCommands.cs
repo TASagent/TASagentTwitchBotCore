@@ -53,6 +53,25 @@ public partial class ScriptedCommands : ICommandContainer, IScriptedComponent
         commandRegistrar.RegisterScopedCommand("disable", "script", (chatter, remainingCommand) => SetScriptState(chatter, remainingCommand, false));
         commandRegistrar.RegisterScopedCommand("script", "disable", (chatter, remainingCommand) => SetScriptState(chatter, remainingCommand, false));
 
+        commandRegistrar.RegisterGlobalCommand("showscript", (chatter, remainingCommand) => SetScriptShownState(chatter, remainingCommand, true));
+        commandRegistrar.RegisterScopedCommand("show", "script", (chatter, remainingCommand) => SetScriptShownState(chatter, remainingCommand, true));
+        commandRegistrar.RegisterScopedCommand("script", "show", (chatter, remainingCommand) => SetScriptShownState(chatter, remainingCommand, true));
+        commandRegistrar.RegisterGlobalCommand("unhidescript", (chatter, remainingCommand) => SetScriptShownState(chatter, remainingCommand, true));
+        commandRegistrar.RegisterScopedCommand("unhide", "script", (chatter, remainingCommand) => SetScriptShownState(chatter, remainingCommand, true));
+        commandRegistrar.RegisterScopedCommand("script", "unhide", (chatter, remainingCommand) => SetScriptShownState(chatter, remainingCommand, true));
+
+        commandRegistrar.RegisterGlobalCommand("hidescript", (chatter, remainingCommand) => SetScriptShownState(chatter, remainingCommand, false));
+        commandRegistrar.RegisterScopedCommand("hide", "script", (chatter, remainingCommand) => SetScriptShownState(chatter, remainingCommand, false));
+        commandRegistrar.RegisterScopedCommand("script", "hide", (chatter, remainingCommand) => SetScriptShownState(chatter, remainingCommand, false));
+
+        commandRegistrar.RegisterGlobalCommand("listscript", ListScripts);
+        commandRegistrar.RegisterGlobalCommand("listscripts", ListScripts);
+        commandRegistrar.RegisterScopedCommand("list", "script", ListScripts);
+        commandRegistrar.RegisterScopedCommand("list", "scripts", ListScripts);
+        commandRegistrar.RegisterScopedCommand("script", "list", ListScripts);
+        commandRegistrar.RegisterScopedCommand("scripts", "list", ListScripts);
+
+
         foreach (ScriptedCommandsConfig.ScriptedCommand scriptedCommand in scriptedCommandsConfig.ScriptedCommands.Where(x => x.Enabled))
         {
             commandRegistrar.RegisterCustomCommand(scriptedCommand.ScriptName, (chatter, remainingCommand) => HandleScript(chatter, remainingCommand, scriptedCommand.ScriptName));
@@ -143,7 +162,7 @@ public partial class ScriptedCommands : ICommandContainer, IScriptedComponent
 
     public IEnumerable<string> GetPublicCommands()
     {
-        foreach (ScriptedCommandsConfig.ScriptedCommand scriptedCommand in scriptedCommandsConfig.ScriptedCommands.Where(x => x.Enabled))
+        foreach (ScriptedCommandsConfig.ScriptedCommand scriptedCommand in scriptedCommandsConfig.ScriptedCommands.Where(x => x.Enabled && x.Shown))
         {
             yield return scriptedCommand.ScriptName;
         }
@@ -403,6 +422,102 @@ public partial class ScriptedCommands : ICommandContainer, IScriptedComponent
             communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, !{scriptName} script already {(enabled ? "enabled" : "disabled")}.");
         }
 
+        return Task.CompletedTask;
+    }
+
+    private Task SetScriptShownState(IRC.TwitchChatter chatter, string[] remainingCommand, bool shown)
+    {
+        if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
+        {
+            //Only Admins and Mods can edit scripts
+            communication.SendPublicChatMessage($"I'm afraid I can't let you do that, @{chatter.User.TwitchUserName}.");
+            return Task.CompletedTask;
+        }
+
+        if (remainingCommand is null || remainingCommand.Length != 1)
+        {
+            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, {(shown ? "Show Script" : "Hide Script")} requires a script name.");
+            return Task.CompletedTask;
+        }
+
+        return SetScriptShownState(chatter, remainingCommand[0].ToLowerInvariant(), shown);
+    }
+
+    private Task SetScriptShownState(IRC.TwitchChatter chatter, string scriptName, bool shown)
+    {
+        if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
+        {
+            //Only Admins and Mods can edit scripts
+            communication.SendPublicChatMessage($"I'm afraid I can't let you do that, @{chatter.User.TwitchUserName}.");
+            return Task.CompletedTask;
+        }
+
+        if (scriptName.StartsWith('!'))
+        {
+            //Remove leading Bang
+            scriptName = scriptName[1..];
+        }
+
+        ScriptedCommandsConfig.ScriptedCommand? editedScript = scriptedCommandsConfig.ScriptedCommands.Where(x => string.Equals(x.ScriptName, scriptName, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+
+        if (editedScript is null)
+        {
+            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, cannot {(shown ? "show" : "hide")} custom script !{scriptName} - does not exists.");
+            return Task.CompletedTask;
+        }
+
+        if (editedScript.Shown != shown)
+        {
+            editedScript.Shown = shown;
+            scriptedCommandsConfig.Serialize();
+
+            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, {(shown ? "Showing" : "Hiding")} !{scriptName} script.");
+        }
+        else
+        {
+            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, !{scriptName} script already {(shown ? "shown" : "hidden")}.");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task ListScripts(IRC.TwitchChatter chatter, string[] remainingCommand)
+    {
+        if (chatter.User.AuthorizationLevel < AuthorizationLevel.Moderator)
+        {
+            //Only Admins and Mods can List commands
+            communication.SendPublicChatMessage($"I'm afraid I can't let you do that, @{chatter.User.TwitchUserName}.");
+            return Task.CompletedTask;
+        }
+
+        string enabledShownScripts = string.Join(", ", scriptedCommandsConfig.ScriptedCommands.Where(x => x.Enabled && x.Shown).Select(x => x.ScriptName));
+        string enabledHiddenScripts = string.Join(", ", scriptedCommandsConfig.ScriptedCommands.Where(x => x.Enabled && !x.Shown).Select(x => x.ScriptName));
+        string disabledScripts = string.Join(", ", scriptedCommandsConfig.ScriptedCommands.Where(x => !x.Enabled).Select(x => x.ScriptName));
+
+        string response = "";
+
+        if (!string.IsNullOrEmpty(enabledShownScripts))
+        {
+            response += "Enabled Scripts: " + enabledShownScripts + " ";
+        }
+
+        if (!string.IsNullOrEmpty(enabledHiddenScripts))
+        {
+            response += "Hidden Scripts: " + enabledHiddenScripts + " ";
+        }
+
+        if (!string.IsNullOrEmpty(disabledScripts))
+        {
+            response += "Disabled Scripts: " + disabledScripts;
+        }
+
+        if (string.IsNullOrEmpty(response))
+        {
+            communication.SendPublicChatMessage($"No scripts defined");
+            return Task.CompletedTask;
+        }
+
+        communication.SendPublicChatMessage(response);
         return Task.CompletedTask;
     }
 }

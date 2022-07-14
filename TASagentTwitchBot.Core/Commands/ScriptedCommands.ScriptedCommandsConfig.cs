@@ -45,6 +45,7 @@ public partial class ScriptedCommands
         {
             public string ScriptName { get; init; } = "";
             public bool Enabled { get; set; } = true;
+            public bool Shown { get; set; } = true;
             public string ScriptText { get; set; } = DEFAULT_SCRIPT;
 
             [JsonIgnore]

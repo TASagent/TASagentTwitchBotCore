@@ -60,6 +60,13 @@ public class NotificationImageHelper : INotificationImageHelper
 
         DepletableBag<string> imageURLs = new DepletableBag<string>(true);
 
+        string assetPath = Path.Combine(assetsPath, directory);
+
+        if (!Directory.Exists(assetPath))
+        {
+            Directory.CreateDirectory(assetPath);
+        }
+
         foreach (string imagePath in Directory.GetFiles(Path.Combine(assetsPath, directory)))
         {
             imageURLs.Add($"/Assets/{directory}/{Path.GetFileName(imagePath)}");

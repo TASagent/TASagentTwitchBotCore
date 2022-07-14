@@ -40,5 +40,6 @@ public class CustomTextCommand
 
     public string Command { get; set; } = null!;
     public string Text { get; set; } = null!;
-    public bool Enabled { get; set; }
+    public bool Enabled { get; set; } = true;
+    public bool Shown { get; set; } = true;
 }

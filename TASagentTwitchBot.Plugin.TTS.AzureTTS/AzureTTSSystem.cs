@@ -10,13 +10,18 @@ namespace TASagentTwitchBot.Plugin.TTS.AzureTTS;
 
 public abstract class AzureTTSSystem : ITTSSystem
 {
-    private static IReadOnlyList<string>? voices = null;
+    private IReadOnlyList<string>? voices = null;
 
     public abstract string SystemName { get; }
 
-    public IEnumerable<string> GetVoices()
+    protected void FinalizeInitialization(bool enabled)
     {
-        if (voices is null)
+        if (voices is not null)
+        {
+            throw new Exception($"Azure TTS System already initialized");
+        }
+
+        if (enabled)
         {
             List<string> voicesList = new List<string>((int)AzureTTSVoice.MAX);
             for (AzureTTSVoice voice = 0; voice < AzureTTSVoice.MAX; voice++)
@@ -26,9 +31,13 @@ public abstract class AzureTTSSystem : ITTSSystem
 
             voices = voicesList;
         }
-
-        return voices;
+        else
+        {
+            voices = Array.Empty<string>();
+        }
     }
+
+    public IEnumerable<string> GetVoices() => voices ?? throw new Exception($"GetVoices called before FinalizeInitialization");
 
     public string GetDefaultVoice() => AzureTTSVoice.en_US_GuyRUS.Serialize();
 
@@ -44,7 +53,7 @@ public abstract class AzureTTSSystem : ITTSSystem
 public class AzureTTSLocalSystem : AzureTTSSystem
 {
     private readonly ICommunication communication;
-    private readonly SpeechConfig azureClient;
+    private readonly SpeechConfig? azureClient;
 
     public override string SystemName => "Azure Speech Synthesis (Local)";
 
@@ -53,18 +62,29 @@ public class AzureTTSLocalSystem : AzureTTSSystem
     {
         this.communication = communication;
 
-
-        string azureCredentialsPath = BGC.IO.DataManagement.PathForDataFile("Config", "azureSpeechSynthesisCredentials.json");
-
-        if (!File.Exists(azureCredentialsPath))
+        try
         {
-            throw new FileNotFoundException($"Could not find credentials for Azure SpeechSynthesis at {azureCredentialsPath}");
+            string azureCredentialsPath = BGC.IO.DataManagement.PathForDataFile("Config", "azureSpeechSynthesisCredentials.json");
+
+            if (!File.Exists(azureCredentialsPath))
+            {
+                throw new FileNotFoundException($"Could not find credentials for Azure SpeechSynthesis at {azureCredentialsPath}");
+            }
+
+            AzureSpeechSynthesisCredentials azureCredentials = JsonSerializer.Deserialize<AzureSpeechSynthesisCredentials>(File.ReadAllText(azureCredentialsPath))!;
+
+            azureClient = SpeechConfig.FromSubscription(azureCredentials.AccessKey, azureCredentials.Region);
+            azureClient.SetSpeechSynthesisOutputFormat(SpeechSynthesisOutputFormat.Audio24Khz48KBitRateMonoMp3);
+
+            FinalizeInitialization(true);
         }
+        catch (Exception ex)
+        {
+            communication.SendErrorMessage($"Error initializing Local Azure TTS, Disabling system: {ex.Message}");
+            azureClient = null;
 
-        AzureSpeechSynthesisCredentials azureCredentials = JsonSerializer.Deserialize<AzureSpeechSynthesisCredentials>(File.ReadAllText(azureCredentialsPath))!;
-
-        azureClient = SpeechConfig.FromSubscription(azureCredentials.AccessKey, azureCredentials.Region);
-        azureClient.SetSpeechSynthesisOutputFormat(SpeechSynthesisOutputFormat.Audio24Khz48KBitRateMonoMp3);
+            FinalizeInitialization(false);
+        }
     }
 
     public override TTSSystemRenderer CreateRenderer(
@@ -74,7 +94,7 @@ public class AzureTTSLocalSystem : AzureTTSSystem
         Effect effectsChain)
     {
         return new AzureTTSLocalRenderer(
-            azureClient: azureClient,
+            azureClient: azureClient!,
             communication: communication,
             voice: voice.SafeTranslateAzureTTSVoice(),
             pitch: pitch,
@@ -96,6 +116,8 @@ public class AzureTTSWebSystem : AzureTTSSystem
     {
         this.ttsWebRequestHandler = ttsWebRequestHandler;
         this.communication = communication;
+
+        FinalizeInitialization(true);
     }
 
 
