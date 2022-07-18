@@ -113,31 +113,31 @@ public partial class ScriptedActivityProvider
 
         private static readonly FunctionSignature[] subscriptionFunctions = new FunctionSignature[] {
             new FunctionSignature("GetAlertData", typeof(IAlert),
-                new VariableData("user", typeof(ScriptingUser)),
-                new VariableData("sub", typeof(NotificationSub)))};
+                new ArgumentData("user", typeof(ScriptingUser)),
+                new ArgumentData("sub", typeof(NotificationSub)))};
 
         private static readonly FunctionSignature[] cheerFunctions = new FunctionSignature[] {
             new FunctionSignature("GetAlertData", typeof(IAlert),
-                new VariableData("user", typeof(ScriptingUser)),
-                new VariableData("cheer", typeof(NotificationCheer)))};
+                new ArgumentData("user", typeof(ScriptingUser)),
+                new ArgumentData("cheer", typeof(NotificationCheer)))};
 
         private static readonly FunctionSignature[] raidFunctions = new FunctionSignature[] {
             new FunctionSignature("GetAlertData", typeof(IAlert),
-                new VariableData("user", typeof(ScriptingUser)),
-                new VariableData("raiders", typeof(int)))};
+                new ArgumentData("user", typeof(ScriptingUser)),
+                new ArgumentData("raiders", typeof(int)))};
 
         private static readonly FunctionSignature[] giftSubFunctions = new FunctionSignature[] {
             new FunctionSignature("GetAlertData", typeof(IAlert),
-                new VariableData("sender", typeof(ScriptingUser)),
-                new VariableData("recipient", typeof(ScriptingUser)),
-                new VariableData("sub", typeof(NotificationGiftSub))),
+                new ArgumentData("sender", typeof(ScriptingUser)),
+                new ArgumentData("recipient", typeof(ScriptingUser)),
+                new ArgumentData("sub", typeof(NotificationGiftSub))),
             new FunctionSignature("GetAnonAlertData", typeof(IAlert),
-                new VariableData("recipient", typeof(ScriptingUser)),
-                new VariableData("sub", typeof(NotificationGiftSub)))};
+                new ArgumentData("recipient", typeof(ScriptingUser)),
+                new ArgumentData("sub", typeof(NotificationGiftSub)))};
 
         private static readonly FunctionSignature[] followFunctions = new FunctionSignature[] {
             new FunctionSignature("GetAlertData", typeof(IAlert),
-                new VariableData("follower", typeof(ScriptingUser)))};
+                new ArgumentData("follower", typeof(ScriptingUser)))};
 
         private const string DEFAULT_SUB_SCRIPT =
 @"//Default Sub Script

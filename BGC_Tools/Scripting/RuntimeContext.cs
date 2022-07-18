@@ -105,11 +105,18 @@ public abstract class RuntimeContext
         throw new ScriptRuntimeException($"Variable {key} was set but never declared.");
     }
 
-    public virtual void RunVoidFunction(string functionName, object[] arguments) =>
+    public virtual void RunVoidFunction(string functionName, object?[] arguments) =>
         ScriptContext.RunVoidFunction(functionName, arguments);
 
-    public virtual object RunFunction(string functionName, object[] arguments) =>
+    public virtual object RunFunction(string functionName, object?[] arguments) =>
         ScriptContext.RunFunction(functionName, arguments);
+
+
+    public virtual void RunVoidFunction(Guid functionId, object?[] arguments) =>
+        ScriptContext.RunVoidFunction(functionId, arguments);
+
+    public virtual object RunFunction(Guid functionId, object?[] arguments) =>
+        ScriptContext.RunFunction(functionId, arguments);
 
     public virtual void Clear() => valueDictionary.Clear();
 }
@@ -129,9 +136,9 @@ public class GlobalRuntimeContext : RuntimeContext
     protected override FunctionRuntimeContext FunctionContext =>
         throw new NotSupportedException("Cannot retrieve FunctionContext from GlobalContext");
 
-    public override void RunVoidFunction(string functionName, object[] arguments) =>
+    public override void RunVoidFunction(string functionName, object?[] arguments) =>
         throw new NotSupportedException("Cannot Run Functions from GlobalContext");
-    public override object RunFunction(string functionName, object[] arguments) =>
+    public override object RunFunction(string functionName, object?[] arguments) =>
         throw new NotSupportedException("Cannot Run Functions from GlobalContext");
 
     public override void PushReturnValue(object? value) => stashedReturnValue = value;
@@ -254,11 +261,18 @@ public class ScriptRuntimeContext : RuntimeContext
         GlobalContext.DeclareVariable(key, type, value);
     }
 
-    public override void RunVoidFunction(string functionName, object[] arguments) =>
+    public override void RunVoidFunction(string functionName, object?[] arguments) =>
         script.ExecuteFunction(functionName, this, arguments);
 
-    public override object RunFunction(string functionName, object[] arguments) =>
+    public override object RunFunction(string functionName, object?[] arguments) =>
         script.ExecuteFunction<object>(functionName, this, arguments);
+
+
+    public override void RunVoidFunction(Guid functionId, object?[] arguments) =>
+        script.ExecuteFunction(functionId, this, arguments);
+
+    public override object RunFunction(Guid functionId, object?[] arguments) =>
+        script.ExecuteFunction<object>(functionId, this, arguments);
 }
 
 public class FunctionRuntimeContext : RuntimeContext
@@ -269,23 +283,24 @@ public class FunctionRuntimeContext : RuntimeContext
     public FunctionRuntimeContext(
         ScriptRuntimeContext scriptContext,
         in FunctionSignature functionSignature,
-        object[] arguments)
+        object?[] arguments)
         : base(scriptContext)
     {
 
         if (arguments.Length != functionSignature.arguments.Length)
         {
             throw new ScriptRuntimeException(
-                $"Tried to call function {functionSignature} with argument list: {string.Join(", ", arguments.Select(x => x.ToString()))}");
+                $"Tried to call function {functionSignature} with argument list: {string.Join(", ", arguments.Select(x => x?.ToString() ?? "null"))}");
         }
 
         for (int i = 0; i < functionSignature.arguments.Length; i++)
         {
-            if (!functionSignature.arguments[i].valueType.AssignableOrConvertableFromType(arguments[i].GetType()))
+            if (arguments[i] is not null &&
+                !functionSignature.arguments[i].valueType.AssignableOrConvertableFromType(arguments[i]!.GetType()))
             {
                 throw new ScriptRuntimeException(
                     $"Incompatible argument type for argument {functionSignature.arguments[i].identifierToken.identifier}.  " +
-                    $"Expected: {functionSignature.arguments[i].valueType.Name},  Received: {arguments[i].GetType().Name}");
+                    $"Expected: {functionSignature.arguments[i].valueType.Name},  Received: {arguments[i]!.GetType().Name}");
             }
 
             DeclareVariable(

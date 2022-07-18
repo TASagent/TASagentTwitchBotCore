@@ -717,8 +717,6 @@ public sealed class GeneralScriptReader : IDisposable
             case "NaN": return new LiteralToken<double>(line, startingColumn, double.NaN);
             case "null": return new NullLiteralToken(line, startingColumn);
 
-            case "new": return new KeywordToken(line, startingColumn, Keyword.New);
-
             //Conditionals
             case "if": return new KeywordToken(line, startingColumn, Keyword.If);
             case "else": return new KeywordToken(line, startingColumn, Keyword.Else);
@@ -741,6 +739,14 @@ public sealed class GeneralScriptReader : IDisposable
             case "extern": return new KeywordToken(line, startingColumn, Keyword.Extern);
             case "global": return new KeywordToken(line, startingColumn, Keyword.Global);
             case "const": return new KeywordToken(line, startingColumn, Keyword.Const);
+
+            //Construction Keyword
+            case "new": return new KeywordToken(line, startingColumn, Keyword.New);
+
+            //Parameter Modifiers
+            case "out": return new KeywordToken(line, startingColumn, Keyword.Out);
+            case "ref": return new KeywordToken(line, startingColumn, Keyword.Ref);
+            case "params": return new KeywordToken(line, startingColumn, Keyword.Params);
 
             case "void": return new TypeToken(line, startingColumn, "void", typeof(void));
 

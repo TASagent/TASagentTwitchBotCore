@@ -69,8 +69,8 @@ public partial class ScriptedCommands
 
         public static readonly FunctionSignature[] commandFunctions = new FunctionSignature[] {
             new FunctionSignature("HandleMessage", typeof(void),
-                new VariableData("user", typeof(ScriptingUser)),
-                new VariableData("remainingCommand", typeof(List<string>)))};
+                new ArgumentData("user", typeof(ScriptingUser)),
+                new ArgumentData("remainingCommand", typeof(List<string>)))};
 
         public const string DEFAULT_SCRIPT = @"//Default Command Script
 extern ICommunication communication;

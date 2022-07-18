@@ -12,7 +12,7 @@ public enum Keyword
     While,
     For,
     ForEach,
-    In,
+    In,  //Also a parameter modifier
 
     //Flow Control
     Continue,
@@ -28,6 +28,11 @@ public enum Keyword
 
     //Construction keyword
     New,
+
+    //Parameter Modifiers
+    Out,
+    Ref,
+    Params,
 
     MAX
 }

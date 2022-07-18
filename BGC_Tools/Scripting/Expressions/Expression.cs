@@ -408,10 +408,11 @@ public static class Expression
                     {
                         //Non-Array
 
-                        IValueGetter[] args = ParseArguments(tokens, context);
+                        InvocationArgument[] args = ParseArguments(tokens, context);
 
                         if (tokens.TestWithoutAdvancing(Separator.OpenCurlyBoi))
                         {
+                            //Initializer List
                             Type? itemType = newObjectType.GetInitializerItemType();
                             if (itemType == null)
                             {
@@ -451,11 +452,11 @@ public static class Expression
         }
     }
 
-    public static IValueGetter[] ParseArguments(
+    public static InvocationArgument[] ParseArguments(
         IEnumerator<Token> tokens,
         CompilationContext context)
     {
-        List<IValueGetter> arguments = new List<IValueGetter>();
+        List<InvocationArgument> arguments = new List<InvocationArgument>();
         tokens.AssertAndAdvance(Separator.OpenParen);
 
         if (!tokens.TestWithoutAdvancing(Separator.CloseParen))
@@ -463,14 +464,54 @@ public static class Expression
             do
             {
                 Token temp = tokens.Current;
-                IExpression? nextExpression = ParseNextExpression(tokens, context);
-                if (nextExpression is not IValueGetter nextValue)
+                ArgumentType argumentType = tokens.GetArgumentType();
+                if (argumentType == ArgumentType.Params)
                 {
                     throw new ScriptParsingException(
                         source: temp,
-                        message: $"Function Arguments must be values: {nextExpression}");
+                        message: $"Keyword params is just used for method declaration: {temp}");
                 }
-                arguments.Add(nextValue);
+
+                temp = tokens.Current;
+
+                IExpression? nextExpression = ParseNextExpression(tokens, context);
+
+                //validate
+                switch (argumentType)
+                {
+                    case ArgumentType.Standard:
+                    case ArgumentType.In:
+                        if (nextExpression is not IValueGetter)
+                        {
+                            throw new ScriptParsingException(
+                                source: temp,
+                                message: $"{argumentType} Function Arguments must be gettable values: {nextExpression}");
+                        }
+                        break;
+
+                    case ArgumentType.Ref:
+                        if (nextExpression is not IValueGetter || nextExpression is not IValueSetter)
+                        {
+                            throw new ScriptParsingException(
+                                source: temp,
+                                message: $"{argumentType} Function Arguments must be settable and gettable: {nextExpression}");
+                        }
+                        break;
+
+                    case ArgumentType.Out:
+                        if (nextExpression is not IValueSetter)
+                        {
+                            throw new ScriptParsingException(
+                                source: temp,
+                                message: $"{argumentType} Function Arguments must be settable values: {nextExpression}");
+                        }
+                        break;
+
+                    default:
+                        throw new Exception($"Not supported ArgumentType: {argumentType}");
+                }
+
+                arguments.Add(new InvocationArgument(nextExpression!, argumentType));
             }
             while (tokens.TestAndConditionallyAdvance(Separator.Comma));
         }
@@ -517,36 +558,30 @@ public static class Expression
         IdentifierToken identToken,
         CompilationContext context)
     {
-        IValueGetter[] arguments = ParseArguments(tokens, context);
+        InvocationArgument[] arguments = ParseArguments(tokens, context);
 
         string functionName = identToken.identifier;
 
-        FunctionSignature? functionSignature =
-            context.GetMatchingFunctionSignature(identToken, arguments.Select(x=>x.GetValueType()).ToArray());
+        FunctionSignature? functionSignature = context.GetMatchingFunctionSignature(identToken, arguments);
 
         if (functionSignature is null)
         {
             throw new ScriptParsingException(
                 source: identToken,
-                message: $"Failure to identify function of name {functionName} and expected argument types [{string.Join(", ", arguments.Select(x => x.GetValueType().Name))}]");
+                message: $"Failure to identify function of name {functionName} and expected argument types [{string.Join(", ", arguments.Select(x => x.ToString()))}]");
         }
 
         if (functionSignature.Value.returnType == typeof(void))
         {
             return new FunctionExecutableOperation(
-                operation: (RuntimeContext rtContext) =>
-                    rtContext.RunVoidFunction(
-                        functionName: functionName,
-                        arguments: arguments.GetArgs(functionSignature.Value, rtContext)));
+                functionSignature: functionSignature.Value,
+                arguments: arguments);
         }
         else
         {
             return new FunctionValueOperation(
-                outputType: functionSignature.Value.returnType,
-                operation: (RuntimeContext rtContext) =>
-                    rtContext.RunFunction(
-                        functionName: functionName,
-                        arguments: arguments.GetArgs(functionSignature.Value, rtContext)));
+                functionSignature: functionSignature.Value,
+                arguments: arguments);
         }
     }
 
@@ -1220,12 +1255,12 @@ public static class Expression
         public override Operator OperatorType => Operator.MemberAccess;
 
         public readonly string identifier;
-        public readonly IValueGetter[]? args;
+        public readonly InvocationArgument[]? args;
         public readonly Type[]? genericMethodArguments;
 
         public MemberAccessUnit(
             string identifier,
-            IValueGetter[]? args,
+            InvocationArgument[]? args,
             Type[]? genericMethodArguments,
             Token firstToken)
         {

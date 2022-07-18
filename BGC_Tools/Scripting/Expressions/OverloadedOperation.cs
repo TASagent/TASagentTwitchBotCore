@@ -10,12 +10,15 @@ public static class OverloadedOperation
         OperatorToken operatorToken)
     {
         Type[] types = new Type[] { arg1.GetValueType(), arg2.GetValueType() };
-        IValueGetter[] valueGetters = new IValueGetter[] { arg1, arg2 };
+
+        InvocationArgument[] methodArguments = new InvocationArgument[] {
+            new InvocationArgument(arg1, ArgumentType.Standard),
+            new InvocationArgument(arg2, ArgumentType.Standard) };
 
         if (ClassRegistrar.GetStaticMethodExpression(
                 type: types[0],
                 genericMethodArguments: null,
-                args: valueGetters,
+                args: methodArguments,
                 methodName: GetOverloadName(operatorToken.operatorType),
                 source: operatorToken) is IExpression firstOverload)
         {
@@ -26,7 +29,7 @@ public static class OverloadedOperation
             ClassRegistrar.GetStaticMethodExpression(
                 type: types[1],
                 genericMethodArguments: null,
-                args: valueGetters,
+                args: methodArguments,
                 methodName: GetOverloadName(operatorToken.operatorType),
                 source: operatorToken) is IExpression secondOverload)
         {

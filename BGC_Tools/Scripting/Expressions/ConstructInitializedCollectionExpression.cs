@@ -7,14 +7,14 @@ namespace BGC.Scripting;
 public class ConstructInitializedCollectionExpression : IValueGetter
 {
     private readonly Type objectType;
-    private readonly IValueGetter[] args;
+    private readonly InvocationArgument[] args;
     private readonly IValueGetter[] items;
 
     private readonly MethodInfo addMethod;
 
     public ConstructInitializedCollectionExpression(
         Type objectType,
-        IValueGetter[] args,
+        InvocationArgument[] args,
         IValueGetter[] items,
         Token source)
     {
@@ -73,12 +73,16 @@ public class ConstructInitializedCollectionExpression : IValueGetter
         }
         else
         {
+            object?[] argumentValues = args.GetArgs(context);
+
             newCollection = (T?)Activator.CreateInstance(
                 type: objectType,
                 bindingAttr: BindingFlags.CreateInstance | BindingFlags.Public | BindingFlags.Instance | BindingFlags.OptionalParamBinding,
                 binder: null,
-                args: args.Select(x => x.GetAs<object>(context)).ToArray(),
+                args: argumentValues,
                 culture: CultureInfo.CurrentCulture);
+
+            args.HandlePostInvocation(argumentValues, context);
         }
 
         object[] item = new object[1];

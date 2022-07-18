@@ -10,7 +10,7 @@ public static class MemberManagement
     public static IExpression HandleMemberExpression(
         IValueGetter value,
         Type[]? genericMethodArguments,
-        IValueGetter[]? args,
+        InvocationArgument[]? args,
         string identifier,
         Token source)
     {
@@ -32,7 +32,7 @@ public static class MemberManagement
     public static IExpression HandleStaticExpression(
         Type type,
         Type[]? genericMethodArguments,
-        IValueGetter[]? args,
+        InvocationArgument[]? args,
         string identifier,
         Token source)
     {
@@ -76,7 +76,7 @@ public static class MemberManagement
     private static IExpression HandleMemberValueMethodExpression(
         IValueGetter value,
         Type[]? genericMethodArguments,
-        IValueGetter[] args,
+        InvocationArgument[] args,
         string identifier,
         Token source)
     {
@@ -122,7 +122,7 @@ public static class MemberManagement
     private static IExpression HandleStaticMethodExpression(
         Type type,
         Type[]? genericMethodArguments,
-        IValueGetter[] args,
+        InvocationArgument[] args,
         string identifier,
         Token source)
     {

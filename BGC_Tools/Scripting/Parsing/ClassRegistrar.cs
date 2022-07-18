@@ -154,7 +154,7 @@ public static partial class ClassRegistrar
     public static IExpression? GetMethodExpression(
         IValueGetter value,
         Type[]? genericMethodArguments,
-        IValueGetter[] args,
+        InvocationArgument[] args,
         string methodName,
         Token source)
     {
@@ -172,7 +172,7 @@ public static partial class ClassRegistrar
     public static IExpression? GetStaticMethodExpression(
         Type type,
         Type[]? genericMethodArguments,
-        IValueGetter[] args,
+        InvocationArgument[] args,
         string methodName,
         Token source)
     {
@@ -231,7 +231,7 @@ public static partial class ClassRegistrar
             IValueGetter value,
             Type[]? genericClassArguments,
             Type[]? genericMethodArguments,
-            IValueGetter[] args,
+            InvocationArgument[] args,
             string methodName,
             Token source);
 
@@ -244,7 +244,7 @@ public static partial class ClassRegistrar
         IExpression? GetStaticMethodExpression(
             Type[]? genericClassArguments,
             Type[]? genericMethodArguments,
-            IValueGetter[] args,
+            InvocationArgument[] args,
             string methodName,
             Token source);
 

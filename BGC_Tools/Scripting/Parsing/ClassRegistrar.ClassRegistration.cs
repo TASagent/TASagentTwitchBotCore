@@ -21,33 +21,11 @@ public static partial class ClassRegistrar
 
         #region IRegistration
 
-        //public bool HasMember(string memberName)
-        //{
-        //    ClassType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.FlattenHierarchy)
-        //        .Where(x => x.Name == memberName)
-        //        .Where(x => fullRegistration || x.GetCustomAttribute<ScriptingAccessAttribute>() is not null)
-        //        .Any();
-        //}
-
-        //public bool HasProperty(string propertyName) =>
-        //    ClassType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.FlattenHierarchy)
-        //        .Where(x => x.Name == propertyName)
-        //        .Where(x => x is PropertyInfo || x is FieldInfo)
-        //        .Where(x => fullRegistration || x.GetCustomAttribute<ScriptingAccessAttribute>() is not null)
-        //        .Any();
-
-        //public bool HasMember(string memberName)
-        //{
-        //    ClassType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.FlattenHierarchy)
-        //        .Where(x => x.Name == memberName)
-        //        .Where(x => fullRegistration || x.GetCustomAttribute<ScriptingAccessAttribute>() is not null);
-        //}
-
         public IExpression? GetMethodExpression(
             IValueGetter value,
             Type[]? genericClassArguments,
             Type[]? genericMethodArguments,
-            IValueGetter[] args,
+            InvocationArgument[] args,
             string methodName,
             Token source)
         {
@@ -70,7 +48,7 @@ public static partial class ClassRegistrar
 
             MethodInfo? selectedMethodInfo = SelectMethod(
                 methodInfos: methodInfos.ToArray(),
-                argumentTypes: args.Select(x => x.GetValueType()).ToArray(),
+                methodArguments: args,
                 genericMethodArguments: genericMethodArguments);
 
             if (selectedMethodInfo is null)
@@ -147,7 +125,7 @@ public static partial class ClassRegistrar
         public IExpression? GetStaticMethodExpression(
             Type[]? genericClassArguments,
             Type[]? genericMethodArguments,
-            IValueGetter[] args,
+            InvocationArgument[] args,
             string methodName,
             Token source)
         {
@@ -170,7 +148,7 @@ public static partial class ClassRegistrar
 
             MethodInfo? selectedMethodInfo = SelectMethod(
                 methodInfos: methodInfos.ToArray(),
-                argumentTypes: args.Select(x => x.GetValueType()).ToArray(),
+                methodArguments: args,
                 genericMethodArguments: genericMethodArguments);
 
             if (selectedMethodInfo is null)
@@ -255,7 +233,7 @@ public static partial class ClassRegistrar
 
         private static MethodInfo? SelectMethod(
             MethodInfo[] methodInfos,
-            Type[] argumentTypes,
+            InvocationArgument[] methodArguments,
             Type[]? genericMethodArguments)
         {
             if (genericMethodArguments is null)
@@ -264,8 +242,8 @@ public static partial class ClassRegistrar
                 if (Type.DefaultBinder.SelectMethod(
                     bindingAttr: BindingFlags.Public | BindingFlags.Instance,
                     match: methodInfos,
-                    types: argumentTypes,
-                    modifiers: null) is MethodInfo methodInfo)
+                    types: methodArguments.GetEffectiveTypes(),
+                    modifiers: methodArguments.CreateParameterModifiers()) is MethodInfo methodInfo)
                 {
                     return methodInfo;
                 }
@@ -279,8 +257,8 @@ public static partial class ClassRegistrar
                         .Where(x => x.ContainsGenericParameters)
                         .Select(x => x.MakeGenericMethod(genericMethodArguments))
                         .ToArray(),
-                    types: argumentTypes,
-                    modifiers: null) is MethodInfo methodInfo)
+                    types: methodArguments.GetEffectiveTypes(),
+                    modifiers: methodArguments.CreateParameterModifiers()) is MethodInfo methodInfo)
                 {
                     return methodInfo;
                 }

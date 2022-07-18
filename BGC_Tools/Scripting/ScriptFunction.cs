@@ -7,6 +7,7 @@ public class ScriptFunction
     private readonly List<Token> cachedFunctionTokens = new List<Token>();
 
     public string FunctionName => functionSignature.identifierToken.identifier;
+    public Guid FunctionId => functionSignature.id;
 
     public ScriptFunction(
         IEnumerator<Token> functionTokens,
@@ -148,7 +149,7 @@ public class ScriptFunction
     public void Execute(
         ScriptRuntimeContext context,
         CancellationToken ct,
-        params object[] arguments)
+        params object?[] arguments)
     {
         FunctionRuntimeContext functionContext = new FunctionRuntimeContext(
             scriptContext: context,
@@ -179,6 +180,22 @@ public class ScriptFunction
 
                 default:
                     throw new Exception($"Unexpected FlowState: {state}");
+            }
+        }
+
+        for (int i = 0; i < functionSignature.arguments.Length; i++)
+        {
+            switch (functionSignature.arguments[i].argumentType)
+            {
+                case ArgumentType.Ref:
+                case ArgumentType.Out:
+                    //Copy Ref and Output values back to input
+                    arguments[i] = functionContext.GetExistingValue<object>(functionSignature.arguments[i].identifierToken.identifier);
+                    break;
+
+                default:
+                    //Do nothing
+                    break;
             }
         }
     }

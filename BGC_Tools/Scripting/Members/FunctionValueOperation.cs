@@ -2,22 +2,26 @@
 
 public class FunctionValueOperation : IValueGetter, IExecutable
 {
-    private readonly Type outputType;
-    private readonly Func<RuntimeContext, object?> operation;
+    private readonly FunctionSignature functionSignature;
+    private readonly InvocationArgument[] arguments;
 
     public FunctionValueOperation(
-        Type outputType,
-        Func<RuntimeContext, object?> operation)
+        FunctionSignature functionSignature,
+        InvocationArgument[] arguments)
     {
-        this.outputType = outputType;
-        this.operation = operation;
+        this.functionSignature = functionSignature;
+        this.arguments = arguments;
     }
 
     public FlowState Execute(ScopeRuntimeContext context, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
 
-        operation(context);
+        object?[] args = arguments.GetArgs(functionSignature, context);
+
+        context.RunFunction(functionSignature.id, args);
+
+        arguments.HandlePostInvocation(args, context);
 
         return FlowState.Nominal;
     }
@@ -26,14 +30,18 @@ public class FunctionValueOperation : IValueGetter, IExecutable
     {
         Type returnType = typeof(T);
 
-        if (!returnType.AssignableOrConvertableFromType(outputType))
+        if (!returnType.AssignableOrConvertableFromType(functionSignature.returnType))
         {
-            throw new ScriptRuntimeException($"Tried to retrieve result of Indexing with type {outputType.Name} as type {returnType.Name}");
+            throw new ScriptRuntimeException($"Tried to retrieve result of Indexing with type {functionSignature.returnType.Name} as type {returnType.Name}");
         }
 
-        object? result = operation(context);
+        object?[] args = arguments.GetArgs(functionSignature, context);
 
-        if (!returnType.IsAssignableFrom(outputType))
+        object? result = context.RunFunction(functionSignature.id, args);
+
+        arguments.HandlePostInvocation(args, context);
+
+        if (!returnType.IsAssignableFrom(functionSignature.returnType))
         {
             return (T?)Convert.ChangeType(result, returnType);
         }
@@ -41,6 +49,6 @@ public class FunctionValueOperation : IValueGetter, IExecutable
         return (T?)result;
     }
 
-    public Type GetValueType() => outputType;
+    public Type GetValueType() => functionSignature.returnType;
 }
 

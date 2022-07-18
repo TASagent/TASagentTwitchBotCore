@@ -159,6 +159,37 @@ public static class ParsingExtensions
         return false;
     }
 
+    public static ArgumentType GetArgumentType(this IEnumerator<Token> tokens, bool checkEOF = true)
+    {
+        if (tokens.Current is KeywordToken keyTok)
+        {
+            switch (keyTok.keyword)
+            {
+                case Keyword.In:
+                    tokens.CautiousAdvance(checkEOF);
+                    return ArgumentType.In;
+
+                case Keyword.Out:
+                    tokens.CautiousAdvance(checkEOF);
+                    return ArgumentType.Out;
+
+                case Keyword.Ref:
+                    tokens.CautiousAdvance(checkEOF);
+                    return ArgumentType.Ref;
+
+                case Keyword.Params:
+                    tokens.CautiousAdvance(checkEOF);
+                    return ArgumentType.Params;
+
+                default:
+                    //Could be valid (like new)
+                    break;
+            }
+        }
+
+        return ArgumentType.Standard;
+    }
+
     public static Type ReadTypeAndAdvance(this IEnumerator<Token> tokens, bool checkEOF = true)
     {
         Type? type = null;

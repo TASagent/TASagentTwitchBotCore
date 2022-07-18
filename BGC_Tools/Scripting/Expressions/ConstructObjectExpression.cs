@@ -6,11 +6,11 @@ namespace BGC.Scripting;
 public class ConstructObjectExpression : IValueGetter
 {
     private readonly Type objectType;
-    private readonly IValueGetter[] args;
+    private readonly InvocationArgument[] args;
 
     public ConstructObjectExpression(
         Type objectType,
-        IValueGetter[] args)
+        InvocationArgument[] args)
     {
         this.objectType = objectType;
         this.args = args;
@@ -36,12 +36,18 @@ public class ConstructObjectExpression : IValueGetter
         }
         else
         {
-            return (T?)Activator.CreateInstance(
+            object?[] argumentValues = args.GetArgs(context);
+
+            T? value = (T?)Activator.CreateInstance(
                 type: objectType,
                 bindingAttr: BindingFlags.CreateInstance | BindingFlags.Public | BindingFlags.Instance | BindingFlags.OptionalParamBinding,
                 binder: null,
-                args: args.Select(x => x.GetAs<object>(context)).ToArray(),
+                args: argumentValues,
                 culture: CultureInfo.CurrentCulture);
+
+            args.HandlePostInvocation(argumentValues, context);
+
+            return value;
         }
     }
 

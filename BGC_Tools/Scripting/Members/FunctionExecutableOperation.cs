@@ -2,19 +2,26 @@
 
 public class FunctionExecutableOperation : IExecutable
 {
-    private readonly Action<RuntimeContext> operation;
+    private readonly FunctionSignature functionSignature;
+    private readonly InvocationArgument[] arguments;
 
     public FunctionExecutableOperation(
-        Action<RuntimeContext> operation)
+        FunctionSignature functionSignature,
+        InvocationArgument[] arguments)
     {
-        this.operation = operation;
+        this.functionSignature = functionSignature;
+        this.arguments = arguments;
     }
 
     public FlowState Execute(ScopeRuntimeContext context, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
 
-        operation(context);
+        object?[] args = arguments.GetArgs(functionSignature, context);
+
+        context.RunVoidFunction(functionSignature.id, args);
+
+        arguments.HandlePostInvocation(args, context);
 
         return FlowState.Nominal;
     }
