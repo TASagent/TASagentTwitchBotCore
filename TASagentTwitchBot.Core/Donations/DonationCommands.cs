@@ -1,16 +1,21 @@
-﻿namespace TASagentTwitchBot.Core.Donations;
+﻿using TASagentTwitchBot.Core.IRC;
+
+namespace TASagentTwitchBot.Core.Donations;
 
 public class DonationCommands : Commands.ICommandContainer
 {
     private readonly ICommunication communication;
     private readonly IDonationTracker donationTracker;
+    private readonly IDonationHandler donationHandler;
 
     public DonationCommands(
         ICommunication communication,
-        IDonationTracker donationTracker)
+        IDonationTracker donationTracker,
+        IDonationHandler donationHandler)
     {
         this.communication = communication;
         this.donationTracker = donationTracker;
+        this.donationHandler = donationHandler;
     }
 
     public void RegisterCommands(Commands.ICommandRegistrar commandRegistrar)
@@ -37,6 +42,15 @@ public class DonationCommands : Commands.ICommandContainer
 
         commandRegistrar.RegisterScopedCommand("remove", "donation", RemoveDonation);
         commandRegistrar.RegisterScopedCommand("remove", "donations", RemoveDonation);
+
+        commandRegistrar.RegisterScopedCommand("test", "donations", TestDonation);
+        commandRegistrar.RegisterScopedCommand("test", "donation", TestDonation);
+
+        commandRegistrar.RegisterScopedCommand("donations", "test", TestDonation);
+        commandRegistrar.RegisterScopedCommand("donation", "test", TestDonation);
+
+        commandRegistrar.RegisterGlobalCommand("testdonations", TestDonation);
+        commandRegistrar.RegisterGlobalCommand("testdonation", TestDonation);
     }
 
     public IEnumerable<string> GetPublicCommands()
@@ -92,6 +106,39 @@ public class DonationCommands : Commands.ICommandContainer
         }
 
         donationTracker.AddDirectDonations(-donation);
+        return Task.CompletedTask;
+    }
+
+    private Task TestDonation(TwitchChatter chatter, string[] remainingCommand)
+    {
+        if (chatter.User.AuthorizationLevel < Commands.AuthorizationLevel.Moderator)
+        {
+            //Moderators and Admins can adjust users
+            communication.SendPublicChatMessage($"I'm afraid I can't let you do that, @{chatter.User.TwitchUserName}.");
+            return Task.CompletedTask;
+        }
+
+        if (remainingCommand is null || remainingCommand.Length < 2)
+        {
+            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, TestDonations requires a Name and an amount, followed by an optional message.");
+            return Task.CompletedTask;
+        }
+
+
+        if (!double.TryParse(remainingCommand[1], out double donation))
+        {
+            communication.SendPublicChatMessage($"@{chatter.User.TwitchUserName}, Unable to parse {remainingCommand[1]} as quantity.");
+            return Task.CompletedTask;
+        }
+
+        string message = "";
+
+        if (remainingCommand.Length >= 3)
+        {
+            message = string.Join(' ', remainingCommand[2..]);
+        }
+
+        donationHandler.HandleDonation(remainingCommand[0], donation, message, true);
         return Task.CompletedTask;
     }
 }

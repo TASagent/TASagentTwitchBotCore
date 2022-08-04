@@ -26,7 +26,7 @@ public partial class ScriptedActivityProvider
         public string GiftSubNotificationScript { get; set; } = DEFAULT_GIFTSUB_SCRIPT;
         public string FollowNotificationScript { get; set; } = DEFAULT_FOLLOW_SCRIPT;
 
-        public static ScriptedNotificationConfig GetConfig()
+        public static ScriptedNotificationConfig GetConfig(ScriptedNotificationConfig? defaultConfig = null)
         {
             ScriptedNotificationConfig config;
             if (File.Exists(ConfigFilePath))
@@ -36,7 +36,7 @@ public partial class ScriptedActivityProvider
             }
             else
             {
-                config = new ScriptedNotificationConfig();
+                config = defaultConfig ?? new ScriptedNotificationConfig();
             }
 
             File.WriteAllText(ConfigFilePath, JsonSerializer.Serialize(config));
