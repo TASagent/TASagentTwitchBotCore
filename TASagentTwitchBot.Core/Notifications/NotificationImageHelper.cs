@@ -41,7 +41,7 @@ public class NotificationImageHelper : INotificationImageHelper
             PopulateDirectoryLookup(directory);
         }
 
-        if (subdirectoryLookup[directory].Count == 0)
+        if (subdirectoryLookup[directory].TotalCount == 0)
         {
             communication.SendWarningMessage($"Requested empty image directory {directory}");
             return "";
