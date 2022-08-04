@@ -13,8 +13,9 @@ public class ActivityProviderStubs :
     ITTSHandler
 {
     public virtual Task Execute(ActivityRequest activityRequest) => Task.CompletedTask;
+    public virtual void RegisterDonationTracker(Donations.IDonationTracker donationTracker) { }
 
-    public virtual void HandleCheer(User cheerer, string message, int quantity, bool approved) { }
+    public virtual void HandleCheer(User cheerer, string message, int quantity, bool meetsTTSThreshold, bool approved) { }
 
     public virtual void HandleFollower(User follower, bool approved) { }
 
@@ -51,7 +52,7 @@ public sealed class FollowerHandlerStub : IFollowerHandler
 
 public sealed class CheerHandlerStub : ICheerHandler
 {
-    public void HandleCheer(User cheerer, string message, int quantity, bool approved) { }
+    public void HandleCheer(User cheerer, string message, int quantity, bool meetsTTSThreshold, bool approved) { }
 }
 
 public sealed class SubscriptionHandlerStub : ISubscriptionHandler

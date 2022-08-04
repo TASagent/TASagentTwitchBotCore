@@ -38,6 +38,8 @@ public partial class ScriptedActivityProvider :
 
     private readonly CancellationTokenSource generalTokenSource = new CancellationTokenSource();
 
+    private Donations.IDonationTracker? donationTracker = null;
+
     private GlobalRuntimeContext? globalRuntimeContext;
 
     private ScriptRuntimeContext? subRuntimeContext;
@@ -231,6 +233,7 @@ public partial class ScriptedActivityProvider :
     }
 
     #endregion IScriptedComponent
+    #region IActivityHandler
 
     public Task Execute(ActivityRequest activityRequest)
     {
@@ -254,6 +257,18 @@ public partial class ScriptedActivityProvider :
 
         return Task.WhenAll(taskList).WithCancellation(generalTokenSource.Token);
     }
+
+    public void RegisterDonationTracker(Donations.IDonationTracker donationTracker)
+    {
+        if (this.donationTracker is not null)
+        {
+            throw new Exception($"donationTracker already assigned: Was \"{this.donationTracker}\", Assigned \"{donationTracker}\"");
+        }
+
+        this.donationTracker = donationTracker;
+    }
+
+    #endregion IActivityHandler
 
     protected delegate Task<string> GetDefaultImageAsync();
     protected delegate string GetDefaultImage();
@@ -335,6 +350,8 @@ public partial class ScriptedActivityProvider :
         int tier,
         bool approved)
     {
+        donationTracker?.AddSubs(1, tier);
+
         Database.User? subscriber = await userHelper.GetUserByTwitchId(userId);
 
         if (subscriber is null)
@@ -385,8 +402,11 @@ public partial class ScriptedActivityProvider :
         Database.User cheerer,
         string message,
         int quantity,
+        bool meetsTTSThreshold,
         bool approved)
     {
+        donationTracker?.AddBits(quantity);
+
         communication.NotifyEvent($"Cheer {quantity}: {cheerer.TwitchUserName}");
 
         if (!notificationConfig.CheerNotificationEnabled)
@@ -399,7 +419,7 @@ public partial class ScriptedActivityProvider :
             try
             {
                 ScriptingUser user = scriptHelper.GetScriptingUser(cheerer);
-                NotificationCheer cheer = new NotificationCheer(quantity, message);
+                NotificationCheer cheer = new NotificationCheer(quantity, message, meetsTTSThreshold);
 
                 IAlert alertData = await cheerScript.ExecuteFunctionAsync<IAlert>(
                     "GetAlertData", 2_000, cheerRuntimeContext, user, cheer);
@@ -483,6 +503,8 @@ public partial class ScriptedActivityProvider :
         int months,
         bool approved)
     {
+        donationTracker?.AddSubs(1, tier);
+
         Database.User? sender = await userHelper.GetUserByTwitchId(senderId);
         Database.User? recipient = await userHelper.GetUserByTwitchId(recipientId);
 
@@ -542,6 +564,8 @@ public partial class ScriptedActivityProvider :
         int months,
         bool approved)
     {
+        donationTracker?.AddSubs(1, tier);
+
         Database.User? recipient = await userHelper.GetUserByTwitchId(recipientId);
 
         if (recipient is null)
@@ -880,13 +904,18 @@ public partial class ScriptedActivityProvider :
     {
         public int Quantity { get; set; } = 0;
         public string Message { get; set; } = "";
+        public bool MeetsTTSThreshold { get; set; } = true;
 
         public NotificationCheer() { }
 
-        public NotificationCheer(int quantity, string message)
+        public NotificationCheer(
+            int quantity,
+            string message,
+            bool meetsTTSThreshold)
         {
             Quantity = quantity;
             Message = message;
+            MeetsTTSThreshold = meetsTTSThreshold;
         }
     }
 

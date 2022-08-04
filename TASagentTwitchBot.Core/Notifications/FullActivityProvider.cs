@@ -31,6 +31,8 @@ public class FullActivityProvider :
 
     protected readonly CancellationTokenSource generalTokenSource = new CancellationTokenSource();
 
+    private Donations.IDonationTracker? donationTracker = null;
+
     protected readonly HashSet<string> followedUserIds = new HashSet<string>();
 
     private bool disposedValue;
@@ -65,6 +67,8 @@ public class FullActivityProvider :
         this.userHelper = userHelper;
     }
 
+    #region IActivityHandler
+
     public Task Execute(ActivityRequest activityRequest)
     {
         List<Task> taskList = new List<Task>();
@@ -88,6 +92,17 @@ public class FullActivityProvider :
         return Task.WhenAll(taskList).WithCancellation(generalTokenSource.Token);
     }
 
+    public void RegisterDonationTracker(Donations.IDonationTracker donationTracker)
+    {
+        if (this.donationTracker is not null)
+        {
+            throw new Exception($"donationTracker already assigned: Was \"{this.donationTracker}\", Assigned \"{donationTracker}\"");
+        }
+
+        this.donationTracker = donationTracker;
+    }
+
+    #endregion IActivityHandler
     #region ISubscriptionHandler
 
     public virtual async void HandleSubscription(
@@ -97,6 +112,8 @@ public class FullActivityProvider :
         int tier,
         bool approved)
     {
+        donationTracker?.AddSubs(1, tier);
+
         Database.User? subscriber = await userHelper.GetUserByTwitchId(userId);
 
         if (subscriber is null)
@@ -245,8 +262,11 @@ public class FullActivityProvider :
         Database.User cheerer,
         string message,
         int quantity,
+        bool meetsTTSThreshold,
         bool approved)
     {
+        donationTracker?.AddBits(quantity);
+
         communication.NotifyEvent($"Cheer {quantity}: {cheerer.TwitchUserName}");
 
         if (!notificationConfig.CheerNotificationEnabled)
@@ -266,7 +286,7 @@ public class FullActivityProvider :
                 description: $"User {cheerer.TwitchUserName} cheered {quantity} bits: {message}",
                 requesterId: cheerer.TwitchUserId,
                 notificationMessage: await GetCheerNotificationRequest(cheerer, message, quantity),
-                audioRequest: await GetCheerAudioRequest(cheerer, message, quantity),
+                audioRequest: await GetCheerAudioRequest(cheerer, message, quantity, meetsTTSThreshold),
                 marqueeMessage: await GetCheerMarqueeMessage(cheerer, message, quantity)),
             approved: approved);
     }
@@ -302,7 +322,8 @@ public class FullActivityProvider :
     protected virtual async Task<Audio.AudioRequest?> GetCheerAudioRequest(
         Database.User cheerer,
         string message,
-        int quantity)
+        int quantity,
+        bool meetsTTSThreshold)
     {
         Audio.AudioRequest? soundEffectRequest = null;
         Audio.AudioRequest? ttsRequest = null;
@@ -322,7 +343,7 @@ public class FullActivityProvider :
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(message))
+        if (!string.IsNullOrWhiteSpace(message) && meetsTTSThreshold)
         {
             ttsRequest = await ttsRenderer.TTSRequest(
                 authorizationLevel: cheerer.AuthorizationLevel,
@@ -442,6 +463,8 @@ public class FullActivityProvider :
         int months,
         bool approved)
     {
+        donationTracker?.AddSubs(1, tier);
+
         Database.User? sender = await userHelper.GetUserByTwitchId(senderId);
         Database.User? recipient = await userHelper.GetUserByTwitchId(recipientId);
 
@@ -577,6 +600,8 @@ public class FullActivityProvider :
         int months,
         bool approved)
     {
+        donationTracker?.AddSubs(1, tier);
+
         Database.User? recipient = await userHelper.GetUserByTwitchId(recipientId);
 
         if (recipient is null)

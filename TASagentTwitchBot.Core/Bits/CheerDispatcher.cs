@@ -19,9 +19,11 @@ public class CheerDispatcher : IStartupListener
 
     private void CheerMessageHandler(IRC.TwitchChatter chatter)
     {
-        if (chatter.Bits != 0 && chatter.Bits >= ttsConfig.BitThreshold)
+        if (chatter.Bits != 0)
         {
-            cheerHandler.HandleCheer(chatter.User, chatter.Message, chatter.Bits, true);
+            bool meetsTTSThreshold = chatter.Bits >= ttsConfig.BitThreshold;
+
+            cheerHandler.HandleCheer(chatter.User, chatter.Message, chatter.Bits, meetsTTSThreshold, true);
         }
     }
 }

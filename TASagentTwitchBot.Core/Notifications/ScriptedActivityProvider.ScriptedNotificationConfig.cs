@@ -235,7 +235,7 @@ IAlert GetAlertData(User user, Cheer cheer)
     alertData.Audio.Add(new SoundEffect(""FF7 Purchase""));
     alertData.Audio.Add(new Pause(500));
     
-    if (!string.IsNullOrEmpty(cheer.Message))
+    if (!string.IsNullOrEmpty(cheer.Message) && cheer.MeetsTTSThreshold)
     {
         alertData.Audio.Add(new TTS(user, cheer.Message));
 

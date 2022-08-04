@@ -39,7 +39,6 @@ public class ActivityDispatcher : IActivityDispatcher, IDisposable
     private ActivityRequest? lastFinishedRequest = null;
 
     public ActivityDispatcher(
-        Config.BotConfiguration botConfig,
         ErrorHandler errorHandler,
         ICommunication communication,
         IMessageAccumulator messageAccumulator,

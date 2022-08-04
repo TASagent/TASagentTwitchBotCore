@@ -4,6 +4,7 @@
 public interface IActivityHandler
 {
     Task Execute(ActivityRequest activityRequest);
+    void RegisterDonationTracker(Donations.IDonationTracker donationTracker);
 }
 
 [AutoRegister]
@@ -15,7 +16,7 @@ public interface ISubscriptionHandler
 [AutoRegister]
 public interface ICheerHandler
 {
-    void HandleCheer(Database.User cheerer, string message, int quantity, bool approved);
+    void HandleCheer(Database.User cheerer, string message, int quantity, bool meetsTTSThreshold, bool approved);
 }
 
 [AutoRegister]

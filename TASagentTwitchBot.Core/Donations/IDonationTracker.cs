@@ -14,7 +14,6 @@ public interface IDonationTracker
     DonationAmount GetAmount();
 }
 
-
 public class NoDonationTracker : IDonationTracker
 {
     public NoDonationTracker() { }
@@ -26,17 +25,20 @@ public class NoDonationTracker : IDonationTracker
     DonationAmount IDonationTracker.GetAmount() => new DonationAmount(0.00);
 }
 
-public class PersistentDonationTracker : IDonationTracker
+public class PersistentDonationTracker : IDonationTracker, IStartupListener
 {
     private readonly IHubContext<Web.Hubs.DonationHub> donationHubContext;
     private readonly TrackedDonations trackedDonations;
 
     public PersistentDonationTracker(
-        IHubContext<Web.Hubs.DonationHub> donationHubContext)
+        IHubContext<Web.Hubs.DonationHub> donationHubContext,
+        Notifications.IActivityHandler activityHandler)
     {
         this.donationHubContext = donationHubContext;
 
         trackedDonations = TrackedDonations.GetData();
+
+        activityHandler.RegisterDonationTracker(this);
     }
 
     public async void AddBits(int count)
