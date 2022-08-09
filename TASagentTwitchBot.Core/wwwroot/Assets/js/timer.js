@@ -72,7 +72,7 @@ connection.on('SetState', SetState);
 
 async function Initiate() {
     await connection.start();
-    await connection.invoke("RequestState");
+    await connection.invoke('RequestState');
 }
 
 Initiate();

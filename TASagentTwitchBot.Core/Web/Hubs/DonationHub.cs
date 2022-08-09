@@ -11,8 +11,8 @@ public class DonationHub : Hub
         this.donationTracker = donationTracker;
     }
 
-    public async Task RequestAmount()
+    public async Task RequestState()
     {
-        await Clients.Caller.SendAsync("SetAmount", donationTracker.GetAmount());
+        await Clients.Caller.SendAsync("SetState", donationTracker.GetState());
     }
 }

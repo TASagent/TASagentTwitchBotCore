@@ -7,22 +7,28 @@ namespace TASagentTwitchBot.Core.Donations;
 [AutoRegister]
 public interface IDonationTracker
 {
+    void SetFundraisingGoal(double amount);
+
     void AddBits(int count);
     void AddSubs(int count, int tier);
     void AddDirectDonations(double amount);
 
     DonationAmount GetAmount();
+    DonationState GetState();
 }
 
 public class NoDonationTracker : IDonationTracker
 {
     public NoDonationTracker() { }
 
+    void IDonationTracker.SetFundraisingGoal(double amount) { }
+
     void IDonationTracker.AddBits(int count) { }
     void IDonationTracker.AddDirectDonations(double amount) { }
     void IDonationTracker.AddSubs(int count, int tier) { }
 
     DonationAmount IDonationTracker.GetAmount() => new DonationAmount(0.00);
+    DonationState IDonationTracker.GetState() => new DonationState(0.00, 1.00);
 }
 
 public class PersistentDonationTracker : IDonationTracker, IStartupListener
@@ -41,12 +47,20 @@ public class PersistentDonationTracker : IDonationTracker, IStartupListener
         activityHandler.RegisterDonationTracker(this);
     }
 
+    public async void SetFundraisingGoal(double amount)
+    {
+        trackedDonations.FundraisingGoal = amount;
+        trackedDonations.Serialize();
+
+        await donationHubContext.Clients.All.SendAsync("SetState", GetState());
+    }
+
     public async void AddBits(int count)
     {
         trackedDonations.BitCount += count;
         trackedDonations.Serialize();
 
-        await donationHubContext.Clients.All.SendAsync("SetAmount", GetAmount());
+        await donationHubContext.Clients.All.SendAsync("UpdateAmount", GetAmount());
     }
 
     public async void AddDirectDonations(double amount)
@@ -54,29 +68,28 @@ public class PersistentDonationTracker : IDonationTracker, IStartupListener
         trackedDonations.DirectDonationAmount += amount;
         trackedDonations.Serialize();
 
-        await donationHubContext.Clients.All.SendAsync("SetAmount", GetAmount());
+        await donationHubContext.Clients.All.SendAsync("UpdateAmount", GetAmount());
     }
 
     public async void AddSubs(int count, int tier)
     {
-        int multiplier = 1;
-
-        if (tier == 2)
-        {
-            multiplier = 2;
-        }
-        else if (tier == 3)
-        {
-            multiplier = 6;
-        }
-
-        trackedDonations.SubCount += multiplier * count;
+        trackedDonations.SubCount += TranslateTier(tier) * count;
         trackedDonations.Serialize();
 
-        await donationHubContext.Clients.All.SendAsync("SetAmount", GetAmount());
+        await donationHubContext.Clients.All.SendAsync("UpdateAmount", GetAmount());
     }
 
+    private static int TranslateTier(int tier) =>
+        tier switch
+        {
+            0 or 1 => 1,
+            2 => 2,
+            3 => 6,
+            _ => 1
+        };
+
     public DonationAmount GetAmount() => new DonationAmount(trackedDonations.GetDollarAmount);
+    public DonationState GetState() => new DonationState(trackedDonations.GetDollarAmount, trackedDonations.FundraisingGoal);
 
     private class TrackedDonations
     {
@@ -89,6 +102,8 @@ public class PersistentDonationTracker : IDonationTracker, IStartupListener
         public int BitCount { get; set; } = 0;
         public int SubCount { get; set; } = 0;
         public double DirectDonationAmount { get; set; } = 0.0;
+
+        public double FundraisingGoal { get; set; } = 2000;
 
 
         public double DollarsPerSub { get; set; } = 2.50;
@@ -124,4 +139,5 @@ public class PersistentDonationTracker : IDonationTracker, IStartupListener
     }
 }
 
-public record DonationAmount(double CurrentAmount);
+public record DonationAmount(double NewAmount);
+public record DonationState(double NewAmount, double NewGoal);
