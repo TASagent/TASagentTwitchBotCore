@@ -97,15 +97,13 @@ public class TTSWebRequestHandler : IDisposable
             }
             else
             {
-                communication.SendErrorMessage($"TTSHub failed to connect. Make sure settings are correct.");
+                communication.SendErrorMessage($"TTSHub failed to connect. Make sure settings are correct. Message: {ex.Message}");
             }
-
-            errorHandler.LogSystemException(ex);
         }
         catch (Exception ex)
         {
-            errorHandler.LogSystemException(ex);
             communication.SendErrorMessage($"TTSHub failed to connect. Make sure settings are correct.");
+            errorHandler.LogSystemException(ex);
         }
 
         return Initialized;

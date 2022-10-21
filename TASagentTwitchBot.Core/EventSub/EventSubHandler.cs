@@ -88,10 +88,9 @@ public class EventSubHandler : IStartupListener, IDisposable
             }
             else
             {
-                communication.SendErrorMessage($"EventSub failed to connect. Make sure settings are correct.");
+                communication.SendErrorMessage($"EventSub failed to connect. Make sure settings are correct. Message: {ex.Message}");
             }
-
-            errorHandler.LogSystemException(ex);
+            return;
         }
         catch (Exception ex)
         {
