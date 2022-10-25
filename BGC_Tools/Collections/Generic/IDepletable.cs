@@ -51,6 +51,11 @@ public interface IDepletable<T> : IEnumerable<T>, ICollection<T>
     /// </summary>
     IList<T> GetAvailable();
 
+    /// <summary>
+    /// Add an enumerable set to the set of values
+    /// </summary>
+    void AddRange(IEnumerable<T> values);
+
     #region ICollection<T> Extended Methods
 
     /// <summary>

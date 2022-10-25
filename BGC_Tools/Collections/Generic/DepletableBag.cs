@@ -214,6 +214,14 @@ public sealed class DepletableBag<T> : IDepletable<T>
             count: Math.Min(values.Count, array.Length - arrayIndex));
     }
 
+    public void AddRange(IEnumerable<T> values)
+    {
+        foreach (T value in values)
+        {
+            Add(value);
+        }
+    }
+
     #endregion IDepletable<T>
     #region ICollection<T>
 

@@ -985,6 +985,21 @@ public partial class ScriptedActivityProvider :
 
         public NotificationTTS(
             string ttsVoice,
+            TTSPitch ttsPitch,
+            TTSSpeed ttsSpeed,
+            string ttsEffect,
+            string message)
+        {
+            TTSVoice = ttsVoice;
+            TTSPitch = ttsPitch;
+            TTSSpeed = ttsSpeed;
+            TTSEffect = ttsEffect;
+
+            Message = message;
+        }
+
+        public NotificationTTS(
+            string ttsVoice,
             string ttsPitch,
             string ttsSpeed,
             string ttsEffect,
