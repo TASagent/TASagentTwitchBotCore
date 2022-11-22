@@ -64,7 +64,7 @@ public class NAudioPlayer : IAudioPlayer
                 return;
             }
 
-            await audioRequest.PlayRequest(effectDevice, ttsDevice ?? effectDevice);
+            await Task.Run(() => audioRequest.PlayRequest(effectDevice, ttsDevice ?? effectDevice));
         }
         catch (Exception e)
         {
