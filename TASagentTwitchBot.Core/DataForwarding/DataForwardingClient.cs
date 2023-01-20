@@ -127,6 +127,8 @@ public class DataForwardingClient : IStartupListener, IDisposable
 
     private async Task RequestSoundEffect(string soundEffectAlias, string requestIdentifier)
     {
+        communication.SendWarningMessage($"Request for sound effect {soundEffectAlias} received");
+
         SoundEffect? soundEffect = soundEffectSystem.GetSoundEffectByAlias(soundEffectAlias);
 
         if (soundEffect is null)

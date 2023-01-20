@@ -73,11 +73,17 @@ public class ServerDataForwardingSFXHandler : IServerDataForwardingSFXHandler
             arg1: soundEffectAlias,
             arg2: requestIdentifier);
 
-        return await completionSource.Task;
+        ServerSoundEffectData? data = await completionSource.Task;
+
+        logger.LogWarning("Received sound effect {name} data of {bytes} bytes. Replying", soundEffectAlias, data?.Data?.Length ?? 0);
+
+        return data;
     }
 
     public void ReceiveSoundEffect(string requestIdentifier, string name, byte[] data, string? contentType)
     {
+        logger.LogWarning("Received sound effect {name} data of {bytes} bytes", name, data?.Length ?? 0);
+
         if (!waitingDownloads.TryGetValue(requestIdentifier, out PendingDownload? pendingDownload))
         {
             logger.LogWarning("Received unexpected SoundEffect data for identifier: {requestIdentifier}", requestIdentifier);
@@ -88,7 +94,7 @@ public class ServerDataForwardingSFXHandler : IServerDataForwardingSFXHandler
 
         ServerSoundEffectData soundEffectData = new ServerSoundEffectData(
             Name: name,
-            Data: data,
+            Data: data!,
             ContentType: contentType);
 
         pendingDownload.CompletionSource.SetResult(soundEffectData);
