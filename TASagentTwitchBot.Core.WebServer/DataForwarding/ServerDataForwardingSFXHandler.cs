@@ -77,8 +77,6 @@ public class ServerDataForwardingSFXHandler : IServerDataForwardingSFXHandler
 
         ServerSoundEffectData? data = await completionSource.Task;
 
-        logger.LogWarning("Received sound effect {name} data of {bytes} bytes. Replying", soundEffectAlias, data?.Data?.Length ?? 0);
-
         return data;
     }
 
