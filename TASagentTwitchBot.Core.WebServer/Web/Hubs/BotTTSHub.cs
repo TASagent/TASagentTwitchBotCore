@@ -1,11 +1,11 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Authorization;
 
 using TASagentTwitchBot.Core.WebServer.Models;
 using TASagentTwitchBot.Core.WebServer.TTS;
 using TASagentTwitchBot.Core.TTS;
-using System.Text.Json.Serialization;
 
 namespace TASagentTwitchBot.Core.WebServer.Web.Hubs;
 
@@ -13,13 +13,16 @@ namespace TASagentTwitchBot.Core.WebServer.Web.Hubs;
 public class BotTTSHub : Hub
 {
     private readonly UserManager<ApplicationUser> userManager;
+    private readonly ILogger<BotTTSHub> logger;
     private readonly IServerTTSRenderer ttsHandler;
 
     public BotTTSHub(
         UserManager<ApplicationUser> userManager,
+        ILogger<BotTTSHub> logger,
         IServerTTSRenderer ttsHandler)
     {
         this.userManager = userManager;
+        this.logger = logger;
         this.ttsHandler = ttsHandler;
     }
 
@@ -27,7 +30,13 @@ public class BotTTSHub : Hub
     {
         await base.OnConnectedAsync();
 
-        ApplicationUser user = await userManager.GetUserAsync(Context.User);
+        if (Context.User is null)
+        {
+            logger.LogWarning("Received TTS connection from null user {User} with connectionId {ConnectionId}", Context.UserIdentifier, Context.ConnectionId);
+            return;
+        }
+
+        ApplicationUser? user = await userManager.GetUserAsync(Context.User);
 
         if (user is not null && !string.IsNullOrEmpty(user.TwitchBroadcasterId))
         {
@@ -42,7 +51,20 @@ public class BotTTSHub : Hub
 
     public async Task RequestNewTTS(ServerTTSRequest ttsRequest)
     {
-        ApplicationUser user = await userManager.GetUserAsync(Context.User);
+        if (Context.User is null)
+        {
+            logger.LogWarning("Received TTS request from null user {User} with connectionId {ConnectionId}", Context.UserIdentifier, Context.ConnectionId);
+            return;
+        }
+
+        ApplicationUser? user = await userManager.GetUserAsync(Context.User);
+
+        if (user is null)
+        {
+            logger.LogWarning("Received TTS request from unknown user {User} with connectionId {ConnectionId}", Context.User.ToString(), Context.ConnectionId);
+            return;
+        }
+
         await ttsHandler.HandleTTSRequest(userManager, user, ttsRequest);
     }
 
@@ -52,7 +74,19 @@ public class BotTTSHub : Hub
     /// </summary>
     public async Task RequestTTS(LegacyServerTTSRequest legacyTTSRequest)
     {
-        ApplicationUser user = await userManager.GetUserAsync(Context.User);
+        if (Context.User is null)
+        {
+            logger.LogWarning("Received TTS request from null user {User} with connectionId {ConnectionId}", Context.UserIdentifier, Context.ConnectionId);
+            return;
+        }
+
+        ApplicationUser? user = await userManager.GetUserAsync(Context.User);
+
+        if (user is null)
+        {
+            logger.LogWarning("Received TTS request from unknown user {User} with connectionId {ConnectionId}", Context.User.ToString(), Context.ConnectionId);
+            return;
+        }
 
         ServerTTSRequest ttsRequest = new ServerTTSRequest(
                 RequestIdentifier: legacyTTSRequest.RequestIdentifier,
@@ -67,7 +101,20 @@ public class BotTTSHub : Hub
 
     public async Task RequestRawTTS(RawServerTTSRequest rawTTSRequest)
     {
-        ApplicationUser user = await userManager.GetUserAsync(Context.User);
+        if (Context.User is null)
+        {
+            logger.LogWarning("Received TTS request from null user {User} with connectionId {ConnectionId}", Context.UserIdentifier, Context.ConnectionId);
+            return;
+        }
+
+        ApplicationUser? user = await userManager.GetUserAsync(Context.User);
+
+        if (user is null)
+        {
+            logger.LogWarning("Received TTS request from unknown user {User} with connectionId {ConnectionId}", Context.User.ToString(), Context.ConnectionId);
+            return;
+        }
+
         await ttsHandler.HandleRawTTSRequest(userManager, user, rawTTSRequest);
     }
 }

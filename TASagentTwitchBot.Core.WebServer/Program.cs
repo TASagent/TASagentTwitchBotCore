@@ -17,6 +17,7 @@ using TASagentTwitchBot.Core.WebServer.API.Twitch;
 using TASagentTwitchBot.Core.WebServer.TTS;
 using TASagentTwitchBot.Core.WebServer.Web.Middleware;
 using TASagentTwitchBot.Core.WebServer.Web.Hubs;
+using TASagentTwitchBot.Core.WebServer.Web;
 
 //Initialize DataManagement
 BGC.IO.DataManagement.Initialize("TASagentBotWebServer");
@@ -90,6 +91,9 @@ builder.Services
     .AddTASSingleton<TASagentTwitchBot.Plugin.TTS.AzureTTS.AzureTTSLocalSystem>()
     .AddTASSingleton<TASagentTwitchBot.Plugin.TTS.GoogleTTS.GoogleTTSLocalSystem>();
 
+builder.Services
+    .AddTASSingleton<DataForwardingConnectionManager>()
+    .AddTASSingleton<ServerDataForwardingSFXHandler>();
 
 using WebApplication app = builder.Build();
 
@@ -129,6 +133,7 @@ app.MapRazorPages();
 
 app.MapHub<BotEventSubHub>("/Hubs/BotEventSubHub");
 app.MapHub<BotTTSHub>("/Hubs/BotTTSHub");
+app.MapHub<BotDataForwardingHub>("/Hubs/BotDataForwardingHub");
 
 //Prepare Database
 using (IServiceScope scope = app.Services.CreateScope())
@@ -160,11 +165,11 @@ static void UseCoreLibraryAssets(WebApplication app)
 
     if (app.Environment.IsDevelopment())
     {
-#warning DOTNET CORE 6 FIX
+//#warning DOTNET CORE 6 FIX
         //Behavior of Directory.GetParent(x) seems to have changed in DotNetCore 6.0.
         //Now Directory.GetParent("/path/to/dir/") returns "/path/to/dir" when it used to return "/path/to"
         string path = Directory.GetParent(app.Environment.ContentRootPath)!.FullName;
-        path = Directory.GetParent(path)!.FullName;
+        //path = Directory.GetParent(path)!.FullName;
 
         //Navigate relative to the current path in Development
         wwwRootPath = Path.Combine(

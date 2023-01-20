@@ -28,7 +28,7 @@ public partial class TokenModel : PageModel
 
     private async Task LoadAsync(Models.ApplicationUser user)
     {
-        string botToken = await userManager.GetAuthenticationTokenAsync(user, "Self", "BotToken");
+        string? botToken = await userManager.GetAuthenticationTokenAsync(user, "Self", "BotToken");
         if (string.IsNullOrEmpty(botToken))
         {
             botToken = "None";

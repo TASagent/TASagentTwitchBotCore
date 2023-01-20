@@ -50,7 +50,7 @@ public class TokenAuthenticationHandler : AuthenticationHandler<TokenAuthenticat
             return AuthenticateResult.Fail($"No Authorization {TOKEN_IDENTIFIER} Token included");
         }
 
-        string authHeader = Request.Headers[TOKEN_HEADER];
+        string? authHeader = Request.Headers[TOKEN_HEADER];
         if (string.IsNullOrEmpty(authHeader))
         {
             return AuthenticateResult.Fail($"No Authorization {TOKEN_IDENTIFIER} Token included");
@@ -67,7 +67,7 @@ public class TokenAuthenticationHandler : AuthenticationHandler<TokenAuthenticat
             return AuthenticateResult.Fail($"No Authorization {TOKEN_IDENTIFIER} Token included");
         }
 
-        string userId = Request.Headers[USER_ID_HEADER];
+        string? userId = Request.Headers[USER_ID_HEADER];
         if (string.IsNullOrEmpty(userId))
         {
             return AuthenticateResult.Fail("No User-Id");
@@ -75,7 +75,7 @@ public class TokenAuthenticationHandler : AuthenticationHandler<TokenAuthenticat
 
         try
         {
-            ApplicationUser matchingUser = await userManager.FindByNameAsync(userId);
+            ApplicationUser? matchingUser = await userManager.FindByNameAsync(userId);
 
             if (matchingUser is null)
             {
@@ -83,7 +83,7 @@ public class TokenAuthenticationHandler : AuthenticationHandler<TokenAuthenticat
                 return AuthenticateResult.Fail("Unauthorized");
             }
 
-            string botToken = await userManager.GetAuthenticationTokenAsync(matchingUser, "Self", "BotToken");
+            string? botToken = await userManager.GetAuthenticationTokenAsync(matchingUser, "Self", "BotToken");
 
             if (string.IsNullOrEmpty(botToken))
             {
@@ -98,10 +98,10 @@ public class TokenAuthenticationHandler : AuthenticationHandler<TokenAuthenticat
             }
 
             List<Claim> claims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.Name, matchingUser.UserName),
-                    new Claim(ClaimTypes.NameIdentifier, matchingUser.Id)
-                };
+            {
+                new Claim(ClaimTypes.Name, matchingUser.UserName!),
+                new Claim(ClaimTypes.NameIdentifier, matchingUser.Id)
+            };
 
             foreach (string role in await userManager.GetRolesAsync(matchingUser))
             {
@@ -118,7 +118,6 @@ public class TokenAuthenticationHandler : AuthenticationHandler<TokenAuthenticat
                 principal: claimsPrincipal,
                 authenticationScheme: Scheme.Name);
 
-            //logger.LogInformation($"{matchingUser.UserName} Authenticated with a Token.");
             return AuthenticateResult.Success(ticket);
         }
         catch (Exception ex)

@@ -49,7 +49,7 @@ public partial class EmailModel : PageModel
 
         Input = new InputModel
         {
-            NewEmail = email,
+            NewEmail = email!,
         };
 
         IsEmailConfirmed = await userManager.IsEmailConfirmedAsync(user);
@@ -128,8 +128,9 @@ public partial class EmailModel : PageModel
             pageHandler: null,
             values: new { area = "Identity", userId = userId, code = code },
             protocol: Request.Scheme)!;
+
         await emailSender.SendEmailAsync(
-            email,
+            email!,
             "Confirm your email",
             $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
 

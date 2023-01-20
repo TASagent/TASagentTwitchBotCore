@@ -11,13 +11,16 @@ namespace TASagentTwitchBot.Core.WebServer.Web.Hubs;
 public class BotEventSubHub : Hub
 {
     private readonly UserManager<ApplicationUser> userManager;
+    private readonly ILogger<BotEventSubHub> logger;
     private readonly IServerEventSubHandler eventSubHandler;
 
     public BotEventSubHub(
         UserManager<ApplicationUser> userManager,
+        ILogger<BotEventSubHub> logger,
         IServerEventSubHandler eventSubHandler)
     {
         this.userManager = userManager;
+        this.logger = logger;
         this.eventSubHandler = eventSubHandler;
     }
 
@@ -25,7 +28,13 @@ public class BotEventSubHub : Hub
     {
         await base.OnConnectedAsync();
 
-        ApplicationUser user = await userManager.GetUserAsync(Context.User);
+        if (Context.User is null)
+        {
+            logger.LogWarning("Received EventSub connection from null user {User} with connectionId {ConnectionId}", Context.UserIdentifier, Context.ConnectionId);
+            return;
+        }
+
+        ApplicationUser? user = await userManager.GetUserAsync(Context.User);
 
         if (user is not null && !string.IsNullOrEmpty(user.TwitchBroadcasterId))
         {
@@ -40,19 +49,58 @@ public class BotEventSubHub : Hub
 
     public async Task Subscribe(string subType)
     {
-        ApplicationUser user = await userManager.GetUserAsync(Context.User);
+        if (Context.User is null)
+        {
+            logger.LogWarning("Received EventSub Subscribe request from null user {User} with connectionId {ConnectionId}", Context.UserIdentifier, Context.ConnectionId);
+            return;
+        }
+
+        ApplicationUser? user = await userManager.GetUserAsync(Context.User);
+
+        if (user is null)
+        {
+            logger.LogWarning("Received EventSub Subscribe request from unknown user {User} with connectionId {ConnectionId}", Context.User.ToString(), Context.ConnectionId);
+            return;
+        }
+
         await eventSubHandler.SubscribeToStandardEvent(user, subType);
     }
 
     public async Task ReportDesiredEventSubs(HashSet<string> subTypes)
     {
-        ApplicationUser user = await userManager.GetUserAsync(Context.User);
+        if (Context.User is null)
+        {
+            logger.LogWarning("Received EventSub ReportDesiredEventSubs request from null user {User} with connectionId {ConnectionId}", Context.UserIdentifier, Context.ConnectionId);
+            return;
+        }
+
+        ApplicationUser? user = await userManager.GetUserAsync(Context.User);
+
+        if (user is null)
+        {
+            logger.LogWarning("Received EventSub ReportDesiredEventSubs request from unknown user {User} with connectionId {ConnectionId}", Context.User.ToString(), Context.ConnectionId);
+            return;
+        }
+
         await eventSubHandler.ReportDesiredEventSubs(user, subTypes);
     }
 
     public async Task ReportUndesiredEventSub(string subType)
     {
-        ApplicationUser user = await userManager.GetUserAsync(Context.User);
+        if (Context.User is null)
+        {
+            logger.LogWarning("Received EventSub ReportUndesiredEventSub request from null user {User} with connectionId {ConnectionId}", Context.UserIdentifier, Context.ConnectionId);
+            return;
+        }
+
+        ApplicationUser? user = await userManager.GetUserAsync(Context.User);
+
+        if (user is null)
+        {
+            logger.LogWarning("Received EventSub ReportUndesiredEventSub request from unknown user {User} with connectionId {ConnectionId}", Context.User.ToString(), Context.ConnectionId);
+            return;
+        }
+
         await eventSubHandler.ReportUndesiredEventSub(user, subType);
     }
 }

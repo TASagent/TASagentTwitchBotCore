@@ -121,9 +121,9 @@ public class EventSubHandler : IStartupListener, IDisposable
 
     public async Task ReceiveEvent(EventSubPayload eventSubPayload)
     {
-        if (eventHandlers.ContainsKey(eventSubPayload.EventType))
+        if (eventHandlers.TryGetValue(eventSubPayload.EventType, out EventHandler? eventHandler))
         {
-            await eventHandlers[eventSubPayload.EventType](eventSubPayload.TwitchEvent);
+            await eventHandler(eventSubPayload.TwitchEvent);
         }
         else
         {

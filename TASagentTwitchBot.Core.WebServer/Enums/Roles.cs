@@ -10,5 +10,6 @@ public enum Roles
     TTSNeural,
     TTSExternal,
     EventSub,
+    DataForwarding,
     MAX
 }

@@ -34,10 +34,10 @@ public static class StartupUtilities
         {
             //Navigate relative to the current path in Development
             string path = Directory.GetParent(app.Environment.ContentRootPath)!.FullName;
-#warning DOTNET CORE 6 FIX
+//#warning DOTNET CORE 6 FIX
             //Behavior of Directory.GetParent(x) seems to have changed in DotNetCore 6.0.
             //Now Directory.GetParent("/path/to/dir/") returns "/path/to/dir" when it used to return "/path/to"
-            path = Directory.GetParent(path)!.FullName;
+            //path = Directory.GetParent(path)!.FullName;
             wwwRootPath = Path.Combine(
                 path,
                 "TASagentTwitchBotCore",
@@ -79,10 +79,10 @@ public static class StartupUtilities
         {
             //Navigate relative to the current path in Development
             string path = Directory.GetParent(app.Environment.ContentRootPath)!.FullName;
-#warning DOTNET CORE 6 FIX
+//#warning DOTNET CORE 6 FIX
             //Behavior of Directory.GetParent(x) seems to have changed in DotNetCore 6.0.
             //Now Directory.GetParent("/path/to/dir/") returns "/path/to/dir" when it used to return "/path/to"
-            path = Directory.GetParent(path)!.FullName;
+            //path = Directory.GetParent(path)!.FullName;
             wwwRootPath = Path.Combine(
                 path,
                 libraryName,

@@ -23,7 +23,7 @@ public static class ContextSeed
         UserManager<ApplicationUser> userManager)
     {
         //Check for default admin
-        ApplicationUser admin = await userManager.FindByNameAsync("admin");
+        ApplicationUser? admin = await userManager.FindByNameAsync("admin");
 
         if (admin is null)
         {

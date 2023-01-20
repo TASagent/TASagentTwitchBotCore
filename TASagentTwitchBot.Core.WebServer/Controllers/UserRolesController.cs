@@ -30,7 +30,7 @@ public class UserRolesController : Controller
             userRolesViewModel.Add(new UserRolesViewModel()
             {
                 UserId = user.Id,
-                Email = user.Email,
+                Email = user.Email!,
                 TwitchBroadcasterId = user.TwitchBroadcasterId,
                 TwitchBroadcasterName = user.TwitchBroadcasterName,
                 MonthlyTTSCharacterLimit = user.MonthlyTTSLimit,
@@ -51,7 +51,7 @@ public class UserRolesController : Controller
     public async Task<IActionResult> Manage(string userId)
     {
         ViewBag.userId = userId;
-        ApplicationUser user = await userManager.FindByIdAsync(userId);
+        ApplicationUser? user = await userManager.FindByIdAsync(userId);
 
         if (user is null)
         {
@@ -66,10 +66,10 @@ public class UserRolesController : Controller
             ManageUserRolesViewModel userRolesViewModel = new ManageUserRolesViewModel
             {
                 RoleId = role.Id,
-                RoleName = role.Name
+                RoleName = role.Name!
             };
 
-            if (await userManager.IsInRoleAsync(user, role.Name))
+            if (await userManager.IsInRoleAsync(user, role.Name!))
             {
                 userRolesViewModel.Selected = true;
             }
@@ -88,7 +88,7 @@ public class UserRolesController : Controller
     [Authorize(Roles = "SuperAdmin")]
     public async Task<IActionResult> Manage(List<ManageUserRolesViewModel> model, string userId)
     {
-        ApplicationUser user = await userManager.FindByIdAsync(userId);
+        ApplicationUser? user = await userManager.FindByIdAsync(userId);
 
         if (user is null)
         {
@@ -119,7 +119,7 @@ public class UserRolesController : Controller
     public async Task<IActionResult> ManageTTS(string userId)
     {
         ViewBag.userId = userId;
-        ApplicationUser user = await userManager.FindByIdAsync(userId);
+        ApplicationUser? user = await userManager.FindByIdAsync(userId);
 
         if (user is null)
         {
@@ -141,7 +141,7 @@ public class UserRolesController : Controller
     [Authorize(Roles = "SuperAdmin")]
     public async Task<IActionResult> ManageTTS(ManageUserTTSViewModel model, string userId)
     {
-        ApplicationUser user = await userManager.FindByIdAsync(userId);
+        ApplicationUser? user = await userManager.FindByIdAsync(userId);
 
         if (user is null)
         {

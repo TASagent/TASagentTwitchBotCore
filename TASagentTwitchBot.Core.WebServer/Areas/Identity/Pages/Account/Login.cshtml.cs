@@ -81,7 +81,7 @@ public class LoginModel : PageModel
                 Models.ApplicationUser? user = await _userManager.FindByEmailAsync(Input.Email);
                 if (user is not null)
                 {
-                    userName = user.UserName;
+                    userName = user.UserName!;
                 }
             }
 

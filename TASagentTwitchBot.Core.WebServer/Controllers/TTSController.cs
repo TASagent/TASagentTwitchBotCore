@@ -32,7 +32,13 @@ public class TTSController : Controller
             return BadRequest("No text included");
         }
 
-        ApplicationUser user = await userManager.GetUserAsync(HttpContext.User);
+        ApplicationUser? user = await userManager.GetUserAsync(HttpContext.User);
+
+        if (user is null)
+        {
+            return BadRequest($"User not found");
+        }
+
         byte[]? data = await ttsHandler.HandleRawExternalTTSRequest(userManager, user, request);
 
         if (data is null)

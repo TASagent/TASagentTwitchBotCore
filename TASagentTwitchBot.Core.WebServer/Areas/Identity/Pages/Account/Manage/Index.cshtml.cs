@@ -41,7 +41,7 @@ public partial class IndexModel : PageModel
         Username = userName;
         Input = new InputModel
         {
-            Username = userName,
+            Username = userName!,
             TwitchBroadcasterName = twitchBroadcasterName!,
         };
     }

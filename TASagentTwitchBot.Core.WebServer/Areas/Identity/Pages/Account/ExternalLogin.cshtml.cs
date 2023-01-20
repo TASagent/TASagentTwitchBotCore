@@ -61,7 +61,7 @@ public class ExternalLoginModel : PageModel
             return RedirectToPage("./Login", new { ReturnUrl = returnUrl });
         }
 
-        ExternalLoginInfo info = await signInManager.GetExternalLoginInfoAsync();
+        ExternalLoginInfo? info = await signInManager.GetExternalLoginInfoAsync();
         if (info is null)
         {
             ErrorMessage = "Error loading external login information.";
@@ -98,7 +98,7 @@ public class ExternalLoginModel : PageModel
         returnUrl ??= Url.Content("~/");
 
         // Get the information about the user from the external login provider
-        ExternalLoginInfo info = await signInManager.GetExternalLoginInfoAsync();
+        ExternalLoginInfo? info = await signInManager.GetExternalLoginInfoAsync();
         if (info is null)
         {
             ErrorMessage = "Error loading external login information during confirmation.";
@@ -107,8 +107,8 @@ public class ExternalLoginModel : PageModel
 
         if (ModelState.IsValid)
         {
-            string displayName = info.Principal.FindFirstValue("urn:twitch:displayname");
-            string email = info.Principal.FindFirstValue(ClaimTypes.Email);
+            string displayName = info.Principal.FindFirstValue("urn:twitch:displayname")!;
+            string email = info.Principal.FindFirstValue(ClaimTypes.Email)!;
 
             ApplicationUser user = new ApplicationUser
             {

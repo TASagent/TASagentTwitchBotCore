@@ -29,7 +29,7 @@ public class AuthCheckerMiddleware
                 return;
             }
 
-            AuthDegree authDegree = botConfig.AuthConfiguration.CheckAuthString(context.Request.Headers["Authorization"]);
+            AuthDegree authDegree = botConfig.AuthConfiguration.CheckAuthString(context.Request.Headers["Authorization"]!);
 
             if (authDegree == AuthDegree.None)
             {

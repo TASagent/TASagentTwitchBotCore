@@ -18,15 +18,11 @@ public static class Cryptography
             throw new ArgumentException("Password cannot be null or empty", nameof(password));
         }
 
-        if (salt is null)
-        {
-            salt = GenerateSalt();
-        }
+        salt ??= GenerateSalt();
 
-        using (Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, salt, 10000))
-        {
-            hash = pbkdf2.GetBytes(20);
-        }
+        using Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, salt, 10000, HashAlgorithmName.SHA1);
+
+        hash = pbkdf2.GetBytes(20);
 
         hashBytes = new byte[36];
         Array.Copy(salt, 0, hashBytes, 0, 16);
@@ -35,8 +31,7 @@ public static class Cryptography
         return Convert.ToBase64String(hashBytes);
     }
 
-    private static byte[] GenerateSalt() =>
-        RandomNumberGenerator.GetBytes(16);
+    private static byte[] GenerateSalt() => RandomNumberGenerator.GetBytes(16);
 
     /// <summary>
     /// Thank you stack overflow
@@ -69,10 +64,10 @@ public static class Cryptography
             byte[] hash;
 
             Array.Copy(hashBytes, 0, salt, 0, 16);
-            using (Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, salt, 10000))
-            {
-                hash = pbkdf2.GetBytes(20);
-            }
+            
+            using Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, salt, 10000, HashAlgorithmName.SHA1);
+
+            hash = pbkdf2.GetBytes(20);
 
             for (int i = 0; i < 20; i++)
             {

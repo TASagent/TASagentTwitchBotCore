@@ -2,6 +2,7 @@
 using NAudio.Wave;
 using NAudio.MediaFoundation;
 using BGC.Mathematics;
+using System.Reflection.PortableExecutable;
 
 namespace TASagentTwitchBot.Core.Audio;
 
@@ -200,11 +201,14 @@ public class NAudioMicrophoneHandler : IMicrophoneHandler, IAudioDeviceUpdateLis
         }
 
         fileRecordingStream.StopRecording();
-
         MediaFoundationApi.Startup();
 
-        MediaFoundationEncoder.EncodeToMp3(
+        using MediaFoundationResampler resampler = new MediaFoundationResampler(
             fileRecordingStream.ApplyMicrophoneEffects(botConfig.MicConfiguration, new Effects.NoEffect()).ToWaveProvider(),
+            new WaveFormat(44100, 16, 2));
+
+        MediaFoundationEncoder.EncodeToMp3(
+            resampler,
             fileRecordingPath);
 
         MediaFoundationApi.Shutdown();

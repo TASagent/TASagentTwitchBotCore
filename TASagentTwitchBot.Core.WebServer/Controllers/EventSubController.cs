@@ -32,10 +32,10 @@ public class EventSubController : Controller
         TwitchEventSubPayload payload,
         string userId)
     {
-        string messageId = Request.Headers["Twitch-Eventsub-Message-Id"];
-        string messageTimestamp = Request.Headers["Twitch-Eventsub-Message-Timestamp"];
-        string signature = Request.Headers["Twitch-Eventsub-Message-Signature"];
-        string messageType = Request.Headers["Twitch-Eventsub-Message-Type"];
+        string? messageId = Request.Headers["Twitch-Eventsub-Message-Id"];
+        string? messageTimestamp = Request.Headers["Twitch-Eventsub-Message-Timestamp"];
+        string? signature = Request.Headers["Twitch-Eventsub-Message-Signature"];
+        string? messageType = Request.Headers["Twitch-Eventsub-Message-Type"];
 
         if (string.IsNullOrEmpty(signature))
         {
@@ -77,7 +77,7 @@ public class EventSubController : Controller
             return BadRequest("Malformed URL");
         }
 
-        ApplicationUser user = await userManager.FindByIdAsync(userId);
+        ApplicationUser? user = await userManager.FindByIdAsync(userId);
 
         if (user is null)
         {

@@ -63,14 +63,14 @@ public class ResetPasswordModel : PageModel
             return Page();
         }
 
-        Models.ApplicationUser? user = await _userManager.FindByEmailAsync(Input.Email);
+        Models.ApplicationUser? user = await _userManager.FindByEmailAsync(Input.Email!);
         if (user is null)
         {
             // Don't reveal that the user does not exist
             return RedirectToPage("./ResetPasswordConfirmation");
         }
 
-        IdentityResult result = await _userManager.ResetPasswordAsync(user, Input.Code, Input.Password);
+        IdentityResult result = await _userManager.ResetPasswordAsync(user, Input.Code!, Input.Password!);
         if (result.Succeeded)
         {
             return RedirectToPage("./ResetPasswordConfirmation");
