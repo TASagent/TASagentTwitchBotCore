@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.AspNetCore.StaticFiles;
+using System.Linq;
 using TASagentTwitchBot.Core.Audio;
 
 namespace TASagentTwitchBot.Core.DataForwarding;
@@ -154,8 +155,19 @@ public class DataForwardingClient : IStartupListener, IDataForwardingRegistrar, 
     Task IDataForwardingInitializer.ClearServerFileList(string context) =>
         serverHubConnection!.InvokeCoreAsync("ClearFileList", new object?[] { context });
 
-    Task IDataForwardingInitializer.UpdateServerFileList(string context, List<ServerDataFile> dataFiles) =>
-        serverHubConnection!.InvokeCoreAsync("AppendFileList", new object?[] { context, dataFiles });
+    async Task IDataForwardingInitializer.UpdateServerFileList(string context, List<ServerDataFile> dataFiles)
+    {
+        const int pageSize = 500;
+        int start = 0;
+
+        do
+        {
+            await serverHubConnection!.InvokeCoreAsync("AppendFileList", new object?[] { context, dataFiles.Skip(start).Take(pageSize).ToList() });
+
+            start += pageSize;
+        }
+        while (start <= dataFiles.Count);
+    }
 
     private async Task RequestDataFile(string dataFileAlias, string context, string requestIdentifier)
     {

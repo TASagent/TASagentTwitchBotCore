@@ -1,6 +1,5 @@
 ﻿using TASagentTwitchBot.Core.DataForwarding;
 using TASagentTwitchBot.Core.Audio;
-using System.Linq;
 
 namespace TASagentTwitchBot.Plugin.TTTAS;
 
