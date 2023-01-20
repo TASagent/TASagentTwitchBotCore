@@ -25,21 +25,21 @@ public class DataForwardingController : Controller
         return dataForwardingHandler.GetDataFileList(userNameString, context);
     }
 
-    [HttpGet("{dataFileAlias}")]
+    [HttpGet("Fetch")]
     [AllowCrossSite]
-    public async Task<IActionResult> Fetch(string userNameString, string context, string dataFileAlias)
+    public async Task<IActionResult> Fetch(string userNameString, string context, string alias)
     {
-        if (string.IsNullOrEmpty(dataFileAlias))
+        if (string.IsNullOrEmpty(alias))
         {
             return BadRequest();
         }
 
-        if (dataFileAlias.StartsWith('/'))
+        if (alias.StartsWith('/'))
         {
-            dataFileAlias = dataFileAlias[1..];
+            alias = alias[1..];
         }
 
-        ServerFileData? fileData = await dataForwardingHandler.GetDataFileByAlias(userNameString, context, dataFileAlias);
+        ServerFileData? fileData = await dataForwardingHandler.GetDataFileByAlias(userNameString, context, alias);
 
         if (fileData is null)
         {
