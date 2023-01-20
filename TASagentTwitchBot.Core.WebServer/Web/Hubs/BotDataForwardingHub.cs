@@ -86,9 +86,14 @@ public class BotDataForwardingHub : Hub
         dataForwardingHandler.UpdateSoundEffectList(user.TwitchBroadcasterName, soundEffects);
     }
 
-    public void UploadSoundEffect(string requestIdentifier, string name, byte[] data, string? contentType)
+    public void UploadSoundEffectMetaData(string requestIdentifier, string? contentType, int totalBytes)
     {
-        dataForwardingHandler.ReceiveSoundEffect(requestIdentifier, name, data, contentType);
+        dataForwardingHandler.ReceiveSoundEffectMetaData(requestIdentifier, contentType, totalBytes);
+    }
+
+    public void UploadSoundEffectData(string requestIdentifier, byte[] data, int current)
+    {
+        dataForwardingHandler.ReceiveSoundEffectData(requestIdentifier, data, current);
     }
 
     public void CancelSoundEffect(string requestIdentifier, string reason)

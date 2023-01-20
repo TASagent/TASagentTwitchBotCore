@@ -209,7 +209,7 @@ public class TTSWebRequestHandler : IDisposable
         TaskCompletionSource<string?> completionSource = new TaskCompletionSource<string?>();
         waitingDownloads.Add(request.RequestIdentifier, completionSource);
 
-        await serverHubConnection!.InvokeAsync("RequestNewTTS", request);
+        await serverHubConnection!.InvokeCoreAsync("RequestNewTTS", new object?[] { request });
         return await completionSource.Task;
     }
 

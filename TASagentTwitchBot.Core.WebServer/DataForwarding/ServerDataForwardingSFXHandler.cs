@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using Amazon.Runtime.Internal.Transform;
+using Microsoft.AspNetCore.SignalR;
 
 using TASagentTwitchBot.Core.Audio;
 using TASagentTwitchBot.Core.WebServer.Web;
@@ -11,7 +12,8 @@ public interface IServerDataForwardingSFXHandler
     void UpdateSoundEffectList(string userName, List<ServerSoundEffect> soundEffects);
     List<ServerSoundEffect> GetSoundEffectList(string userName);
     Task<ServerSoundEffectData?> GetSoundEffectByAlias(string userName, string soundEffectString);
-    void ReceiveSoundEffect(string requestIdentifier, string name, byte[] data, string? contentType);
+    void ReceiveSoundEffectMetaData(string requestIdentifier, string? contentType, int totalBytes);
+    void ReceiveSoundEffectData(string requestIdentifier, byte[] data, int current);
     void CancelSoundEffect(string requestIdentifier, string reason);
 }
 
@@ -24,6 +26,8 @@ public class ServerDataForwardingSFXHandler : IServerDataForwardingSFXHandler
     private readonly Dictionary<string, List<ServerSoundEffect>> soundEffectListLookup = new Dictionary<string, List<ServerSoundEffect>>();
 
     private readonly Dictionary<string, PendingDownload> waitingDownloads = new Dictionary<string, PendingDownload>();
+    private readonly Dictionary<string, OngoingDownload> ongoingDownloads = new Dictionary<string, OngoingDownload>();
+
 
     public ServerDataForwardingSFXHandler(
         ILogger<ServerDataForwardingSFXHandler> logger,
@@ -63,8 +67,6 @@ public class ServerDataForwardingSFXHandler : IServerDataForwardingSFXHandler
             new TaskCompletionSource<ServerSoundEffectData?>();
 
         waitingDownloads.Add(requestIdentifier, new PendingDownload(
-            UserName: userName,
-            SoundEffectAlias: soundEffectAlias,
             CompletionSource: completionSource,
             RequestTime: DateTime.Now));
 
@@ -80,10 +82,8 @@ public class ServerDataForwardingSFXHandler : IServerDataForwardingSFXHandler
         return data;
     }
 
-    public void ReceiveSoundEffect(string requestIdentifier, string name, byte[] data, string? contentType)
+    public void ReceiveSoundEffectMetaData(string requestIdentifier, string? contentType, int totalBytes)
     {
-        logger.LogWarning("Received sound effect {name} data of {bytes} bytes", name, data?.Length ?? 0);
-
         if (!waitingDownloads.TryGetValue(requestIdentifier, out PendingDownload? pendingDownload))
         {
             logger.LogWarning("Received unexpected SoundEffect data for identifier: {requestIdentifier}", requestIdentifier);
@@ -92,12 +92,35 @@ public class ServerDataForwardingSFXHandler : IServerDataForwardingSFXHandler
 
         waitingDownloads.Remove(requestIdentifier);
 
-        ServerSoundEffectData soundEffectData = new ServerSoundEffectData(
-            Name: name,
-            Data: data!,
-            ContentType: contentType);
+        ongoingDownloads.Add(requestIdentifier, new OngoingDownload(totalBytes, contentType, pendingDownload.CompletionSource));
+    }
 
-        pendingDownload.CompletionSource.SetResult(soundEffectData);
+    public void ReceiveSoundEffectData(string requestIdentifier, byte[] data, int current)
+    {
+        if (!ongoingDownloads.TryGetValue(requestIdentifier, out OngoingDownload? ongoingDownload))
+        {
+            logger.LogWarning("Received unexpected SoundEffect data for identifier: {requestIdentifier}", requestIdentifier);
+            return;
+        }
+
+        Array.Copy(
+            sourceArray: data,
+            sourceIndex: 0,
+            destinationArray: ongoingDownload.Data!,
+            destinationIndex: ongoingDownload.Downloaded,
+            length: current);
+
+        ongoingDownload.Downloaded += current;
+
+        if (ongoingDownload.Downloaded == ongoingDownload.Data.Length)
+        {
+            //Download finished
+            ongoingDownloads.Remove(requestIdentifier);
+
+            ongoingDownload.CompletionSource.SetResult(new ServerSoundEffectData(
+                Data: ongoingDownload.Data,
+                ContentType: ongoingDownload.ContentType));
+        }
     }
 
     public void CancelSoundEffect(string requestIdentifier, string reason)
@@ -112,8 +135,24 @@ public class ServerDataForwardingSFXHandler : IServerDataForwardingSFXHandler
     }
 
     private record PendingDownload(
-        string UserName,
-        string SoundEffectAlias,
         TaskCompletionSource<ServerSoundEffectData?> CompletionSource,
         DateTime RequestTime);
+
+    private class OngoingDownload
+    {
+        public byte[] Data { get; init; }
+        public int Downloaded { get; set; } = 0;
+        public TaskCompletionSource<ServerSoundEffectData?> CompletionSource { get; init; }
+        public string? ContentType { get; init; }
+
+        public OngoingDownload(
+            int size,
+            string? contentType,
+            TaskCompletionSource<ServerSoundEffectData?> completionSource)
+        {
+            Data = new byte[size];
+            ContentType = contentType;
+            CompletionSource = completionSource;
+        }
+    }
 }

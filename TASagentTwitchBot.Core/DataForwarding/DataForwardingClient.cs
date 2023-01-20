@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.AspNetCore.StaticFiles;
 using TASagentTwitchBot.Core.Audio;
+using TASagentTwitchBot.Core.Web.Controllers;
 
 namespace TASagentTwitchBot.Core.DataForwarding;
 
@@ -137,11 +138,28 @@ public class DataForwardingClient : IStartupListener, IDisposable
             return;
         }
 
-        byte[] fileData = await File.ReadAllBytesAsync(soundEffect.FilePath);
+        using FileStream file = new FileStream(soundEffect.FilePath, FileMode.Open);
+        int totalData = (int)file.Length;
 
         new FileExtensionContentTypeProvider().TryGetContentType(soundEffect.FilePath, out string? contentType);
 
-        await serverHubConnection!.InvokeCoreAsync("UploadSoundEffect", new object?[] { requestIdentifier, soundEffect.Name, fileData, contentType });
+        await serverHubConnection!.InvokeCoreAsync(
+            methodName: "UploadSoundEffectMetaData",
+            args: new object?[] { requestIdentifier, contentType, totalData });
+
+        int dataPacketSize = Math.Min(totalData, 1 << 13);
+        byte[] dataPacket = new byte[dataPacketSize];
+
+        int bytesReady;
+        //Now stream the file back to the requester
+        while ((bytesReady = await file.ReadAsync(dataPacket)) > 0)
+        {
+            await serverHubConnection!.InvokeCoreAsync(
+                methodName: "UploadSoundEffectData",
+                args: new object?[] { requestIdentifier, dataPacket, bytesReady });
+        }
+
+        file.Close();
     }
 
     protected virtual void Dispose(bool disposing)

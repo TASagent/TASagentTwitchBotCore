@@ -102,7 +102,7 @@ public class EventSubHandler : IStartupListener, IDisposable
         HashSet<string> requiredEvents = new HashSet<string>(eventHandlers.Keys);
 
         //Make sure the server subs to relevant events
-        await serverHubConnection!.InvokeAsync("ReportDesiredEventSubs", requiredEvents);
+        await serverHubConnection!.InvokeCoreAsync("ReportDesiredEventSubs", new object?[] { requiredEvents });
     }
 
     private Task ServerHubConnectionClosed(Exception? arg)
@@ -128,7 +128,7 @@ public class EventSubHandler : IStartupListener, IDisposable
         else
         {
             communication.SendWarningMessage($"Received undesired EventSub event: {JsonSerializer.Serialize(eventSubPayload)}");
-            await serverHubConnection!.InvokeAsync("ReportUndesiredEventSub", eventSubPayload.SubId);
+            await serverHubConnection!.InvokeCoreAsync("ReportUndesiredEventSub", new object?[] { eventSubPayload.SubId });
         }
     }
 
