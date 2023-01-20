@@ -93,7 +93,7 @@ builder.Services
 
 builder.Services
     .AddTASSingleton<DataForwardingConnectionManager>()
-    .AddTASSingleton<ServerDataForwardingSFXHandler>();
+    .AddTASSingleton<ServerDataForwardingHandler>();
 
 using WebApplication app = builder.Build();
 

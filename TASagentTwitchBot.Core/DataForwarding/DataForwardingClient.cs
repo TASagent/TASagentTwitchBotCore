@@ -1,16 +1,38 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.AspNetCore.StaticFiles;
 using TASagentTwitchBot.Core.Audio;
-using TASagentTwitchBot.Core.Web.Controllers;
 
 namespace TASagentTwitchBot.Core.DataForwarding;
 
-public class DataForwardingClient : IStartupListener, IDisposable
+[AutoRegister]
+public interface IDataForwardingContextHandler
+{
+    void Register(IDataForwardingRegistrar registrar);
+
+    List<ServerDataFile> GetDataFileList(string context);
+    string? GetDataFilePath(string dataFileAlias, string context);
+
+    Task Initialize(IDataForwardingInitializer initializer);
+}
+
+public interface IDataForwardingRegistrar
+{
+    void RegisterHandler(string context, IDataForwardingContextHandler handler);
+}
+
+public interface IDataForwardingInitializer
+{
+    Task ClearServerFileList(string context);
+    Task UpdateServerFileList(string context, List<ServerDataFile> dataFiles);
+}
+
+public class DataForwardingClient : IStartupListener, IDataForwardingRegistrar, IDataForwardingInitializer, IDisposable
 {
     private readonly Config.ServerConfig serverConfig;
 
     private readonly ICommunication communication;
-    private readonly ISoundEffectSystem soundEffectSystem;
+
+    private readonly Dictionary<string, IDataForwardingContextHandler> handlerMap = new Dictionary<string, IDataForwardingContextHandler>();
 
     private HubConnection? serverHubConnection;
     private readonly ErrorHandler errorHandler;
@@ -23,13 +45,17 @@ public class DataForwardingClient : IStartupListener, IDisposable
     public DataForwardingClient(
         Config.ServerConfig serverConfig,
         ICommunication communication,
-        ISoundEffectSystem soundEffectSystem,
-        ErrorHandler errorHandler)
+        ErrorHandler errorHandler,
+        IEnumerable<IDataForwardingContextHandler> dataForwardingContextHandlers)
     {
         this.serverConfig = serverConfig;
         this.communication = communication;
-        this.soundEffectSystem = soundEffectSystem;
         this.errorHandler = errorHandler;
+
+        foreach (IDataForwardingContextHandler handler in dataForwardingContextHandlers)
+        {
+            handler.Register(this);
+        }
 
         Task.Run(StartupInitialize);
     }
@@ -77,14 +103,17 @@ public class DataForwardingClient : IStartupListener, IDisposable
         serverHubConnection.On<string>("ReceiveWarning", ReceiveWarning);
         serverHubConnection.On<string>("ReceiveError", ReceiveError);
 
-        serverHubConnection.On<string, string>("RequestSoundEffect", RequestSoundEffect);
+        serverHubConnection.On<string, string, string>("RequestDataFile", RequestDataFile);
 
         try
         {
             await serverHubConnection!.StartAsync();
             Initialized = true;
 
-            await serverHubConnection.InvokeCoreAsync("UpdateSoundEffects", new object?[] { GetServerSoundEffectList() });
+            foreach (IDataForwardingContextHandler handler in handlerMap.Values.Distinct())
+            {
+                await handler.Initialize(this);
+            }
         }
         catch (HttpRequestException ex)
         {
@@ -119,30 +148,38 @@ public class DataForwardingClient : IStartupListener, IDisposable
     public void ReceiveWarning(string message) => communication.SendWarningMessage($"DataForwarding WebServer Warning: {message}");
     public void ReceiveError(string message) => communication.SendErrorMessage($"DataForwarding WebServer Error: {message}");
 
-    private List<ServerSoundEffect> GetServerSoundEffectList() =>
-        soundEffectSystem
-        .GetAllSoundEffects()
-        .Select(x => new ServerSoundEffect(x.Name, x.Aliases))
-        .ToList();
+    void IDataForwardingRegistrar.RegisterHandler(string context, IDataForwardingContextHandler handler) => handlerMap.Add(context.ToUpper(), handler);
 
 
-    private async Task RequestSoundEffect(string soundEffectAlias, string requestIdentifier)
+    Task IDataForwardingInitializer.ClearServerFileList(string context) =>
+        serverHubConnection!.InvokeCoreAsync("ClearFileList", new object?[] { context });
+
+    Task IDataForwardingInitializer.UpdateServerFileList(string context, List<ServerDataFile> dataFiles) =>
+        serverHubConnection!.InvokeCoreAsync("AppendFileList", new object?[] { context, dataFiles });
+
+    private async Task RequestDataFile(string dataFileAlias, string context, string requestIdentifier)
     {
-        SoundEffect? soundEffect = soundEffectSystem.GetSoundEffectByAlias(soundEffectAlias);
-
-        if (soundEffect is null)
+        if (!handlerMap.TryGetValue(context, out IDataForwardingContextHandler? handler))
         {
-            await serverHubConnection!.InvokeCoreAsync("CancelSoundEffect", new object?[] { requestIdentifier, $"Sound effect {soundEffectAlias} does not exist" });
+            await serverHubConnection!.InvokeCoreAsync("CancelFileTransfer", new object?[] { requestIdentifier, $"Datafile Handler for context {context} does not exist" });
             return;
         }
 
-        using FileStream file = new FileStream(soundEffect.FilePath, FileMode.Open);
+        string? dataFilePath = handler.GetDataFilePath(dataFileAlias, context);
+
+        if (string.IsNullOrEmpty(dataFilePath))
+        {
+            await serverHubConnection!.InvokeCoreAsync("CancelFileTransfer", new object?[] { requestIdentifier, $"Datafile {dataFileAlias} does not exist in context {context}" });
+            return;
+        }
+
+        using FileStream file = new FileStream(dataFilePath, FileMode.Open);
         int totalData = (int)file.Length;
 
-        new FileExtensionContentTypeProvider().TryGetContentType(soundEffect.FilePath, out string? contentType);
+        new FileExtensionContentTypeProvider().TryGetContentType(dataFilePath, out string? contentType);
 
         await serverHubConnection!.InvokeCoreAsync(
-            methodName: "UploadSoundEffectMetaData",
+            methodName: "UploadDataFileMetaData",
             args: new object?[] { requestIdentifier, contentType, totalData });
 
         int dataPacketSize = Math.Min(totalData, 1 << 13);
@@ -153,7 +190,7 @@ public class DataForwardingClient : IStartupListener, IDisposable
         while ((bytesReady = await file.ReadAsync(dataPacket)) > 0)
         {
             await serverHubConnection!.InvokeCoreAsync(
-                methodName: "UploadSoundEffectData",
+                methodName: "UploadDataFileData",
                 args: new object?[] { requestIdentifier, dataPacket, bytesReady });
         }
 

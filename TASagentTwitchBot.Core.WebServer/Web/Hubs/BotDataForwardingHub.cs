@@ -1,14 +1,10 @@
-﻿using System.Text.Json.Serialization;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Authorization;
 
 using TASagentTwitchBot.Core.Audio;
 using TASagentTwitchBot.Core.WebServer.Models;
 using TASagentTwitchBot.Core.WebServer.TTS;
-using System.Collections.Concurrent;
-using Google.Api;
-using System.Diagnostics.CodeAnalysis;
 
 namespace TASagentTwitchBot.Core.WebServer.Web.Hubs;
 
@@ -17,13 +13,13 @@ public class BotDataForwardingHub : Hub
 {
     private readonly UserManager<ApplicationUser> userManager;
     private readonly ILogger<BotDataForwardingHub> logger;
-    private readonly IServerDataForwardingSFXHandler dataForwardingHandler;
+    private readonly IServerDataForwardingHandler dataForwardingHandler;
     private readonly IDataForwardingConnectionManager dataForwardingConnectionManager;
 
     public BotDataForwardingHub(
         UserManager<ApplicationUser> userManager,
         ILogger<BotDataForwardingHub> logger,
-        IServerDataForwardingSFXHandler dataForwardingHandler,
+        IServerDataForwardingHandler dataForwardingHandler,
         IDataForwardingConnectionManager dataForwardingConnectionManager)
     {
         this.userManager = userManager;
@@ -46,7 +42,7 @@ public class BotDataForwardingHub : Hub
 
         if (user is not null && !string.IsNullOrEmpty(user.TwitchBroadcasterName))
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, user.TwitchBroadcasterName.ToLower());
+            await Groups.AddToGroupAsync(Context.ConnectionId, user.TwitchBroadcasterName.ToUpper());
 
             dataForwardingConnectionManager.AddConnection(user.TwitchBroadcasterName, Context.ConnectionId);
         }
@@ -67,7 +63,7 @@ public class BotDataForwardingHub : Hub
         await base.OnDisconnectedAsync(exception);
     }
 
-    public async Task UpdateSoundEffects(List<ServerSoundEffect> soundEffects)
+    public async Task ClearFileList(string context)
     {
         if (Context.User is null)
         {
@@ -83,21 +79,40 @@ public class BotDataForwardingHub : Hub
             return;
         }
 
-        dataForwardingHandler.UpdateSoundEffectList(user.TwitchBroadcasterName, soundEffects);
+        dataForwardingHandler.ClearFileList(user.TwitchBroadcasterName, context);
     }
 
-    public void UploadSoundEffectMetaData(string requestIdentifier, string? contentType, int totalBytes)
+    public async Task AppendFileList(string context, List<ServerDataFile> dataFiles)
     {
-        dataForwardingHandler.ReceiveSoundEffectMetaData(requestIdentifier, contentType, totalBytes);
+        if (Context.User is null)
+        {
+            logger.LogWarning("Received DataForwarding request from null user {User} with connectionId {ConnectionId}", Context.UserIdentifier, Context.ConnectionId);
+            return;
+        }
+
+        ApplicationUser? user = await userManager.GetUserAsync(Context.User);
+
+        if (user is null || string.IsNullOrEmpty(user.TwitchBroadcasterName))
+        {
+            logger.LogWarning("Received DataForwarding request from unknown user {User} with connectionId {ConnectionId}", Context.User.ToString(), Context.ConnectionId);
+            return;
+        }
+
+        dataForwardingHandler.AppendFileList(user.TwitchBroadcasterName, context, dataFiles);
     }
 
-    public void UploadSoundEffectData(string requestIdentifier, byte[] data, int current)
+    public void UploadDataFileMetaData(string requestIdentifier, string? contentType, int totalBytes)
     {
-        dataForwardingHandler.ReceiveSoundEffectData(requestIdentifier, data, current);
+        dataForwardingHandler.ReceiveFileMetaData(requestIdentifier, contentType, totalBytes);
     }
 
-    public void CancelSoundEffect(string requestIdentifier, string reason)
+    public void UploadDataFileData(string requestIdentifier, byte[] data, int current)
     {
-        dataForwardingHandler.CancelSoundEffect(requestIdentifier, reason);
+        dataForwardingHandler.ReceiveFileData(requestIdentifier, data, current);
+    }
+
+    public void CancelFileTransfer(string requestIdentifier, string reason)
+    {
+        dataForwardingHandler.CancelFileTransfer(requestIdentifier, reason);
     }
 }

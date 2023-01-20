@@ -28,6 +28,9 @@ public interface ITTTASProvider
     void Rerecord(string words);
 
     AudioRequest GetWord(string word, string requestId, Effect? effect = null);
+
+    IReadOnlyList<TTTASProvider.Recording> GetAllRecordings();
+    string? GetRecordingFilePath(string alias);
 }
 
 public class TTTASProvider : ITTTASProvider
@@ -302,6 +305,9 @@ public class TTTASProvider : ITTTASProvider
     public int GetRecordingCount() => recordingData.Recordings.Count;
 
     public List<string> GetPendingRecordings() => pendingRecordings.Values.Select(x => x.Name).ToList();
+    public IReadOnlyList<Recording> GetAllRecordings() => recordingData.Recordings;
+    public string? GetRecordingFilePath(string alias) => recordingData.RecordingLookup[alias]?.FilePath;
+
 
     private class RecordingData
     {
@@ -334,7 +340,7 @@ public class TTTASProvider : ITTTASProvider
         }
     }
 
-    private record Recording(string Name, string FilePath);
+    public record Recording(string Name, string FilePath);
 
     public class PendingRecording
     {
