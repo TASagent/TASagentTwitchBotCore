@@ -277,6 +277,14 @@ public record TwitchUpdateActiveUserExtensions(
     }
 }
 
+public record TwitchChatAnnouncementData(
+    [property: JsonPropertyName("message")]
+    string Message,
+
+    [property: JsonPropertyName("color")]
+    [property:JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? Color);
+
 public record TwitchExtensionAnalytics(
     [property: JsonPropertyName("data")] List<TwitchExtensionAnalytics.Datum> Data)
 {

@@ -161,6 +161,13 @@ public abstract class TokenValidator : IShutdownListener, ITokenValidator, IDisp
             return false;
         }
 
+        //Check our scopes
+        if (!ValidateScopes(request.Scope))
+        {
+            communication.SendWarningMessage($"Missing some access scopes.");
+            return false;
+        }
+
         //Update Tokens
         AccessToken = request.AccessToken;
         RefreshToken = request.RefreshToken;
@@ -179,6 +186,12 @@ public abstract class TokenValidator : IShutdownListener, ITokenValidator, IDisp
 
         //Was our token validated?
         if (validationRequest is null)
+        {
+            return false;
+        }
+
+        //Check our scopes
+        if (!ValidateScopes(validationRequest.Scopes))
         {
             return false;
         }
@@ -369,6 +382,7 @@ public abstract class TokenValidator : IShutdownListener, ITokenValidator, IDisp
         FailedValidation
     }
 
+    protected abstract bool ValidateScopes(List<string> receivedScopes);
     protected abstract void SendCodeRequest(string stateString);
     protected abstract void SaveChanges();
 

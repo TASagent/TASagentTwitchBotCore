@@ -82,19 +82,18 @@ public class ShoutOutSystem : ICommandContainer
         if (channelsInfo is null || channelsInfo.Data.Count == 0)
         {
             communication.SendErrorMessage($"Unable to request channel information about user \"{matchingUser.TwitchUserName}\".");
-            communication.SendPublicChatMessage($"/shoutout {matchingUser.TwitchUserName}");
             communication.SendPublicChatMessage($"Check out {matchingUser.TwitchUserName} at twitch.tv/{matchingUser.TwitchUserName}");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(channelsInfo.Data[0].GameName))
         {
-            communication.SendPublicChatMessage($"/shoutout {matchingUser.TwitchUserName}");
+            await helixHelper.SendShoutout(matchingUser.TwitchUserId);
             communication.SendPublicChatMessage($"Check out {matchingUser.TwitchUserName} at twitch.tv/{matchingUser.TwitchUserName}");
             return;
         }
 
-        communication.SendPublicChatMessage($"/shoutout {matchingUser.TwitchUserName}");
+        await helixHelper.SendShoutout(matchingUser.TwitchUserId);
         communication.SendPublicChatMessage($"Check out {matchingUser.TwitchUserName} at twitch.tv/{matchingUser.TwitchUserName} - " +
             $"Their last stream was of {channelsInfo.Data[0].GameName}, entitled \"{channelsInfo.Data[0].Title}\"");
     }

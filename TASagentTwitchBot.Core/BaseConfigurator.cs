@@ -153,7 +153,9 @@ public abstract class BaseConfigurator : IConfigurator
         return successful;
     }
 
-    protected async Task<bool> ConfigureBotAccount(API.Twitch.IBotTokenValidator botTokenValidator)
+    protected async Task<bool> ConfigureBotAccount(
+        API.Twitch.IBotTokenValidator botTokenValidator,
+        API.Twitch.HelixHelper helixHelper)
     {
         bool successful = true;
 
@@ -181,7 +183,24 @@ public abstract class BaseConfigurator : IConfigurator
         {
             if (await botTokenValidator.TryToConnect())
             {
-                //Success
+                //Set botId if it's not set
+                if (string.IsNullOrEmpty(botConfig.BotId))
+                {
+                    //Fetch the BotID
+                    API.Twitch.TwitchUsers? userData = await helixHelper.GetUsers(null, new List<string>() { botConfig.BotName }) ??
+                        throw new Exception("Unable to get User Data");
+
+                    if (userData.Data is not null && userData.Data.Count > 0)
+                    {
+                        botConfig.BotId = userData.Data[0].ID;
+                        botConfig.Serialize();
+                    }
+                    else
+                    {
+                        WriteError("Unable to fetch BotId.  Please check bot credentials and try again.");
+                        successful = false;
+                    }
+                }
             }
             else
             {

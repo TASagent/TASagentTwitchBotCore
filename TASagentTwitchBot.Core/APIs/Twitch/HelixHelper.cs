@@ -738,7 +738,7 @@ public class HelixHelper : IOAuthHandler
         string? id = null,
         bool? onlyManageableRewards = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix");
+        RestClient restClient = new RestClient(HelixURI);
         RestRequest request = new RestRequest("channel_points/custom_rewards", Method.Get);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {botConfig.BroadcasterAccessToken}");
@@ -763,7 +763,7 @@ public class HelixHelper : IOAuthHandler
         int? globalCooldown = null,
         bool? skipQueue = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix");
+        RestClient restClient = new RestClient(HelixURI);
         RestRequest request = new RestRequest("channel_points/custom_rewards", Method.Post);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {botConfig.BroadcasterAccessToken}");
@@ -795,7 +795,7 @@ public class HelixHelper : IOAuthHandler
         string? after = null,
         int? first = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix");
+        RestClient restClient = new RestClient(HelixURI);
         RestRequest request = new RestRequest("channel_points/custom_rewards/redemptions", Method.Get);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {botConfig.BroadcasterAccessToken}");
@@ -817,7 +817,7 @@ public class HelixHelper : IOAuthHandler
         string id,
         string status)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix");
+        RestClient restClient = new RestClient(HelixURI);
         RestRequest request = new RestRequest("channel_points/custom_rewards/redemptions", Method.Patch);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {botConfig.BroadcasterAccessToken}");
@@ -845,7 +845,7 @@ public class HelixHelper : IOAuthHandler
         bool? paused = null,
         bool? skipQueue = null)
     {
-        RestClient restClient = new RestClient("https://api.twitch.tv/helix");
+        RestClient restClient = new RestClient(HelixURI);
         RestRequest request = new RestRequest("channel_points/custom_rewards", Method.Patch);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
         request.AddHeader("Authorization", $"Bearer {botConfig.BroadcasterAccessToken}");
@@ -870,6 +870,43 @@ public class HelixHelper : IOAuthHandler
             ShouldRedemptionsSkipRewardQueue: skipQueue));
 
         return Deserialize<TwitchCustomRewardRedemption>(await restClient.ExecuteAsync(request));
+    }
+
+    public async Task<bool> SendChatAnnouncement(
+        string message,
+        string? color = null)
+    {
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("chat/announcements", Method.Post);
+        request.AddHeader("Client-ID", botConfig.TwitchClientId);
+        request.AddHeader("Authorization", $"Bearer {botConfig.BotAccessToken}");
+
+        request.AddQueryParameter("broadcaster_id", botConfig.BroadcasterId);
+        request.AddQueryParameter("moderator_id", botConfig.BotId);
+
+        request.AddJsonBody(new TwitchChatAnnouncementData(
+            Message: message,
+            Color: color));
+
+        RestResponse response = await restClient.ExecuteAsync(request);
+
+        return response.StatusCode == HttpStatusCode.NoContent;
+    }
+
+    public async Task<bool> SendShoutout(string broadcasterId)
+    {
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("chat/shoutouts", Method.Post);
+        request.AddHeader("Client-ID", botConfig.TwitchClientId);
+        request.AddHeader("Authorization", $"Bearer {botConfig.BotAccessToken}");
+
+        request.AddQueryParameter("from_broadcaster_id", botConfig.BroadcasterId);
+        request.AddQueryParameter("to_broadcaster_id", broadcasterId);
+        request.AddQueryParameter("moderator_id", botConfig.BotId);
+
+        RestResponse response = await restClient.ExecuteAsync(request);
+
+        return response.StatusCode == HttpStatusCode.NoContent;
     }
 
     private T? Deserialize<T>(RestResponse response)

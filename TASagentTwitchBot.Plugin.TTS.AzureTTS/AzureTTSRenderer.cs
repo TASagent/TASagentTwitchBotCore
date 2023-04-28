@@ -35,7 +35,7 @@ public abstract class AzureTTSRenderer : StandardTTSSystemRenderer
         switch (mode)
         {
             case TTSRenderMode.Whisper:
-                return start ? "<emphasis level=\"reduced\">" : "</emphasis>";
+                return start ? "<mstts:express-as style=\"whispering\">" : "</mstts:express-as>";
 
             case TTSRenderMode.Emphasis:
                 return start ? "<emphasis level=\"strong\">" : "</emphasis>";

@@ -28,8 +28,8 @@ public class StandardConfigurator : BaseConfigurator
         successful |= ConfigureTwitchClient();
 
         //Check Accounts
+        successful |= await ConfigureBotAccount(botTokenValidator, helixHelper);
         successful |= await ConfigureBroadcasterAccount(broadcasterTokenValidator, helixHelper);
-        successful |= await ConfigureBotAccount(botTokenValidator);
 
         successful |= ConfigurePasswords();
 

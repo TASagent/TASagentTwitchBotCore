@@ -14,6 +14,7 @@ public class BotConfiguration
     public const int CURRENT_VERSION = 2;
 
     public string BotName { get; set; } = "";
+    public string BotId { get; set; } = "";
     public string Broadcaster { get; set; } = "";
     public string BroadcasterId { get; set; } = "";
 

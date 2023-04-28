@@ -11,6 +11,16 @@ public class BroadcasterTokenValidator : TokenValidator, IBroadcasterTokenValida
 {
     private readonly Config.BotConfiguration botConfig;
 
+    private readonly IReadOnlySet<string> scopes = new HashSet<string>
+    {
+        "channel:manage:broadcast",
+        "channel:manage:extensions",
+        "channel:manage:redemptions",
+        "channel:moderate",
+        "channel:read:redemptions",
+        "channel:read:subscriptions"
+    };
+
     protected override string AccessToken
     {
         get => botConfig.BroadcasterAccessToken;
@@ -41,24 +51,18 @@ public class BroadcasterTokenValidator : TokenValidator, IBroadcasterTokenValida
 
     protected override void SendCodeRequest(string stateString)
     {
-        const string scopes =
-            "channel:manage:broadcast " +
-            "channel:manage:extensions " +
-            "channel:manage:redemptions " +
-            "channel:moderate " +
-            "channel:read:redemptions " +
-            "channel:read:subscriptions";
-
         string url = $"https://id.twitch.tv/oauth2/authorize" +
             $"?client_id={botConfig.TwitchClientId}" +
             $"&client_secret={botConfig.TwitchClientSecret}" +
             $"&redirect_uri={RedirectURI}" +
             $"&response_type=code" +
-            $"&scope={scopes.Replace(" ", "+")}" +
+            $"&scope={string.Join('+', scopes)}" +
             $"&state={HttpUtility.UrlEncode(stateString)}";
 
         communication.SendDebugMessage($"Go to this url logged into Twitch as the Broadcaster:\n\n{url}\n\n");
     }
+
+    protected override bool ValidateScopes(List<string> receivedScopes) => scopes.IsSubsetOf(receivedScopes);
 
     void IStartupListener.NotifyStartup() => RunValidator();
 }
