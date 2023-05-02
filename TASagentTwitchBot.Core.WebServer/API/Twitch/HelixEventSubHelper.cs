@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using RestSharp;
+using System.Web;
 
 using TASagentTwitchBot.Core.API.Twitch;
 using TASagentTwitchBot.Core.Web.Extensions;
@@ -104,4 +105,6 @@ public class HelixEventSubHelper
 
         return JsonSerializer.Deserialize<TwitchGetSubscriptionsResponse>(response.Content!);
     }
+
+    public string IncludeHTTPUtility() => HttpUtility.HtmlEncode("test");
 }
