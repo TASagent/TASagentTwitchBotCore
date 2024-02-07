@@ -40,7 +40,7 @@ public class HelixEventSubHelper
 
         request.AddJsonBody(new TwitchSubscribeRequest(
             SubscriptionType: subscriptionType,
-            Version: "1",
+            Version: GetVersion(subscriptionType),
             Condition: condition,
             Transport: transport));
 
@@ -107,4 +107,11 @@ public class HelixEventSubHelper
     }
 
     public string IncludeHTTPUtility() => HttpUtility.HtmlEncode("test");
+    
+    private static string GetVersion(string subscriptionType) => subscriptionType switch
+    {
+        "channel.follow" => "2",
+        "channel.update" => "2",
+        _ => "1"
+    };
 }

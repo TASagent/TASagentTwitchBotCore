@@ -148,7 +148,15 @@ public class ServerEventSubHandler : IServerEventSubHandler
             EventSubConditionType conditionType = EventSubHandler.GetEventSubConditionType(subType);
             Condition condition;
 
-            if (conditionType == EventSubConditionType.BroadcasterUserId)
+            //ungh, Special case for Follows
+            if (subType == "channel.follow")
+            {
+                //Condition is ModeratorId AND BroadcasterId
+                condition = new Condition(
+                    BroadcasterUserId: user.TwitchBroadcasterId,
+                    ModeratorUserId: user.TwitchBroadcasterId);
+            }
+            else if (conditionType == EventSubConditionType.BroadcasterUserId)
             {
                 //Condition is Only BroadcasterUserId
                 condition = new Condition(BroadcasterUserId: user.TwitchBroadcasterId);

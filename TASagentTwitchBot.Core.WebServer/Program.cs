@@ -65,6 +65,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Scope.Add("channel:read:predictions");
         options.Scope.Add("channel:read:hype_train");
         options.Scope.Add("channel:read:goals");
+        options.Scope.Add("moderator:read:followers");
     });
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>

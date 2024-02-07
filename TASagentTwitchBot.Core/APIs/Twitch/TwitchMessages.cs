@@ -658,7 +658,11 @@ public record Condition(
 
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [property: JsonPropertyName("user_id")]
-    string? UserId = null);
+    string? UserId = null,
+
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [property: JsonPropertyName("moderator_user_id")]
+    string? ModeratorUserId = null);
 
 public record Transport(
     [property: JsonPropertyName("method")] string Method,

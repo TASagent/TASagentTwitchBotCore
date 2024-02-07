@@ -164,7 +164,6 @@ public class EventSubHandler : IStartupListener, IDisposable
         switch (eventType)
         {
             case "channel.update":
-            case "channel.follow":
             case "channel.subscribe":
             case "channel.subscription.end":
             case "channel.subscription.gift":
@@ -191,6 +190,9 @@ public class EventSubHandler : IStartupListener, IDisposable
             case "stream.online":
             case "stream.offline":
                 return EventSubConditionType.BroadcasterUserId;
+
+            case "channel.follow":
+                return EventSubConditionType.BroadcasterUserId | EventSubConditionType.ModeratorUserId;
 
             case "channel.raid":
                 return EventSubConditionType.FromBroadcasterUserId | EventSubConditionType.ToBroadcasterUserId;
@@ -226,7 +228,8 @@ public enum EventSubConditionType
     RewardId = 1 << 3,
     ClientId = 1 << 4,
     UserId = 1 << 5,
-    ExtensionClientId = 1 << 6
+    ExtensionClientId = 1 << 6,
+    ModeratorUserId = 1 << 7
 }
 
 public record EventSubPayload(
