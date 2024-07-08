@@ -39,7 +39,7 @@ public abstract class AzureTTSSystem : ITTSSystem
 
     public IEnumerable<string> GetVoices() => voices ?? throw new Exception($"GetVoices called before FinalizeInitialization");
 
-    public string GetDefaultVoice() => AzureTTSVoice.en_US_GuyRUS.Serialize();
+    public string GetDefaultVoice() => AzureTTSVoice.en_US_GuyNeural.Serialize();
 
     public TTSVoiceInfo GetTTSVoiceInfo(string voiceString)
     {

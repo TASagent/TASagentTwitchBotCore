@@ -74,8 +74,7 @@ public class StreamChangeSubscriber : IEventSubSubscriber
                 BroadcasterUserName: streamData.Data[0].UserName,
                 Title: streamData.Data[0].Title,
                 CategoryId: streamData.Data[0].GameID,
-                CategoryName: streamData.Data[0].GameName,
-                IsMature: streamData.Data[0].IsMature);
+                CategoryName: streamData.Data[0].GameName);
 
             foreach (IStreamDetailListener detailListener in streamDetailListeners)
             {
@@ -136,8 +135,7 @@ public class StreamChangeSubscriber : IEventSubSubscriber
             BroadcasterUserName: eventData.GetProperty("broadcaster_user_name").GetString()!,
             Title: eventData.GetProperty("title").GetString()!,
             CategoryId: eventData.GetProperty("category_id").GetString()!,
-            CategoryName: eventData.GetProperty("category_name").GetString()!,
-            IsMature: eventData.GetProperty("is_mature").GetBoolean());
+            CategoryName: eventData.GetProperty("category_name").GetString()!);
 }
 
 public record StreamUpdateData(
@@ -145,5 +143,4 @@ public record StreamUpdateData(
     string BroadcasterUserName,
     string Title,
     string CategoryId,
-    string CategoryName,
-    bool IsMature);
+    string CategoryName);

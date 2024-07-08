@@ -15,6 +15,7 @@
  */
 
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using RestSharp;
 
 using TASagentTwitchBot.Core.API.OAuth;
@@ -909,6 +910,37 @@ public class HelixHelper : IOAuthHandler
         return response.StatusCode == HttpStatusCode.NoContent;
     }
 
+    /// <summary>
+    /// Subscribe to EventSub Websocket event
+    /// </summary>
+    public async Task<TwitchSubscribeResponse?> EventSubSubscribe(
+        string subscriptionType,
+        string sessionId)
+    {
+        RestClient restClient = new RestClient(HelixURI);
+        RestRequest request = new RestRequest("eventsub/subscriptions", Method.Post);
+        request.AddHeader("Client-ID", botConfig.TwitchClientId);
+        request.AddHeader("Authorization", $"Bearer {botConfig.BotAccessToken}");
+
+        request.AddJsonBody(new TwitchSubscribeRequest(
+            SubscriptionType: subscriptionType,
+            Version: GetVersion(subscriptionType),
+            Condition: GetCondition(subscriptionType),
+            Transport: new Transport(
+                Method: "websocket",
+                SessionId: sessionId)));
+
+        RestResponse response = await restClient.ExecuteAsync(request);
+
+        if (response.StatusCode != HttpStatusCode.Accepted)
+        {
+            communication.SendWarningMessage($"Bad response to Subscribe request: {response.StatusCode} - {response.Content}");
+            return default;
+        }
+
+        return JsonSerializer.Deserialize<TwitchSubscribeResponse>(response.Content!);
+    }
+
     private T? Deserialize<T>(RestResponse response)
     {
         if (response.StatusCode != HttpStatusCode.OK)
@@ -928,5 +960,62 @@ public class HelixHelper : IOAuthHandler
         }
 
         return JsonSerializer.Deserialize<T>(contentMutator(response.Content!));
+    }
+
+    private static string GetVersion(string subscriptionType) => subscriptionType switch
+    {
+        "channel.follow" => "2",
+        "channel.update" => "2",
+        _ => "1"
+    };
+
+    private Condition GetCondition(string subscriptionType)
+    {
+        switch (subscriptionType)
+        {
+            case "channel.follow":
+                return new Condition(
+                    BroadcasterUserId: botConfig.BroadcasterId,
+                    ModeratorUserId: botConfig.BotId);
+
+            case "channel.update":
+            case "channel.subscribe":
+            case "channel.subscription.end":
+            case "channel.subscription.gift":
+            case "channel.subscription.message":
+            case "channel.cheer":
+            case "channel.ban":
+            case "channel.unban":
+            case "channel.moderator.add":
+            case "channel.moderator.remove":
+            case "channel.channel_points_custom_reward.add":
+            case "channel.poll.begin":
+            case "channel.poll.progress":
+            case "channel.poll.end":
+            case "channel.prediction.begin":
+            case "channel.prediction.progress":
+            case "channel.prediction.lock":
+            case "channel.prediction.end":
+            case "channel.goal.begin":
+            case "channel.goal.progress":
+            case "channel.goal.end":
+            case "channel.hype_train.begin":
+            case "channel.hype_train.progress":
+            case "channel.hype_train.end":
+            case "stream.online":
+            case "stream.offline":
+            case "channel.channel_points_custom_reward.update":
+            case "channel.channel_points_custom_reward.remove":
+            case "channel.channel_points_custom_reward_redemption.add":
+            case "channel.channel_points_custom_reward_redemption.update":
+                return new Condition(
+                    BroadcasterUserId: botConfig.BroadcasterId);
+
+            case "channel.raid":
+                return new Condition(
+                    ToBroadcasterUserId: botConfig.BroadcasterId);
+
+            default: throw new NotSupportedException($"SubscriptionType Not Supported: {subscriptionType}");
+        }
     }
 }

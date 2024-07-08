@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.SignalR;
 
 using TASagentTwitchBot.Core.API.BTTV;
+using static TASagentTwitchBot.Core.IRC.TwitchChatter;
 
 namespace TASagentTwitchBot.Core.EmoteEffects;
 
@@ -13,6 +14,12 @@ public interface IEmoteEffectListener
     void UnignoreEmote(string emote);
 }
 
+[AutoRegister]
+public interface IEmoteListener
+{
+    void NotifyEmotes(IEnumerable<string> urls);
+}
+
 public class EmoteEffectListener : IEmoteEffectListener, IDisposable
 {
     private readonly Config.BotConfiguration botConfig;
@@ -20,6 +27,7 @@ public class EmoteEffectListener : IEmoteEffectListener, IDisposable
     private readonly IBTTVHelper bttvHelper;
     private readonly Bits.ICheerHelper cheerHelper;
     private readonly EmoteEffectConfiguration emoteEffectConfig;
+    private readonly List<IEmoteListener> emoteListeners;
 
     private readonly Dictionary<string, string> externalEmoteLookup = new Dictionary<string, string>();
 
@@ -35,13 +43,16 @@ public class EmoteEffectListener : IEmoteEffectListener, IDisposable
         IHubContext<Web.Hubs.EmoteHub> emoteHubContext,
         IBTTVHelper bttvHelper,
         Bits.ICheerHelper cheerHelper,
-        EmoteEffectConfiguration emoteEffectConfig)
+        EmoteEffectConfiguration emoteEffectConfig,
+        IEnumerable<IEmoteListener> emoteListeners)
     {
         this.botConfig = botConfig;
         this.emoteHubContext = emoteHubContext;
         this.bttvHelper = bttvHelper;
         this.cheerHelper = cheerHelper;
         this.emoteEffectConfig = emoteEffectConfig;
+
+        this.emoteListeners = emoteListeners.ToList();
 
         communication.ReceiveMessageHandlers += ReceiveMessageHandler;
     }
@@ -152,6 +163,11 @@ public class EmoteEffectListener : IEmoteEffectListener, IDisposable
             if (emotes.Count > 0)
             {
                 await emoteHubContext.Clients.All.SendAsync("ReceiveEmotes", emotes);
+
+                foreach (IEmoteListener listener in emoteListeners)
+                {
+                    listener.NotifyEmotes(emotes);
+                }
             }
         }
         else
@@ -159,9 +175,16 @@ public class EmoteEffectListener : IEmoteEffectListener, IDisposable
             //No BTTV Emotes, use old method
             if (chatter.Emotes.Count > 0)
             {
+                List<string> emotes = chatter.Emotes.Where(ShouldRender).Select(x => x.URL).ToList();
+
                 await emoteHubContext.Clients.All.SendAsync(
                     "ReceiveEmotes",
-                    chatter.Emotes.Where(ShouldRender).Select(x => x.URL).ToList());
+                    emotes);
+
+                foreach (IEmoteListener listener in emoteListeners)
+                {
+                    listener.NotifyEmotes(emotes);
+                }
             }
         }
 

@@ -142,8 +142,7 @@ public record TwitchStreamData(
     [property: JsonPropertyName("started_at")] DateTime StartedAt,
     [property: JsonPropertyName("language")] string Language,
     [property: JsonPropertyName("thumbnail_url")] string ThumbnailURL,
-    [property: JsonPropertyName("tag_ids")] List<string> TagIDs,
-    [property: JsonPropertyName("is_mature")] bool IsMature);
+    [property: JsonPropertyName("tag_ids")] List<string> TagIDs);
 
 
 public record TwitchChannels(
@@ -666,8 +665,18 @@ public record Condition(
 
 public record Transport(
     [property: JsonPropertyName("method")] string Method,
-    [property: JsonPropertyName("callback")] string Callback,
-    [property: JsonPropertyName("secret")] string? Secret = null);
+
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [property: JsonPropertyName("session_id")]
+    string? SessionId = null,
+
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [property: JsonPropertyName("callback")]
+    string? Callback = null,
+
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [property: JsonPropertyName("secret")]
+    string? Secret = null);
 
 public record TwitchEventSubPayload(
     [property: JsonPropertyName("subscription")] TwitchSubscriptionDatum Subscription,

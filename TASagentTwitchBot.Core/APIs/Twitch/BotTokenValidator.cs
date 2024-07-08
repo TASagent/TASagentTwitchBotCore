@@ -31,6 +31,7 @@ public class BotTokenValidator : TokenValidator, IBotTokenValidator, IStartupLis
             "user:edit",
             "user:edit:follows",
             "user:read:broadcast",
+            "moderator:read:followers",
             //"user:read:email",
             //"whispers:read",
             //"whispers:edit"

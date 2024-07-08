@@ -183,7 +183,10 @@ public class ServerEventSubHandler : IServerEventSubHandler
             TwitchSubscribeResponse? response = await eventSubHelper.Subscribe(
                 subscriptionType: subType,
                 condition: condition,
-                transport: new Transport("webhook", $"{webServerConfig.ExternalAddress}/TASagentServerAPI/EventSub/Event/{user.Id.Replace("-","")}", user.SubscriptionSecret));
+                transport: new Transport(
+                    Method: "webhook",
+                    Callback: $"{webServerConfig.ExternalAddress}/TASagentServerAPI/EventSub/Event/{user.Id.Replace("-","")}",
+                    Secret: user.SubscriptionSecret));
 
             if (response is not null && response.Data.Length > 0)
             {

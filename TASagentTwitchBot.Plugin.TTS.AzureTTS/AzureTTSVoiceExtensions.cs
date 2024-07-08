@@ -55,6 +55,27 @@ public static class AzureTTSVoiceExtensions
         }
     }
 
+    public static AzureTTSVoice RemapRetiredVoices(this AzureTTSVoice voice) => voice switch
+    {
+        AzureTTSVoice.en_AU_Catherine => AzureTTSVoice.en_AU_NatashaNeural,
+        AzureTTSVoice.en_AU_HayleyRUS => AzureTTSVoice.en_AU_NatashaNeural,
+        AzureTTSVoice.en_CA_HeatherRUS => AzureTTSVoice.en_CA_ClaraNeural,
+        AzureTTSVoice.en_CA_Linda => AzureTTSVoice.en_CA_ClaraNeural,
+        AzureTTSVoice.en_IN_Heera => AzureTTSVoice.en_IN_NeerjaNeural,
+        AzureTTSVoice.en_IN_PriyaRUS => AzureTTSVoice.en_IN_NeerjaNeural,
+        AzureTTSVoice.en_IN_Ravi => AzureTTSVoice.en_IN_PrabhatNeural,
+        AzureTTSVoice.en_IE_Sean => AzureTTSVoice.en_IE_ConnorNeural,
+        AzureTTSVoice.en_GB_George => AzureTTSVoice.en_GB_RyanNeural,
+        AzureTTSVoice.en_GB_HazelRUS => AzureTTSVoice.en_GB_MiaNeural,
+        AzureTTSVoice.en_GB_Susan => AzureTTSVoice.en_GB_MiaNeural,
+        AzureTTSVoice.en_US_BenjaminRUS => AzureTTSVoice.en_US_GuyNeural,
+        AzureTTSVoice.en_US_GuyRUS => AzureTTSVoice.en_US_GuyNeural,
+        AzureTTSVoice.en_US_AriaRUS => AzureTTSVoice.en_US_AriaNeural,
+        AzureTTSVoice.en_US_ZiraRUS => AzureTTSVoice.en_US_AriaNeural,
+
+        _ => voice
+    };
+
 
     public static string GetTTSVoiceString(this AzureTTSVoice voice)
     {
@@ -160,6 +181,27 @@ public static class AzureTTSVoiceExtensions
         }
     }
 
+    public static bool IsStillSupported(this AzureTTSVoice voice) => voice switch
+    {
+        AzureTTSVoice.en_AU_Catherine => false,
+        AzureTTSVoice.en_AU_HayleyRUS => false,
+        AzureTTSVoice.en_CA_HeatherRUS => false,
+        AzureTTSVoice.en_CA_Linda => false,
+        AzureTTSVoice.en_IN_Heera => false,
+        AzureTTSVoice.en_IN_PriyaRUS => false,
+        AzureTTSVoice.en_IN_Ravi => false,
+        AzureTTSVoice.en_IE_Sean => false,
+        AzureTTSVoice.en_GB_George => false,
+        AzureTTSVoice.en_GB_HazelRUS => false,
+        AzureTTSVoice.en_GB_Susan => false,
+        AzureTTSVoice.en_US_BenjaminRUS => false,
+        AzureTTSVoice.en_US_GuyRUS => false,
+        AzureTTSVoice.en_US_AriaRUS => false,
+        AzureTTSVoice.en_US_ZiraRUS => false,
+
+        _ => true
+    };
+
     public static AzureTTSVoice SafeTranslateAzureTTSVoice(this string voiceString)
     {
         AzureTTSVoice voice = voiceString.TranslateAzureTTSVoice();
@@ -181,20 +223,20 @@ public static class AzureTTSVoiceExtensions
 
             for (AzureTTSVoice voice = 0; voice < AzureTTSVoice.MAX; voice++)
             {
-                ttsVoiceLookup.Add(Serialize(voice).ToLowerInvariant(), voice);
+                ttsVoiceLookup.Add(Serialize(voice).ToLowerInvariant(), voice.RemapRetiredVoices());
             }
         }
 
         if (string.IsNullOrEmpty(voiceString))
         {
-            return AzureTTSVoice.en_US_GuyRUS;
+            return AzureTTSVoice.en_US_GuyNeural;
         }
 
         string cleanedString = voiceString.Trim().ToLowerInvariant();
 
         if (string.IsNullOrEmpty(cleanedString))
         {
-            return AzureTTSVoice.en_US_GuyRUS;
+            return AzureTTSVoice.en_US_GuyNeural;
         }
 
         if (ttsVoiceLookup.TryGetValue(cleanedString, out AzureTTSVoice ttsVoice))
@@ -204,7 +246,7 @@ public static class AzureTTSVoiceExtensions
 
         if (cleanedString == "default" || cleanedString == "unassigned")
         {
-            return AzureTTSVoice.en_US_GuyRUS;
+            return AzureTTSVoice.en_US_GuyNeural;
         }
 
         return AzureTTSVoice.MAX;
