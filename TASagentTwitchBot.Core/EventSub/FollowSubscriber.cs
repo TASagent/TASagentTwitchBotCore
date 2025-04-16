@@ -21,9 +21,10 @@ public class FollowSubscriber : IEventSubSubscriber
         this.scopeFactory = scopeFactory;
     }
 
-    public void RegisterHandlers(Dictionary<string, EventHandler> handlers)
+    public Task RegisterHandlers(Dictionary<string, EventHandler> handlers)
     {
         handlers.Add("channel.follow", HandleFollowEvent);
+        return Task.CompletedTask;
     }
 
     public async Task HandleFollowEvent(JsonElement twitchEvent)

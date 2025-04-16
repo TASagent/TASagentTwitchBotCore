@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Google.Cloud.TextToSpeech.V1" Version="3.2.0" />
+    <PackageReference Include="RestSharp" Version="112.1.0" />
   </ItemGroup>
 
 	<ItemGroup>

@@ -52,11 +52,6 @@ public class EventSubWebSocketHandler : IStartupListener, IShutdownListener, IDi
 
         this.eventSubSubscribers = eventSubSubscribers.ToArray();
 
-        foreach (IEventSubSubscriber subscriber in this.eventSubSubscribers)
-        {
-            subscriber.RegisterHandlers(eventHandlers);
-        }
-
         if (this.eventSubSubscribers.Length == 0)
         {
             communication.SendDebugMessage($"No EventSub Listener registered. Skipping EventSub Websocket.");
@@ -69,6 +64,11 @@ public class EventSubWebSocketHandler : IStartupListener, IShutdownListener, IDi
 
     private async Task Launch()
     {
+        foreach (IEventSubSubscriber subscriber in this.eventSubSubscribers)
+        {
+            await subscriber.RegisterHandlers(eventHandlers);
+        }
+
         bool tokenValidated = await broadcasterTokenValidator.WaitForValidationAsync(generalTokenSource.Token);
 
         if (!tokenValidated)

@@ -14,10 +14,12 @@ public class BanSubscriber : IEventSubSubscriber
         this.communication = communication;
     }
 
-    public void RegisterHandlers(Dictionary<string, EventHandler> handlers)
+    public Task RegisterHandlers(Dictionary<string, EventHandler> handlers)
     {
         handlers.Add("channel.ban", HandleBanEvent);
         handlers.Add("channel.unban", HandleUnbanEvent);
+
+        return Task.CompletedTask;
     }
 
     public async Task HandleBanEvent(JsonElement twitchEvent)

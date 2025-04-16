@@ -1,5 +1,5 @@
 ﻿using TASagentTwitchBot.Core.API.Twitch;
-using TASagentTwitchBot.Core.PubSub;
+using TASagentTwitchBot.Core.Redemptions;
 using TASagentTwitchBot.Core.Database;
 
 namespace TASagentTwitchBot.Core.TTS;
@@ -156,7 +156,7 @@ public class TTSRedemptionHandler : IRedemptionContainer
 
     private async Task HandleRedemption(
         User user,
-        ChannelPointMessageData.Datum.RedemptionData redemption)
+        RedemptionData redemption)
     {
         if (!ttsConfig.Enabled)
         {
@@ -167,8 +167,8 @@ public class TTSRedemptionHandler : IRedemptionContainer
                 $"@{user.TwitchUserName}, TTS is currently disabled.");
 
             await helixHelper.UpdateCustomRewardRedemptions(
-                rewardId: redemption.Reward.Id,
-                id: redemption.Id,
+                rewardId: redemption.RewardData.Id,
+                id: redemption.RedemptionId,
                 status: "CANCELED");
 
             return;
@@ -206,8 +206,8 @@ public class TTSRedemptionHandler : IRedemptionContainer
             approved: approved);
 
         await helixHelper.UpdateCustomRewardRedemptions(
-            rewardId: redemption.Reward.Id,
-            id: redemption.Id,
+            rewardId: redemption.RewardData.Id,
+            id: redemption.RedemptionId,
             status: "FULFILLED");
 
         if (!approved)

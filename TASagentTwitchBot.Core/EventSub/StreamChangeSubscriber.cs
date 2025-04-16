@@ -42,7 +42,7 @@ public class StreamChangeSubscriber : IEventSubSubscriber
         Initialize();
     }
 
-    public void RegisterHandlers(Dictionary<string, EventHandler> handlers)
+    public Task RegisterHandlers(Dictionary<string, EventHandler> handlers)
     {
         if (streamDetailListeners.Length > 0)
         {
@@ -54,6 +54,8 @@ public class StreamChangeSubscriber : IEventSubSubscriber
             handlers.Add("stream.online", StreamOnlineHandler);
             handlers.Add("stream.offline", StreamOfflineHandler);
         }
+        
+        return Task.CompletedTask;
     }
 
     private async void Initialize()

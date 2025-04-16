@@ -9,6 +9,7 @@
 
 	<ItemGroup>
 	  <PackageReference Include="Microsoft.CognitiveServices.Speech" Version="1.28.0" />
+	  <PackageReference Include="RestSharp" Version="112.1.0" />
 	</ItemGroup>
 
 	<ItemGroup>

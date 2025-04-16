@@ -15,6 +15,7 @@
   <ItemGroup>
     <PackageReference Include="NAudio.Core" Version="2.1.0" />
     <PackageReference Include="NAudio.Wasapi" Version="2.1.0" />
+    <PackageReference Include="RestSharp" Version="112.1.0" />
   </ItemGroup>
 
 </Project>

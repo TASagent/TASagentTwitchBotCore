@@ -9,6 +9,7 @@
 
 	<ItemGroup>
 	  <PackageReference Include="NAudio.Midi" Version="2.1.0" />
+	  <PackageReference Include="RestSharp" Version="112.1.0" />
 	</ItemGroup>
 
 	<ItemGroup>

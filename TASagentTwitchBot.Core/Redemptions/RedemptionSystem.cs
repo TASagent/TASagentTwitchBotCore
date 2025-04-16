@@ -1,16 +1,11 @@
 ﻿using System.Text.Json;
 using System.Threading.Channels;
+using TASagentTwitchBot.Core.EventSub;
 
-namespace TASagentTwitchBot.Core.PubSub;
+namespace TASagentTwitchBot.Core.Redemptions;
 
-[AutoRegister]
-public interface IRedemptionSystem
-{
-    Task Initialize();
-    void HandleRedemption(ChannelPointMessageData.Datum redemption);
-}
 
-public delegate Task RedemptionHandler(Database.User user, ChannelPointMessageData.Datum.RedemptionData redemption);
+public delegate Task RedemptionHandler(Database.User user, RedemptionData redemption);
 
 [AutoRegister]
 public interface IRedemptionContainer
@@ -19,7 +14,7 @@ public interface IRedemptionContainer
 }
 
 
-public class RedemptionSystem : IRedemptionSystem, IDisposable
+public class RedemptionSystem : IEventSubSubscriber, IDisposable
 {
     private readonly Config.BotConfiguration botConfig;
     private readonly ErrorHandler errorHandler;
@@ -87,41 +82,67 @@ public class RedemptionSystem : IRedemptionSystem, IDisposable
         }
     }
 
-    public async void HandleRedemption(ChannelPointMessageData.Datum redemption)
+    public async Task RegisterHandlers(Dictionary<string, EventSub.EventHandler> handlers)
     {
+        await Initialize();
+
+        handlers.Add("channel.channel_points_custom_reward_redemption.add", HandleRedemption);
+    }
+
+    public async Task HandleRedemption(JsonElement twitchEvent)
+    {
+        RedemptionData redemptionData = new RedemptionData(
+            RedemptionId: twitchEvent.GetProperty("id").GetString()!,
+            BroadcasterUserId: twitchEvent.GetProperty("broadcaster_user_id").GetString()!,
+            BroadcasterUserLogin: twitchEvent.GetProperty("broadcaster_user_login").GetString()!,
+            BroadcasterUserName: twitchEvent.GetProperty("broadcaster_user_name").GetString()!,
+            UserId: twitchEvent.GetProperty("user_id").GetString()!,
+            UserLogin: twitchEvent.GetProperty("user_login").GetString()!,
+            UserName: twitchEvent.GetProperty("user_name").GetString()!,
+            UserInput: twitchEvent.GetProperty("user_input").GetString()!,
+            Status: twitchEvent.GetProperty("status").GetString()!,
+            RedeemedAt: twitchEvent.GetProperty("redeemed_at").GetDateTime()!,
+            RewardData: new RedemptionData.Reward(
+                Id: twitchEvent.GetProperty("reward").GetProperty("id").GetString()!,
+                Title: twitchEvent.GetProperty("reward").GetProperty("title").GetString()!,
+                Cost: twitchEvent.GetProperty("reward").GetProperty("cost").GetInt32()!,
+                Prompt: twitchEvent.GetProperty("reward").GetProperty("prompt").GetString()!));
+
+
+
         //Handle redemption
-        string rewardID = redemption.Redemption.Reward.Id;
+        string rewardID = redemptionData.RewardData.Id;
 
         if (!redemptionHandlers.TryGetValue(rewardID, out RedemptionHandler? redemptionHandler))
         {
             if (botConfig.ExhaustiveRedemptionLogging)
             {
-                logWriterChannel.TryWrite((false, $"*** Handler Not Found:\n{JsonSerializer.Serialize(redemption)}"));
+                logWriterChannel.TryWrite((false, $"*** Handler Not Found:\n{JsonSerializer.Serialize(redemptionData)}"));
             }
 
             communication.SendErrorMessage($"Redemption handler not found: {rewardID}");
             return;
         }
 
-        Database.User? user = await userHelper.GetUserByTwitchId(redemption.Redemption.User.Id);
+        Database.User? user = await userHelper.GetUserByTwitchId(redemptionData.UserId);
 
         if (user is null)
         {
             if (botConfig.ExhaustiveRedemptionLogging)
             {
-                logWriterChannel.TryWrite((false, $"*** User Not Found:\n{JsonSerializer.Serialize(redemption)}"));
+                logWriterChannel.TryWrite((false, $"*** User Not Found:\n{JsonSerializer.Serialize(redemptionData)}"));
             }
 
-            communication.SendErrorMessage($"User not found: {redemption.Redemption.User.Id}");
+            communication.SendErrorMessage($"User not found: {redemptionData.UserId}");
             return;
         }
 
         if (botConfig.ExhaustiveRedemptionLogging)
         {
-            logWriterChannel.TryWrite((true, JsonSerializer.Serialize(redemption)));
+            logWriterChannel.TryWrite((true, JsonSerializer.Serialize(redemptionData)));
         }
 
-        await redemptionHandler(user, redemption.Redemption);
+        await redemptionHandler(user, redemptionData);
     }
 
     public async Task Initialize()
@@ -174,4 +195,25 @@ public class RedemptionSystem : IRedemptionSystem, IDisposable
     }
 
     #endregion IDisposable
+}
+
+
+public record RedemptionData(
+    string RedemptionId,
+    string BroadcasterUserId,
+    string BroadcasterUserLogin,
+    string BroadcasterUserName,
+    string UserId,
+    string UserLogin,
+    string UserName,
+    string UserInput,
+    string Status,
+    DateTime RedeemedAt,
+    RedemptionData.Reward RewardData)
+{
+    public record Reward(
+        string Id,
+        string Title,
+        int Cost,
+        string Prompt);
 }

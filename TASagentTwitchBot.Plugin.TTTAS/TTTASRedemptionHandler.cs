@@ -1,6 +1,6 @@
 ﻿using TASagentTwitchBot.Core.Database;
 using TASagentTwitchBot.Core.API.Twitch;
-using TASagentTwitchBot.Core.PubSub;
+using TASagentTwitchBot.Core.Redemptions;
 
 namespace TASagentTwitchBot.Plugin.TTTAS;
 
@@ -160,14 +160,14 @@ public class TTTASRedemptionHandler : IRedemptionContainer
         }
     }
 
-    public async Task HandleRedemption(User user, ChannelPointMessageData.Datum.RedemptionData redemption)
+    public async Task HandleRedemption(User user, RedemptionData redemption)
     {
         //Handle redemption
         communication.SendDebugMessage($"{tttasConfig.FeatureNameBrief} Redemption: {user.TwitchUserName}");
 
         await helixHelper.UpdateCustomRewardRedemptions(
-            redemption.Reward.Id,
-            redemption.Id,
+            redemption.RewardData.Id,
+            redemption.RedemptionId,
             status: "FULFILLED");
 
         if (tttasConfig.Redemption.AutoApprove || user.AuthorizationLevel >= Core.Commands.AuthorizationLevel.Elevated)

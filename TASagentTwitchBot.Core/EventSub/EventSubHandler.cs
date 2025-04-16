@@ -9,19 +9,21 @@ public delegate Task EventHandler(JsonElement twitchEvent);
 [AutoRegister]
 public interface IEventSubSubscriber
 {
-    void RegisterHandlers(Dictionary<string, EventHandler> handlers);
+    Task RegisterHandlers(Dictionary<string, EventHandler> handlers);
 }
 
 public class EventSubHandler : IStartupListener, IDisposable
 {
     private readonly ICommunication communication;
-    private readonly HubConnection? serverHubConnection;
     private readonly ErrorHandler errorHandler;
+    private readonly Config.ServerConfig serverConfig;
 
     //Event handlers
     private readonly IEventSubSubscriber[] eventSubSubscribers;
 
     private readonly Dictionary<string, EventHandler> eventHandlers = new Dictionary<string, EventHandler>();
+
+    private HubConnection? serverHubConnection = null;
 
     private bool disposedValue;
 
@@ -31,50 +33,57 @@ public class EventSubHandler : IStartupListener, IDisposable
         ErrorHandler errorHandler,
         IEnumerable<IEventSubSubscriber> eventSubSubscribers)
     {
+        this.serverConfig = serverConfig;
         this.communication = communication;
         this.errorHandler = errorHandler;
 
         this.eventSubSubscribers = eventSubSubscribers.ToArray();
 
-        foreach (IEventSubSubscriber subscriber in this.eventSubSubscribers)
-        {
-            subscriber.RegisterHandlers(eventHandlers);
-        }
-
         if (this.eventSubSubscribers.Length == 0)
         {
             communication.SendDebugMessage($"No EventSub Listener registered. Skipping EventSub Websocket.");
+            return;
         }
-        else if (!string.IsNullOrEmpty(serverConfig.ServerAccessToken) &&
-            !string.IsNullOrEmpty(serverConfig.ServerAddress) &&
-            !string.IsNullOrEmpty(serverConfig.ServerUserName))
-        {
-            serverHubConnection = new HubConnectionBuilder()
-                .WithUrl($"{serverConfig.ServerAddress}/Hubs/BotEventSubHub", options =>
-                {
-                    options.Headers.Add("User-Id", serverConfig.ServerUserName);
-                    options.Headers.Add("Authorization", $"Bearer {serverConfig.ServerAccessToken}");
-                })
-                .WithAutomaticReconnect()
-                .Build();
 
-            serverHubConnection.Closed += ServerHubConnectionClosed;
-
-            serverHubConnection.On<string>("ReceiveMessage", ReceiveMessage);
-            serverHubConnection.On<string>("ReceiveWarning", ReceiveWarning);
-            serverHubConnection.On<string>("ReceiveError", ReceiveError);
-            serverHubConnection.On<EventSubPayload>("ReceiveEvent", ReceiveEvent);
-
-            Initialize();
-        }
-        else
+        if (string.IsNullOrEmpty(serverConfig.ServerAccessToken) &&
+            string.IsNullOrEmpty(serverConfig.ServerAddress) &&
+            string.IsNullOrEmpty(serverConfig.ServerUserName))
         {
             communication.SendErrorMessage($"EventSub not configured, skipping. Register at https://server.tas.wtf/ and contact TASagent. " +
                 $"Then update relevant details in Config/ServerConfig.json");
+            return;
         }
+
+        Task.Run(Launch);
     }
 
-    public async void Initialize()
+    private async void Launch()
+    {
+        foreach (IEventSubSubscriber subscriber in this.eventSubSubscribers)
+        {
+            await subscriber.RegisterHandlers(eventHandlers);
+        }
+
+        serverHubConnection = new HubConnectionBuilder()
+            .WithUrl($"{serverConfig.ServerAddress}/Hubs/BotEventSubHub", options =>
+            {
+                options.Headers.Add("User-Id", serverConfig.ServerUserName);
+                options.Headers.Add("Authorization", $"Bearer {serverConfig.ServerAccessToken}");
+            })
+            .WithAutomaticReconnect()
+            .Build();
+
+        serverHubConnection.Closed += ServerHubConnectionClosed;
+
+        serverHubConnection.On<string>("ReceiveMessage", ReceiveMessage);
+        serverHubConnection.On<string>("ReceiveWarning", ReceiveWarning);
+        serverHubConnection.On<string>("ReceiveError", ReceiveError);
+        serverHubConnection.On<EventSubPayload>("ReceiveEvent", ReceiveEvent);
+
+        await Initialize();
+    }
+
+    public async Task Initialize()
     {
         try
         {
