@@ -920,7 +920,7 @@ public class HelixHelper : IOAuthHandler
         RestClient restClient = new RestClient(HelixURI);
         RestRequest request = new RestRequest("eventsub/subscriptions", Method.Post);
         request.AddHeader("Client-ID", botConfig.TwitchClientId);
-        request.AddHeader("Authorization", $"Bearer {botConfig.BotAccessToken}");
+        request.AddHeader("Authorization", $"Bearer {botConfig.BroadcasterAccessToken}");
 
         request.AddJsonBody(new TwitchSubscribeRequest(
             SubscriptionType: subscriptionType,
@@ -976,7 +976,7 @@ public class HelixHelper : IOAuthHandler
             case "channel.follow":
                 return new Condition(
                     BroadcasterUserId: botConfig.BroadcasterId,
-                    ModeratorUserId: botConfig.BotId);
+                    ModeratorUserId: botConfig.BroadcasterId);
 
             case "channel.update":
             case "channel.subscribe":

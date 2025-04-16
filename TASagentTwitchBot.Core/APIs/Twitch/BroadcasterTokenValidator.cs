@@ -18,7 +18,8 @@ public class BroadcasterTokenValidator : TokenValidator, IBroadcasterTokenValida
         "channel:manage:redemptions",
         "channel:moderate",
         "channel:read:redemptions",
-        "channel:read:subscriptions"
+        "channel:read:subscriptions",
+        "moderator:read:followers"
     };
 
     protected override string AccessToken
