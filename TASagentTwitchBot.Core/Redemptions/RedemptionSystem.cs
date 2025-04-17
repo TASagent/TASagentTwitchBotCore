@@ -120,7 +120,8 @@ public class RedemptionSystem : IEventSubSubscriber, IDisposable
                 logWriterChannel.TryWrite((false, $"*** Handler Not Found:\n{JsonSerializer.Serialize(redemptionData)}"));
             }
 
-            communication.SendErrorMessage($"Redemption handler not found: {rewardID}");
+            //This reward is not handled by this bot
+            //Don't return an error - every redeem now comes through.
             return;
         }
 

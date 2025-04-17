@@ -8,8 +8,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="AWSSDK.Core" Version="3.7.402.41" />
-	  <PackageReference Include="AWSSDK.Polly" Version="3.7.403.14" />
+	  <PackageReference Include="AWSSDK.Core" Version="3.7.402.42" />
+	  <PackageReference Include="AWSSDK.Polly" Version="3.7.403.15" />
 	  <PackageReference Include="RestSharp" Version="112.1.0" />
 	</ItemGroup>
 
