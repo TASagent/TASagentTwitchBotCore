@@ -28,13 +28,28 @@ public class VestaboardCommandSystem : ICommandContainer
         if (vestaboardConfig.Command.Enabled)
         {
             commandRegistrar.RegisterGlobalCommand(vestaboardConfig.Command.CommandName.ToLowerInvariant(), TriggerVestaboard);
+            commandRegistrar.RegisterScopedCommand(vestaboardConfig.Command.CommandName.ToLowerInvariant(), "clear", ClearVestaboard);
         }
-
     }
 
     public IEnumerable<string> GetPublicCommands()
     {
         yield break;
+    }
+
+    private Task ClearVestaboard(Core.IRC.TwitchChatter chatter, string[] remainingCommand)
+    {
+        if (!GetCanUserClearVestaboard(chatter.User))
+        {
+            communication.SendPublicChatMessage(
+                $"@{chatter.User.TwitchUserName}, you do not have authorization to clear the vestaboard.");
+
+            return Task.CompletedTask;
+        }
+
+        vestaboardManager.PushDefault();
+
+        return Task.CompletedTask;
     }
 
     private async Task TriggerVestaboard(Core.IRC.TwitchChatter chatter, string[] remainingCommand)
@@ -83,7 +98,7 @@ public class VestaboardCommandSystem : ICommandContainer
             return;
         }
 
-        vestaboardManager.ImmediateSend(string.Join(' ', remainingCommand));
+        vestaboardManager.QueueMessage(string.Join(' ', remainingCommand));
 
         return;
     }
@@ -105,6 +120,18 @@ public class VestaboardCommandSystem : ICommandContainer
 
             default:
                 communication.SendErrorMessage($"Unexpected AuthorizationLevel: {user.AuthorizationLevel}");
+                return false;
+        }
+    }
+
+    private bool GetCanUserClearVestaboard(Core.Database.User user)
+    {
+        switch (user.AuthorizationLevel)
+        {
+            case AuthorizationLevel.Admin:
+            case AuthorizationLevel.Moderator:
+                return true;
+            default:
                 return false;
         }
     }

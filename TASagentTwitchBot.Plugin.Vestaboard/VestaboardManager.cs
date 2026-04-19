@@ -9,23 +9,25 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
 using TASagentTwitchBot.Core;
+using TASagentTwitchBot.Core.Database;
+using TASagentTwitchBot.Core.Notifications;
 
 namespace TASagentTwitchBot.Plugin.Vestaboard;
 
-public class VestaboardManager : IStartupListener, IDisposable
+public class VestaboardManager : IStartupListener, ICheerHandler, IDisposable
 {
     private readonly ICommunication communication;
     private readonly VestaboardConfiguration vestaboardConfiguration;
     private readonly ErrorHandler errorHandler;
 
-    //private readonly ChannelWriter<string> emoteQueueWriter;
-    //private readonly ChannelReader<string> emoteQueueReader;
+    private readonly ChannelWriter<string> messageQueueWriter;
+    private readonly ChannelReader<string> messageQueueReader;
 
     private readonly Message defaultMessage;
 
     private bool disposedValue;
     private readonly CancellationTokenSource generalTokenSource = new CancellationTokenSource();
-    //private readonly Task monitorTask;
+    private readonly Task monitorTask;
 
     public VestaboardManager(
         ICommunication communication,
@@ -38,16 +40,17 @@ public class VestaboardManager : IStartupListener, IDisposable
 
         StoredMessage defaultConfigMessage =
             vestaboardConfiguration.Messages.FirstOrDefault(x => string.Compare(x.Name, "default", ignoreCase: true) == 0) ??
-            new StoredMessage("default", [ "yyyvbvbbbvbvyyy", "ygggggghggggggy", "yyyvbvbbbvbvyyy" ]);
+            new StoredMessage("default", [ "rrroooyyygggbbb", "rroooyyygggbbbv", "roooyyygggbbbvv"]);
 
         defaultMessage = VestaboardUtils.ConvertStored(defaultConfigMessage);
 
+        Channel<string> queueChannel = Channel.CreateUnbounded<string>();
 
-        //emoteQueueReader = queueChannel.Reader;
-        //emoteQueueWriter = queueChannel.Writer;
+        messageQueueReader = queueChannel.Reader;
+        messageQueueWriter = queueChannel.Writer;
 
         PushDefault();
-        //monitorTask = Task.Run(MonitorEmotes);
+        monitorTask = Task.Run(MonitorMessages);
     }
 
     public async void PushDefault()
@@ -70,26 +73,23 @@ public class VestaboardManager : IStartupListener, IDisposable
         await ShowMessage(finalMessage);
     }
 
-    //private async Task UploadBlank()
-    //{
-    //    Bitmap square = new Bitmap(64, 64, PixelFormat.Format24bppRgb);
+    public void QueueMessage(string message)
+    {
+        messageQueueWriter.TryWrite(message);
+    }
 
-    //    using Graphics graphics = Graphics.FromImage(square);
-    //    graphics.FillRectangle(new SolidBrush(Color.FromArgb(0, 0, 0)), 0, 0, 64, 64);
-    //    graphics.DrawImage(square, 0, 0, 64, 64);
+    void ICheerHandler.HandleCheer(User cheerer, string message, int quantity, bool meetsTTSThreshold, bool approved)
+    {
+        if (meetsTTSThreshold && approved)
+        {
+            //All caps because of Vestaboard limitations
+            message = message.ToUpperInvariant();
 
-    //    int index = await UploadEmote("blank", square);
-    //    //uploadMap.Add("blank", index);
-    //}
+            message = message.Replace("CHEER", "h");
 
-    //public async void NotifyEmotes(IEnumerable<string> urls)
-    //{
-    //    foreach (string url in urls.Distinct())
-    //    {
-    //        await emoteQueueWriter.WriteAsync(url);
-    //    }
-    //}
-
+            messageQueueWriter.TryWrite(message);
+        }
+    }
 
     private async Task ShowMessage(Message message)
     {
@@ -108,88 +108,37 @@ public class VestaboardManager : IStartupListener, IDisposable
         RestResponse response = await restClient.ExecuteAsync(request, generalTokenSource.Token);
     }
 
-    //private async Task<int> UploadEmote(string url, Bitmap bitmap)
-    //{
-    //    var destRect = new Rectangle(0, 0, 64, 64);
-    //    BitmapData bmpData = bitmap.LockBits(destRect, ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
 
-    //    // Get the address of the first line.
-    //    IntPtr ptr = bmpData.Scan0;
+    private async Task MonitorMessages()
+    {
+        try
+        {
+            while (!generalTokenSource.IsCancellationRequested)
+            {
+                if (!await messageQueueReader.WaitToReadAsync(generalTokenSource.Token))
+                {
+                    break;
+                }
 
-    //    // Declare an array to hold the bytes of the bitmap.
-    //    int bytes = Math.Abs(bmpData.Stride) * bitmap.Height;
-    //    byte[] rgbValues = new byte[bytes];
+                messageQueueReader.TryRead(out string? message);
 
-    //    // Copy the RGB values into the array.
-    //    System.Runtime.InteropServices.Marshal.Copy(ptr, rgbValues, 0, bytes);
+                if (message != null)
+                {
+                    ImmediateSend(message);
+                }
 
-    //    //Swap R and B
-    //    for (int i = 0; i < rgbValues.Length / 3; i++)
-    //    {
-    //        (rgbValues[3 * i], rgbValues[3 * i + 2]) = (rgbValues[3 * i + 2], rgbValues[3 * i]);
-    //    }
-
-    //    // Copy the RGB values back to the bitmap
-    //    System.Runtime.InteropServices.Marshal.Copy(rgbValues, 0, ptr, bytes);
-
-    //    bitmap.UnlockBits(bmpData);
-
-    //    RestClient restClient = new RestClient("http://10.0.0.106");
-    //    RestRequest request = new RestRequest("post", Method.Post);
-    //    request.AddBody(new SendAnimationData(
-    //        Command: "Draw/SendHttpGif",
-    //        PicNum: 1,
-    //        PicWidth: 64,
-    //        PicOffset: 0,
-    //        PicID: nextImage,
-    //        PicSpeed: 1000,
-    //        PicData: Convert.ToBase64String(rgbValues)));
-
-    //    RestResponse response = await restClient.ExecuteAsync(request, generalTokenSource.Token);
-
-    //    //if (response?.Content is not null)
-    //    //{
-    //    //    communication.SendDebugMessage($"Show: {response.Content}");
-    //    //}
-
-    //    return nextImage++;
-    //}
-
-
-    //private async Task MonitorEmotes()
-    //{
-    //    try
-    //    {
-    //        while (!generalTokenSource.IsCancellationRequested)
-    //        {
-    //            if (!await emoteQueueReader.WaitToReadAsync(generalTokenSource.Token))
-    //            {
-    //                break;
-    //            }
-
-    //            emoteQueueReader.TryRead(out string emoteURL);
-
-    //            {
-    //                Bitmap bitmap = ResizeAndReformatImage(
-    //                image: await emoteCacher.GetEmoteBitmap(emoteURL!),
-    //                width: 64,
-    //                height: 64);
-
-    //                await UploadEmote(emoteURL, bitmap);
-    //            }
-
-    //            await Task.Delay(2_000, generalTokenSource.Token);
-    //        }
-    //    }
-    //    catch (OperationCanceledException) { /* swallow */ }
-    //    catch (ThreadAbortException) { /* swallow */ }
-    //    catch (ObjectDisposedException) { /* swallow */ }
-    //    catch (Exception ex)
-    //    {
-    //        communication.SendErrorMessage($"Pixoo Manager Playback Exception: {ex.GetType().Name}");
-    //        errorHandler.LogMessageException(ex, "");
-    //    }
-    //}
+                await Task.Delay(30_000, generalTokenSource.Token);
+            }
+        }
+        catch (OperationCanceledException) { /* swallow */ }
+        catch (ThreadAbortException) { /* swallow */ }
+        catch (ObjectDisposedException) { /* swallow */ }
+        catch (Exception ex)
+        {
+            communication.SendErrorMessage($"Pixoo Manager Playback Exception: {ex.GetType().Name}");
+            errorHandler.LogMessageException(ex, "");
+        }
+    }
 
     protected virtual void Dispose(bool disposing)
     {
@@ -197,23 +146,21 @@ public class VestaboardManager : IStartupListener, IDisposable
         {
             if (disposing)
             {
-                //emoteQueueWriter.TryComplete();
+                messageQueueWriter.TryComplete();
 
                 ////Wait for monitor
-                //monitorTask.Wait(2_000);
+                monitorTask.Wait(2_000);
 
                 generalTokenSource.Cancel();
 
                 //Wait for monitor
-                //monitorTask.Wait(2_000);
+                monitorTask.Wait(2_000);
 
                 generalTokenSource.Dispose();
 
-                //monitorTask.Dispose();
+                monitorTask.Dispose();
             }
 
-            // TODO: free unmanaged resources (unmanaged objects) and override finalizer
-            // TODO: set large fields to null
             disposedValue = true;
         }
     }
